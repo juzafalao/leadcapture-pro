@@ -16,7 +16,7 @@ Sistema de automação para captação e qualificação de leads para franqueado
 | IA | OpenAI GPT-4o-mini |
 
 ## 📁 Estrutura do Projeto
-exit
+
 ## 🚀 Quick Start
 
 ### 1. Subir n8n
