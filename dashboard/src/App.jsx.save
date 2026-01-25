@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = 'https://krcybmownrpfjvqhacup.supabase.co'
-const supabaseKey = 'sb_publishable_Og18wrLgJWFj13FI37SeNg_h9WqYzvq'
-const supabase = createClient(supabaseUrl, supabaseKey)
+const supabaseKey = 'pabaseUrl, supabaseKey)
 
 function Logo() {
   return (
