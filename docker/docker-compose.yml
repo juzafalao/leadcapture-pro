@@ -1,22 +1,14 @@
-version: '3.8'
-
 services:
-  # ============================================================
-  # N8N - Automação de Workflows
-  # ============================================================
   n8n:
-    image: n8nio/n8n
+    image: n8nio/n8n:latest
     container_name: leadcapture-n8n
     restart: unless-stopped
     ports:
       - "5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=LeadCapture2026!
-      - N8N_HOST=localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
+      - N8N_BASIC_AUTH_USER=juzafalao@gmail.com
+      - N8N_BASIC_AUTH_PASSWORD=Ju041287!
       - WEBHOOK_URL=http://localhost:5678/
       - GENERIC_TIMEZONE=America/Sao_Paulo
     volumes:
@@ -24,9 +16,19 @@ services:
     networks:
       - leadcapture-network
 
-  # ============================================================
-  # EVOLUTION API - WhatsApp Não-Oficial (Para Desenvolvimento)
-  # ============================================================
+  postgres:
+    image: postgres:15
+    container_name: leadcapture-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=leadcapture
+      - POSTGRES_PASSWORD=leadcapture123
+      - POSTGRES_DB=leadcapture
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - leadcapture-network
+
   evolution-api:
     image: atendai/evolution-api:latest
     container_name: leadcapture-evolution
@@ -35,13 +37,11 @@ services:
       - "8080:8080"
     environment:
       - SERVER_URL=http://localhost:8080
-      - AUTHENTICATION_TYPE=apikey
-      - AUTHENTICATION_API_KEY=LeadCaptureEvolution2026
-      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
+      - CORS_ORIGIN=*
+      - LOG_LEVEL=ERROR
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://postgres:postgres@postgres:5432/evolution
-      - DATABASE_CONNECTION_CLIENT_NAME=evolution
+      - DATABASE_CONNECTION_URI=postgresql://postgres:postgres@postgres:5432/postgres
       - DATABASE_SAVE_DATA_INSTANCE=true
       - DATABASE_SAVE_DATA_NEW_MESSAGE=true
       - DATABASE_SAVE_MESSAGE_UPDATE=true
@@ -49,11 +49,8 @@ services:
       - DATABASE_SAVE_DATA_CHATS=true
       - RABBITMQ_ENABLED=false
       - WEBSOCKET_ENABLED=true
-      - LOG_LEVEL=ERROR
-      - DEL_INSTANCE=false
       - CONFIG_SESSION_PHONE_CLIENT=LeadCapture Pro
       - CONFIG_SESSION_PHONE_NAME=Chrome
-      - QRCODE_LIMIT=10
       - WEBHOOK_GLOBAL_ENABLED=true
       - WEBHOOK_GLOBAL_URL=http://n8n:5678/webhook/whatsapp-evolution
       - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=true
@@ -66,28 +63,12 @@ services:
     networks:
       - leadcapture-network
 
-  # ============================================================
-  # POSTGRES - Banco para Evolution API
-  # ============================================================
-  postgres:
-    image: postgres:15
-    container_name: leadcapture-postgres
-    restart: unless-stopped
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=evolution
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - leadcapture-network
-
-volumes:
-  n8n_data:
-  evolution_instances:
-  evolution_store:
-  postgres_data:
-
 networks:
   leadcapture-network:
     driver: bridge
+
+volumes:
+  n8n_data:
+  postgres_data:
+  evolution_instances:
+  evolution_store:
