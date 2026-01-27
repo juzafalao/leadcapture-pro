@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import Logo from './assets/logo-leadcapture.png'
 
 // ============================================================
 // CONFIGURAÇÃO SUPABASE
+// ⚠️ SUBSTITUA PELA SUA CHAVE COMPLETA
 // ============================================================
 const supabaseUrl = 'https://krcybmownrpfjvqhacup.supabase.co'
 const supabaseKey = 'sb_publishable_Og18wrLgJWFj13FI37SeNg_h9WqYzvq'
@@ -73,100 +73,45 @@ const FONTE_CONFIG = {
 // COMPONENTES
 // ============================================================
 
-// Marca d'água do cliente "SEU LOGO"
-function ClientWatermark() {
+// Marca d'água do LeadCapture Pro
+function Watermark() {
   return (
-    <div className="fixed left-8 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none select-none z-0">
-      <div className="text-left transform rotate-[5deg]">
-        <div className="text-8xl font-black text-white tracking-wider">
-          SEU LOGO
+    <div className="fixed bottom-4 right-4 opacity-5 pointer-events-none select-none z-0">
+      <div className="text-right">
+        <div className="text-6xl font-black text-white mb-2">
+          LeadCapture
+        </div>
+        <div className="text-4xl font-light text-white">
+          PRO
         </div>
       </div>
     </div>
   )
 }
 
-// Logo LeadCapture com ícone
-function LeadCaptureLogo() {
-  return (
-    <div className="fixed bottom-4 right-4 opacity-[0.08] pointer-events-none select-none z-0">
-      <div className="flex items-center gap-3">
-        {/* Logo Icon (imagem PNG) */}
-        <div className="h-16 w-16 rounded-xl overflow-hidden flex items-center justify-center shadow-2xl bg-transparent">
-          <img src={Logo} alt="LeadCapture" className="h-full w-full object-cover" />
-        </div>
-        {/* Text */}
-        <div className="text-right">
-          <div className="text-4xl font-black text-white leading-none mb-1">
-            LeadCapture
-          </div>
-          <div className="text-2xl font-light text-white tracking-widest">
-            PRO
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Logo do Tenant (Cliente) com seletor de marca
-function TenantLogo({ tenant, selectedBrand, onBrandChange }) {
+// Logo do Tenant (Cliente)
+function TenantLogo({ tenant }) {
   if (!tenant) return null
   
-  // Obter marcas do tenant
-  const brands = tenant.brands || []
-  const hasBrands = brands.length > 0
-  
   return (
-    <div className="flex items-center gap-4">
-      {/* Logo do Tenant */}
-      <div className="flex items-center gap-3">
-        {tenant.logo_url ? (
-          <img 
-            src={tenant.logo_url} 
-            alt={tenant.name} 
-            className="h-12 w-auto max-w-[200px] object-contain rounded-lg bg-white/5 p-2"
-          />
-        ) : (
-          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-            {tenant.name?.charAt(0) || 'L'}
-          </div>
-        )}
-        <div>
-          <h1 className="text-xl font-bold text-white">
-            {tenant.name || 'LeadCapture Pro'}
-          </h1>
-          <p className="text-xs text-gray-500">Dashboard de Leads</p>
+    <div className="flex items-center gap-3">
+      {tenant.logo_url ? (
+        <img 
+          src={tenant.logo_url} 
+          alt={tenant.name} 
+          className="h-12 w-auto max-w-[200px] object-contain rounded-lg bg-white/5 p-2"
+        />
+      ) : (
+        <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+          {tenant.name?.charAt(0) || 'L'}
         </div>
+      )}
+      <div>
+        <h1 className="text-xl font-bold text-white">
+          {tenant.name || 'LeadCapture Pro'}
+        </h1>
+        <p className="text-xs text-gray-500">Dashboard de Leads</p>
       </div>
-      
-      {/* Seletor de Marca (se tiver múltiplas) */}
-      {hasBrands && brands.length > 1 && (
-        <div className="flex items-center gap-2 ml-4">
-          <span className="text-xs text-gray-500">Marca:</span>
-          <select
-            value={selectedBrand?.id || ''}
-            onChange={(e) => onBrandChange(brands.find(b => b.id === e.target.value))}
-            className="bg-gray-800/50 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-orange-500"
-          >
-            <option value="">Todas as marcas</option>
-            {brands.map(brand => (
-              <option key={brand.id} value={brand.id}>
-                {brand.icon} {brand.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-      
-      {/* Indicador de marca única */}
-      {hasBrands && brands.length === 1 && (
-        <div className="ml-4 px-3 py-1.5 bg-gray-800/50 border border-gray-700/50 rounded-lg">
-          <span className="text-sm text-gray-400">
-            {brands[0].icon} {brands[0].name}
-          </span>
-        </div>
-      )}
     </div>
   )
 }
@@ -175,25 +120,14 @@ function TenantLogo({ tenant, selectedBrand, onBrandChange }) {
 function AppLogo() {
   return (
     <div className="flex items-center gap-2 bg-gray-800/50 px-3 py-2 rounded-lg border border-gray-700/50">
-      <div className="h-8 w-8 rounded overflow-hidden bg-transparent flex items-center justify-center">
-        <img src={Logo} alt="LeadCapture" className="h-full w-full object-cover" />
+      <div className="h-8 w-8 rounded bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+        <span className="text-white font-bold text-sm">LC</span>
       </div>
       <div className="text-xs">
         <div className="font-bold text-white leading-tight">LeadCapture</div>
         <div className="text-gray-400 leading-tight">PRO</div>
       </div>
     </div>
-  )
-}
-
-// Badge de Marca
-function BrandBadge({ brand }) {
-  if (!brand) return null
-  
-  return (
-    <span className="px-2 py-1 bg-purple-500/20 text-purple-400 rounded text-xs font-medium">
-      {brand.icon} {brand.name}
-    </span>
   )
 }
 
@@ -460,7 +394,7 @@ function FonteBadge({ fonte }) {
 }
 
 // Componente de Filtros
-function Filters({ filters, setFilters, leads, brands }) {
+function Filters({ filters, setFilters, leads }) {
   const fontes = [...new Set(leads.map(l => l.fonte).filter(Boolean))]
   const statuses = [...new Set(leads.map(l => l.status).filter(Boolean))]
   
@@ -478,23 +412,6 @@ function Filters({ filters, setFilters, leads, brands }) {
             className="w-full bg-gray-900/50 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500 placeholder-gray-500"
           />
         </div>
-        
-        {/* Marca (se houver) */}
-        {brands && brands.length > 1 && (
-          <div className="w-36">
-            <label className="block text-xs text-gray-400 mb-1">Marca</label>
-            <select
-              value={filters.brand_id}
-              onChange={(e) => setFilters({...filters, brand_id: e.target.value})}
-              className="w-full bg-gray-900/50 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-orange-500"
-            >
-              <option value="">Todas</option>
-              {brands.map(b => (
-                <option key={b.id} value={b.id}>{b.icon} {b.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
         
         {/* Status */}
         <div className="w-36">
@@ -543,7 +460,7 @@ function Filters({ filters, setFilters, leads, brands }) {
         
         {/* Limpar */}
         <button
-          onClick={() => setFilters({ busca: '', status: '', categoria: '', fonte: '', brand_id: '' })}
+          onClick={() => setFilters({ busca: '', status: '', categoria: '', fonte: '' })}
           className="px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition text-sm"
         >
           Limpar
@@ -567,7 +484,6 @@ function App() {
   const [leads, setLeads] = useState([])
   const [tenants, setTenants] = useState([])
   const [currentTenant, setCurrentTenant] = useState(null)
-  const [selectedBrand, setSelectedBrand] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [showCharts, setShowCharts] = useState(false)
@@ -578,8 +494,7 @@ function App() {
     busca: '',
     status: '',
     categoria: '',
-    fonte: '',
-    brand_id: ''
+    fonte: ''
   })
 
   // Carregar tenants
@@ -639,30 +554,18 @@ function App() {
 
   // Métricas
   const metrics = useMemo(() => {
-    let filteredForMetrics = leads
-    
-    // Filtrar por marca se selecionada
-    if (selectedBrand) {
-      filteredForMetrics = filteredForMetrics.filter(l => l.brand_id === selectedBrand.id)
-    }
-    
-    const total = filteredForMetrics.length
-    const hot = filteredForMetrics.filter(l => l.categoria?.toLowerCase() === 'hot').length
-    const aContatar = filteredForMetrics.filter(l => ['novo', 'em_analise'].includes(l.status)).length
-    const convertidos = filteredForMetrics.filter(l => l.status === 'convertido').length
+    const total = leads.length
+    const hot = leads.filter(l => l.categoria?.toLowerCase() === 'hot').length
+    const aContatar = leads.filter(l => ['novo', 'em_analise'].includes(l.status)).length
+    const convertidos = leads.filter(l => l.status === 'convertido').length
     const taxaConversao = total > 0 ? Math.round((convertidos / total) * 100) : 0
     
     return { total, hot, aContatar, convertidos, taxaConversao }
-  }, [leads, selectedBrand])
+  }, [leads])
 
   // Filtrar leads
   const filteredLeads = useMemo(() => {
     let result = leads
-    
-    // Filtro por marca selecionada
-    if (selectedBrand) {
-      result = result.filter(l => l.brand_id === selectedBrand.id)
-    }
     
     // Tab ativo
     if (activeTab === 'hot') {
@@ -673,7 +576,7 @@ function App() {
       result = result.filter(l => l.status === 'convertido')
     }
     
-    // Filtros adicionais
+    // Filtros
     if (filters.busca) {
       const busca = filters.busca.toLowerCase()
       result = result.filter(l =>
@@ -681,10 +584,6 @@ function App() {
         l.email?.toLowerCase().includes(busca) ||
         l.telefone?.includes(busca)
       )
-    }
-    
-    if (filters.brand_id) {
-      result = result.filter(l => l.brand_id === filters.brand_id)
     }
     
     if (filters.status) {
@@ -700,7 +599,7 @@ function App() {
     }
     
     return result
-  }, [leads, activeTab, filters, selectedBrand])
+  }, [leads, activeTab, filters])
 
   // Salvar configuração CRM
   const saveCRMConfig = async (crmData) => {
@@ -729,12 +628,6 @@ function App() {
       console.error('Erro ao salvar CRM:', err)
       alert('❌ Erro ao salvar: ' + err.message)
     }
-  }
-
-  // Obter brand do lead
-  const getBrand = (brandId) => {
-    if (!currentTenant?.brands) return null
-    return currentTenant.brands.find(b => b.id === brandId)
   }
 
   if (loading) {
@@ -768,11 +661,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 relative">
-      {/* Marca d'água do cliente */}
-      <ClientWatermark />
-      
-      {/* Logo LeadCapture com ícone */}
-      <LeadCaptureLogo />
+      {/* Marca d'água */}
+      <Watermark />
 
       {/* Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
@@ -784,11 +674,7 @@ function App() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 py-6">
         {/* Header */}
         <header className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-          <TenantLogo 
-            tenant={currentTenant} 
-            selectedBrand={selectedBrand}
-            onBrandChange={setSelectedBrand}
-          />
+          <TenantLogo tenant={currentTenant} />
           
           <div className="flex flex-wrap items-center gap-3">
             <CRMIndicator tenant={currentTenant} />
@@ -834,7 +720,6 @@ function App() {
             value={metrics.total} 
             icon="📊" 
             color="orange"
-            subtitle={selectedBrand ? selectedBrand.name : 'Todas as marcas'}
             onClick={() => setActiveTab('todos')}
           />
           <MetricCard 
@@ -869,7 +754,7 @@ function App() {
         {/* Tabs */}
         <div className="flex gap-2 mb-4 flex-wrap">
           {[
-            { key: 'todos', label: 'Todos', count: metrics.total },
+            { key: 'todos', label: 'Todos', count: leads.length },
             { key: 'hot', label: '🔥 HOT', count: metrics.hot },
             { key: 'contatar', label: '📞 A Contatar', count: metrics.aContatar },
             { key: 'convertidos', label: '🎉 Convertidos', count: metrics.convertidos },
@@ -889,18 +774,12 @@ function App() {
         </div>
 
         {/* Filters */}
-        <Filters 
-          filters={filters} 
-          setFilters={setFilters} 
-          leads={leads}
-          brands={currentTenant?.brands}
-        />
+        <Filters filters={filters} setFilters={setFilters} leads={leads} />
 
         {/* Results count */}
         <div className="flex justify-between items-center mb-4">
           <p className="text-gray-400 text-sm">
             Mostrando <span className="text-white font-bold">{filteredLeads.length}</span> leads
-            {selectedBrand && <span className="text-orange-400"> • {selectedBrand.icon} {selectedBrand.name}</span>}
           </p>
         </div>
 
@@ -917,9 +796,6 @@ function App() {
                 <thead>
                   <tr className="bg-gray-900/50 border-b border-gray-700/50">
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Lead</th>
-                    {currentTenant?.brands && currentTenant.brands.length > 1 && (
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">Marca</th>
-                    )}
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase">Contato</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">Fonte</th>
                     <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase">Score</th>
@@ -929,44 +805,36 @@ function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/30">
-                  {filteredLeads.map((lead) => {
-                    const brand = getBrand(lead.brand_id)
-                    return (
-                      <tr 
-                        key={lead.id} 
-                        className="hover:bg-gray-700/30 transition-colors cursor-pointer"
-                        onClick={() => setSelectedLead(lead)}
-                      >
-                        <td className="px-4 py-3">
-                          <p className="text-white font-medium">{lead.nome || '-'}</p>
-                        </td>
-                        {currentTenant?.brands && currentTenant.brands.length > 1 && (
-                          <td className="px-4 py-3 text-center">
-                            {brand && <BrandBadge brand={brand} />}
-                          </td>
-                        )}
-                        <td className="px-4 py-3">
-                          <p className="text-gray-300 text-sm">{lead.email || '-'}</p>
-                          <p className="text-gray-500 text-xs">{lead.telefone || '-'}</p>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <FonteBadge fonte={lead.fonte} />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <ScoreBadge score={lead.score} />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <CategoryBadge categoria={lead.categoria} />
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <StatusBadge status={lead.status} />
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-400 text-sm">
-                          {formatDate(lead.created_at)}
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {filteredLeads.map((lead) => (
+                    <tr 
+                      key={lead.id} 
+                      className="hover:bg-gray-700/30 transition-colors cursor-pointer"
+                      onClick={() => setSelectedLead(lead)}
+                    >
+                      <td className="px-4 py-3">
+                        <p className="text-white font-medium">{lead.nome || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="text-gray-300 text-sm">{lead.email || '-'}</p>
+                        <p className="text-gray-500 text-xs">{lead.telefone || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <FonteBadge fonte={lead.fonte} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <ScoreBadge score={lead.score} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <CategoryBadge categoria={lead.categoria} />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <StatusBadge status={lead.status} />
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-400 text-sm">
+                        {formatDate(lead.created_at)}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -975,7 +843,7 @@ function App() {
 
         {/* Footer */}
         <footer className="mt-8 text-center text-gray-500 text-sm">
-          <p>LeadCapture Pro v3.0 | Desenvolvido por Juliana Zafalão</p>
+          <p>LeadCapture Pro v2.0 | Desenvolvido por Juliana Zafalão</p>
           <p className="text-xs mt-1">© 2026 Todos os direitos reservados</p>
         </footer>
       </div>
