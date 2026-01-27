@@ -1,13 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@supabase/supabase-js'
+// importar o client centralizado
+import { supabase } from './lib/supabaseClient'
 import Logo from './assets/logo-leadcapture.png'
-
-// ============================================================
-// CONFIGURAÇÃO SUPABASE
-// ============================================================
-const supabaseUrl = 'https://krcybmownrpfjvqhacup.supabase.co'
-const supabaseKey = 'sb_publishable_Og18wrLgJWFj13FI37SeNg_h9WqYzvq'
-const supabase = createClient(supabaseUrl, supabaseKey)
 
 // ============================================================
 // CONFIGURAÇÃO CRM
