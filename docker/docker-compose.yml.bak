@@ -21,25 +21,22 @@ services:
     container_name: leadcapture-postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=postgres
+      - POSTGRES_USER=leadcapture
+      - POSTGRES_PASSWORD=leadcapture123
+      - POSTGRES_DB=leadcapture
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - leadcapture-network
 
   evolution-api:
-    image: atendai/evolution-api:v2.1.1
+    image: atendai/evolution-api:latest
     container_name: leadcapture-evolution
     restart: unless-stopped
     ports:
       - "8080:8080"
     environment:
       - SERVER_URL=http://localhost:8080
-      - AUTHENTICATION_TYPE=
-      - AUTHENTICATION_API_KEY=429683C4C977415CAAFCCE10F7D57E11
-      - AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=false 
       - CORS_ORIGIN=*
       - LOG_LEVEL=ERROR
       - DATABASE_ENABLED=true
@@ -58,8 +55,6 @@ services:
       - WEBHOOK_GLOBAL_URL=http://n8n:5678/webhook/whatsapp-evolution
       - WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS=true
       - WEBHOOK_EVENTS_MESSAGES_UPSERT=true
-      - CACHE_REDIS_ENABLED=false  # ← ADICIONAR
-      - CACHE_LOCAL_ENABLED=false  # ← ADICIONAR   
     volumes:
       - evolution_instances:/evolution/instances
       - evolution_store:/evolution/store
