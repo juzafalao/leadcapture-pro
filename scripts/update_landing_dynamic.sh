@@ -1,3 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# ============================================================
+# LeadCapturePro | Update Landing Page (backup + dynamic tenant)
+# - Faz backup do index antigo
+# - Substitui por uma versão dinâmica via ?tenant=slug
+# - Mantém o mesmo WEBHOOK_URL do n8n (ajuste se quiser)
+# ============================================================
+
+PROJECT_DIR="${HOME}/Projetos/leadcapture-pro"
+LANDING_DIR="${PROJECT_DIR}/landing-page"
+INDEX_FILE="${LANDING_DIR}/index.html"
+
+# Se seu arquivo estiver em outro lugar, ajuste aqui:
+# INDEX_FILE="${PROJECT_DIR}/landing-page/index.html"
+
+TIMESTAMP="$(date +"%Y%m%d_%H%M%S")"
+BACKUP_FILE="${INDEX_FILE}.bak_${TIMESTAMP}"
+
+echo "== LeadCapturePro | Landing Page Dynamic Update =="
+echo "Project: ${PROJECT_DIR}"
+echo "Index:   ${INDEX_FILE}"
+
+# 1) Validar caminho
+if [[ ! -f "${INDEX_FILE}" ]]; then
+  echo "❌ Não encontrei o index em: ${INDEX_FILE}"
+  echo "➡️ Ajuste a variável INDEX_FILE dentro deste script."
+  exit 1
+fi
+
+# 2) Backup
+cp -v "${INDEX_FILE}" "${BACKUP_FILE}"
+echo "✅ Backup criado: ${BACKUP_FILE}"
+
+# 3) Escrever novo index dinâmico
+cat > "${INDEX_FILE}" <<'HTML'
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -237,9 +274,8 @@
     // - SUPABASE_ANON_KEY: sua anon key (public)
     //
     // Se ficar em branco, ele usa o fallback DEFAULT_TENANT.
-    
-    const SUPABASE_URL = 'https://krcybmownrpfjvqhacup.supabase.co';      // ex: 'https://krcybmownrpfjvqhacup.supabase.co'
-    const SUPABASE_ANON_KEY = 'sb_publishable_Og18wrLgJWFj13FI37SeNg_h9WqYzvq';   // ex: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....'
+    const SUPABASE_URL = '';        // ex: 'https://krcybmownrpfjvqhacup.supabase.co'
+    const SUPABASE_ANON_KEY = '';   // ex: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....'
 
     // Tenant default (caso não venha ?tenant= e/ou não consiga buscar no Supabase)
     const DEFAULT_TENANT = {
@@ -386,3 +422,19 @@
   </script>
 </body>
 </html>
+HTML
+
+echo "✅ Novo index dinâmico gravado."
+
+# 4) Mensagem final
+echo
+echo "== COMO USAR =="
+echo "1) Abra a landing:"
+echo "   - Sem tenant: file://${INDEX_FILE}"
+echo "   - Com tenant: file://${INDEX_FILE}?tenant=lavanderia-express"
+echo
+echo "2) Para buscar dados reais do tenant no Supabase:"
+echo "   - Edite o index e preencha SUPABASE_URL e SUPABASE_ANON_KEY."
+echo
+echo "✅ Pronto."
+
