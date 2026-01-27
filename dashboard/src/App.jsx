@@ -377,10 +377,23 @@ function MetricCard({ title, value, icon, color, subtitle, onClick }) {
     purple: 'border-purple-500/30 shadow-purple-500/10 hover:border-purple-500/50',
   }
   
+  const className = `bg-gray-800/50 backdrop-blur-sm rounded-xl p-5 border ${colors[color] || ''} shadow-lg hover:bg-gray-800/70 transition-all duration-300 hover:scale-[1.02] ${onClick ? 'cursor-pointer' : ''}`
+
+  const handleKeyDown = (e) => {
+    if (!onClick) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onClick()
+    }
+  }
+
   return (
-    <div 
-      className={`bg-gray-800/50 backdrop-blur-sm rounded-xl p-5 border ${colors[color]} shadow-lg hover:bg-gray-800/70 transition-all duration-300 hover:scale-[1.02] ${onClick ? 'cursor-pointer' : ''}`}
+    <div
+      className={className}
       onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={handleKeyDown}
     >
       <div className="flex items-center justify-between">
         <div>
