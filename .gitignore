@@ -38,3 +38,5 @@ venv/
 # Misc
 *.tmp
 *.temp
+server/.env
+.env.server
