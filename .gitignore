@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+
+# Environment - NUNCA COMMITAR!
+.env
+.env.local
+.env.*.local
+docker/.env
+
+# IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# n8n data
+n8n_data/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Misc
+*.tmp
+*.temp
+server/.env
+.env.server
+
+#new
+node_modules/
+.env
+dist/
+.DS_Storeserver/env
+server/env
