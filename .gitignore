@@ -40,3 +40,9 @@ venv/
 *.temp
 server/.env
 .env.server
+
+#new
+node_modules/
+.env
+dist/
+.DS_Storeserver/env
