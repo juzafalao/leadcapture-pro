@@ -1,445 +1,564 @@
-import { useState } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useLeads, useMetrics, useUpdateLead } from './hooks/useLeads'
-import { useMarcas, useCreateMarca, useUpdateMarca } from './hooks/useMarcas'
+import { useState, useEffect, createContext, useContext } from 'react'
+import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from './lib/supabase'
 
 const queryClient = new QueryClient()
 
-const FONTES = { all: 'Todas', website: 'Website', instagram: 'Instagram', whatsapp: 'WhatsApp', indicacao: 'Indicação', evento: 'Evento' }
+// =====================================================
+// CONFIGURAÇÕES DE LOGOS (ALTERE AQUI!)
+// =====================================================
+// Todas as imagens devem estar na pasta: public/
+// Formatos aceitos: .png, .jpg, .svg
+// Tamanho recomendado: 200x200 pixels (quadrado)
+
+const LOGO_SISTEMA = '/logo-sistema.png'      // Logo do LeadCapture Pro (sidebar, header, login)
+const LOGO_CLIENTE = '/logo-cliente.png'      // Logo do cliente/tenant (rodapé da sidebar)
+
+// =====================================================
+// CONFIGURAÇÕES GERAIS
+// =====================================================
+const FONTES = { all: 'Todas', website: 'Website', instagram: 'Instagram', whatsapp: 'WhatsApp', indicacao: 'Indicação', evento: 'Evento', google_ads: 'Google Ads' }
 const CATEGORIAS = { all: 'Todas', hot: '🔥 Hot', warm: '🌤 Warm', cold: '❄️ Cold' }
 const STATUS_OPTIONS = { all: 'Todos', novo: '🆕 Novo', contato: '📞 Em Contato', agendado: '📅 Agendado', negociacao: '💼 Negociação', convertido: '✅ Convertido', perdido: '❌ Perdido' }
+const ROLES = { admin: { label: 'Administrador', emoji: '👑', color: '#ee7b4d' }, gerente: { label: 'Gerente', emoji: '📊', color: '#a78bfa' }, operador: { label: 'Operador', emoji: '👤', color: '#60a5fa' } }
 
-// Sidebar
+// =====================================================
+// COMPONENTE DE LOGO (reutilizável)
+// =====================================================
+function Logo({ src, fallback = 'LC', size = 48, className = '' }) {
+  const [hasError, setHasError] = useState(false)
+  
+  if (hasError || !src) {
+    return (
+      <div 
+        className={`rounded-xl bg-gradient-to-br from-[#ee7b4d] to-[#d4663a] flex items-center justify-center font-black text-[#0a0a0b] ${className}`}
+        style={{ width: size, height: size, fontSize: size * 0.3 }}
+      >
+        {fallback}
+      </div>
+    )
+  }
+  
+  return (
+    <div 
+      className={`rounded-xl overflow-hidden bg-gradient-to-br from-[#ee7b4d] to-[#d4663a] flex items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+    >
+      <img 
+        src={src} 
+        alt="Logo" 
+        className="w-full h-full object-contain"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  )
+}
+
+// =====================================================
+// CONTEXTO DE AUTENTICAÇÃO
+// =====================================================
+const AuthContext = createContext({})
+
+function AuthProvider({ children }) {
+  const [session, setSession] = useState(null)
+  const [usuario, setUsuario] = useState(null)
+  const [tenant, setTenant] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setLoading(false)
+      }
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      if (session?.user) {
+        loadUserData(session.user.id)
+      } else {
+        setUsuario(null)
+        setTenant(null)
+        setLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const loadUserData = async (authId) => {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('auth_id', authId)
+        .eq('ativo', true)
+        .single()
+
+      if (userError || !userData) {
+        console.error('Erro ao buscar usuário:', userError)
+        setLoading(false)
+        return
+      }
+
+      setUsuario(userData)
+
+      if (userData?.tenant_id) {
+        const { data: tenantData } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', userData.tenant_id)
+          .single()
+
+        if (tenantData) setTenant(tenantData)
+      }
+
+      setLoading(false)
+    } catch (err) {
+      console.error('Erro geral:', err)
+      setLoading(false)
+    }
+  }
+
+  const login = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) return { success: false, error: error.message }
+    return { success: true, data }
+  }
+
+  const logout = async () => {
+    await supabase.auth.signOut()
+    setSession(null)
+    setUsuario(null)
+    setTenant(null)
+  }
+
+  const isAdmin = () => usuario?.role === 'admin'
+  const isGerente = () => ['admin', 'gerente'].includes(usuario?.role)
+  const hasPermission = (modulo, acao) => {
+    if (isAdmin()) return true
+    const perms = {
+      gerente: { leads: ['visualizar', 'editar'], marcas: ['visualizar', 'editar'], usuarios: ['visualizar'], relatorios: ['visualizar', 'exportar'] },
+      operador: { leads: ['visualizar', 'editar'], marcas: ['visualizar'], relatorios: ['visualizar'] }
+    }
+    return perms[usuario?.role]?.[modulo]?.includes(acao) || false
+  }
+
+  return (
+    <AuthContext.Provider value={{ session, usuario, tenant, loading, login, logout, isAdmin, isGerente, hasPermission, isAuthenticated: !!session && !!usuario }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+function useAuth() {
+  return useContext(AuthContext)
+}
+
+// =====================================================
+// HOOKS DE DADOS
+// =====================================================
+function useLeads() {
+  const { usuario } = useAuth()
+  return useQuery({
+    queryKey: ['leads', usuario?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*, marca:marcas(id, nome, emoji, cor)')
+        .eq('tenant_id', usuario.tenant_id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!usuario?.tenant_id
+  })
+}
+
+function useMetrics() {
+  const { usuario } = useAuth()
+  return useQuery({
+    queryKey: ['metrics', usuario?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('score, categoria, status')
+        .eq('tenant_id', usuario.tenant_id)
+      if (error) throw error
+      const rows = data ?? []
+      const total = rows.length
+      return {
+        total,
+        hot: rows.filter(l => l.categoria === 'hot').length,
+        warm: rows.filter(l => l.categoria === 'warm').length,
+        cold: rows.filter(l => l.categoria === 'cold' || !l.categoria).length,
+        convertidos: rows.filter(l => l.status === 'convertido').length,
+        taxaConversao: total > 0 ? ((rows.filter(l => l.status === 'convertido').length / total) * 100).toFixed(1) : 0
+      }
+    },
+    enabled: !!usuario?.tenant_id
+  })
+}
+
+function useUpdateLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...dados }) => {
+      const { data, error } = await supabase
+        .from('leads')
+        .update({ ...dados, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('*, marca:marcas(id, nome, emoji, cor)')
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['leads'] })
+      qc.invalidateQueries({ queryKey: ['metrics'] })
+    }
+  })
+}
+
+function useMarcas() {
+  const { usuario } = useAuth()
+  return useQuery({
+    queryKey: ['marcas', usuario?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('marcas')
+        .select('*')
+        .eq('tenant_id', usuario.tenant_id)
+        .eq('ativo', true)
+        .order('ordem')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!usuario?.tenant_id
+  })
+}
+
+function useCreateMarca() {
+  const qc = useQueryClient()
+  const { usuario } = useAuth()
+  return useMutation({
+    mutationFn: async (novaMarca) => {
+      const { data: last } = await supabase
+        .from('marcas')
+        .select('ordem')
+        .eq('tenant_id', usuario.tenant_id)
+        .order('ordem', { ascending: false })
+        .limit(1)
+        .single()
+      const { data, error } = await supabase
+        .from('marcas')
+        .insert({ tenant_id: usuario.tenant_id, ...novaMarca, ordem: (last?.ordem || 0) + 1 })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['marcas'] })
+  })
+}
+
+function useUpdateMarca() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...dados }) => {
+      const { data, error } = await supabase
+        .from('marcas')
+        .update({ ...dados, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['marcas'] })
+  })
+}
+
+function useUsuarios() {
+  const { usuario } = useAuth()
+  return useQuery({
+    queryKey: ['usuarios', usuario?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('tenant_id', usuario.tenant_id)
+        .order('nome')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!usuario?.tenant_id
+  })
+}
+
+function useCreateUsuario() {
+  const qc = useQueryClient()
+  const { usuario } = useAuth()
+  return useMutation({
+    mutationFn: async (novo) => {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .insert({ tenant_id: usuario.tenant_id, ...novo, ativo: true })
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] })
+  })
+}
+
+function useUpdateUsuario() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...dados }) => {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .update(dados)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['usuarios'] })
+  })
+}
+
+function useInteracoes(leadId) {
+  return useQuery({
+    queryKey: ['interacoes', leadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('interacoes')
+        .select('*, usuario:usuarios(id, nome)')
+        .eq('lead_id', leadId)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!leadId
+  })
+}
+
+function useCreateInteracao() {
+  const qc = useQueryClient()
+  const { usuario } = useAuth()
+  return useMutation({
+    mutationFn: async ({ leadId, tipo, descricao }) => {
+      const { data, error } = await supabase
+        .from('interacoes')
+        .insert({ tenant_id: usuario.tenant_id, lead_id: leadId, usuario_id: usuario.id, tipo, descricao })
+        .select('*, usuario:usuarios(id, nome)')
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['interacoes', vars.leadId] })
+  })
+}
+
+// =====================================================
+// PÁGINA DE LOGIN
+// =====================================================
+function LoginPage() {
+  const { login } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [isLogging, setIsLogging] = useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setIsLogging(true)
+    if (!email || !password) { setError('Preencha todos os campos'); setIsLogging(false); return }
+    const result = await login(email, password)
+    if (!result.success) setError(result.error === 'Invalid login credentials' ? 'Email ou senha incorretos' : result.error)
+    setIsLogging(false)
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center p-5">
+      <div className="w-full max-w-md">
+        {/* LOGO DO SISTEMA - Tela de Login */}
+        <div className="text-center mb-10">
+          <div className="flex justify-center mb-6">
+            <Logo src={LOGO_SISTEMA} fallback="LC" size={80} />
+          </div>
+          <h1 className="text-3xl font-light text-[#f5f5f4]">Lead<span className="text-[#ee7b4d] font-bold">Capture</span> Pro</h1>
+          <p className="text-[#6a6a6f] text-sm mt-2">Acesse sua conta</p>
+        </div>
+        <div className="bg-[#12121a] border border-[#1f1f23] rounded-3xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50" />
+            </div>
+            <div>
+              <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Senha</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50" />
+            </div>
+            {error && <div className="bg-[#2a1515] border border-[#ef4444]/30 text-[#ef4444] px-4 py-3 rounded-xl text-sm">{error}</div>}
+            <button type="submit" disabled={isLogging} className="w-full bg-gradient-to-r from-[#ee7b4d] to-[#d4663a] text-[#0a0a0b] font-bold py-4 rounded-xl hover:opacity-90 disabled:opacity-50">{isLogging ? 'Entrando...' : 'Entrar'}</button>
+          </form>
+        </div>
+        <p className="text-center text-[10px] text-[#4a4a4f] mt-8 uppercase tracking-[0.3em]">© 2026 LeadCapture Pro</p>
+      </div>
+    </div>
+  )
+}
+
+// =====================================================
+// SIDEBAR
+// =====================================================
 function Sidebar({ currentPage, setCurrentPage }) {
+  const { isAdmin } = useAuth()
   const navItems = [
     { id: 'dashboard', icon: '◉', label: 'Dashboard' },
     { id: 'relatorios', icon: '◈', label: 'Relatórios' },
     { id: 'marcas', icon: '🏷', label: 'Marcas' },
+    ...(isAdmin() ? [{ id: 'usuarios', icon: '👥', label: 'Usuários' }] : []),
     { id: 'config', icon: '⚙', label: 'Configurações' }
   ]
-
   return (
     <aside className="fixed left-0 top-0 h-full w-20 bg-[#0a0a0b]/95 border-r border-[#1f1f23] flex flex-col items-center py-8 z-50">
-      {/* Logo usando imagem existente */}
-      <div className="w-12 h-12 rounded-xl overflow-hidden mb-12 bg-gradient-to-br from-[#ee7b4d] to-[#d4663a] flex items-center justify-center">
-        <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; e.target.parentElement.innerHTML = '<span style="color:#0a0a0b;font-weight:900;font-size:14px">LC</span>' }} />
+      {/* LOGO DO SISTEMA - Sidebar topo */}
+      <div className="mb-12">
+        <Logo src={LOGO_SISTEMA} fallback="LC" size={48} />
       </div>
       
       <nav className="flex-1 flex flex-col gap-2">
         {navItems.map((item) => (
-          <button key={item.id} onClick={() => setCurrentPage(item.id)}
-            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all group relative ${currentPage === item.id ? 'bg-[#1f1f23] text-[#ee7b4d]' : 'text-[#4a4a4f] hover:text-[#f5f5f4] hover:bg-[#1f1f23]/50'}`}>
+          <button key={item.id} onClick={() => setCurrentPage(item.id)} className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all group relative ${currentPage === item.id ? 'bg-[#1f1f23] text-[#ee7b4d]' : 'text-[#4a4a4f] hover:text-[#f5f5f4] hover:bg-[#1f1f23]/50'}`}>
             <span className="text-lg">{item.icon}</span>
             <span className="absolute left-16 bg-[#1f1f23] text-[#f5f5f4] px-3 py-1.5 rounded-lg text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">{item.label}</span>
           </button>
         ))}
       </nav>
-
-      <div className="w-12 h-12 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center overflow-hidden">
-        <span className="text-[#4a4a4f] text-[8px] text-center leading-tight font-medium">LOGO<br/>CLIENTE</span>
+      
+      {/* LOGO DO CLIENTE - Sidebar rodapé */}
+      <div className="mt-auto">
+        <Logo src={LOGO_CLIENTE} fallback="👤" size={48} className="border border-[#2a2a2f]" />
       </div>
     </aside>
   )
 }
 
-// Página de Relatórios
-function RelatoriosPage({ leads, marcas }) {
-  const [exportFilters, setExportFilters] = useState({ marca: true, categoria: true, status: true, fonte: true })
-  
-  const totalLeads = leads?.length || 0
-  const leadsHot = leads?.filter(l => l.categoria === 'hot').length || 0
-  const leadsWarm = leads?.filter(l => l.categoria === 'warm').length || 0
-  const leadsCold = leads?.filter(l => l.categoria === 'cold').length || 0
-  const convertidos = leads?.filter(l => l.status === 'convertido').length || 0
-  const taxaConversao = totalLeads > 0 ? ((convertidos / totalLeads) * 100).toFixed(1) : 0
-
-  const leadsPorMarca = leads?.reduce((acc, lead) => {
-    const marcaNome = lead.marca?.nome || 'Sem marca'
-    acc[marcaNome] = acc[marcaNome] || { count: 0, marca: lead.marca }
-    acc[marcaNome].count++
-    return acc
-  }, {}) || {}
-
-  const leadsPorStatus = leads?.reduce((acc, lead) => {
-    const status = lead.status || 'novo'
-    acc[status] = (acc[status] || 0) + 1
-    return acc
-  }, {}) || {}
-
-  const leadsPorStatusMarca = leads?.reduce((acc, lead) => {
-    const marca = lead.marca?.nome || 'Sem marca'
-    const status = lead.status || 'novo'
-    if (!acc[marca]) acc[marca] = { marca: lead.marca, statuses: {} }
-    acc[marca].statuses[status] = (acc[marca].statuses[status] || 0) + 1
-    return acc
-  }, {}) || {}
-
-  const exportarCSV = () => {
-    const headers = ['Nome', 'Email', 'Telefone']
-    if (exportFilters.fonte) headers.push('Fonte')
-    if (exportFilters.marca) headers.push('Marca')
-    headers.push('Score')
-    if (exportFilters.categoria) headers.push('Categoria')
-    if (exportFilters.status) headers.push('Status')
-    headers.push('Capital Disponível', 'Data')
-
-    const rows = leads?.map(l => {
-      const row = [l.nome || '', l.email || '', l.telefone || '']
-      if (exportFilters.fonte) row.push(l.fonte || '')
-      if (exportFilters.marca) row.push(l.marca?.nome || '')
-      row.push(l.score || 0)
-      if (exportFilters.categoria) row.push(l.categoria || '')
-      if (exportFilters.status) row.push(l.status || '')
-      row.push(l.capital_disponivel || '', new Date(l.created_at).toLocaleDateString('pt-BR'))
-      return row
-    }) || []
-    
-    const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n')
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`
-    link.click()
-  }
-
-  const statusColors = { novo: '#60a5fa', contato: '#a78bfa', agendado: '#f472b6', negociacao: '#fbbf24', convertido: '#4ade80', perdido: '#ef4444' }
-
+// =====================================================
+// HEADER
+// =====================================================
+function Header() {
+  const { usuario, tenant, logout } = useAuth()
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <p className="text-[10px] text-[#4a4a4f] font-medium tracking-[0.2em] uppercase mb-1">Análise</p>
-          <h1 className="text-2xl font-light tracking-tight">Rela<span className="text-[#ee7b4d] font-semibold">tórios</span></h1>
-        </div>
-      </div>
-
-      {/* Cards de Métricas */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        {[
-          { label: 'Total Leads', value: totalLeads, color: '#f5f5f4', bg: 'from-[#1f1f23] to-[#17171a]' },
-          { label: 'Leads Hot', value: leadsHot, color: '#ee7b4d', bg: 'from-[#2a1f1a] to-[#1a1512]' },
-          { label: 'Leads Warm', value: leadsWarm, color: '#60a5fa', bg: 'from-[#1a1f2a] to-[#12151a]' },
-          { label: 'Leads Cold', value: leadsCold, color: '#6a6a6f', bg: 'from-[#1f1f23] to-[#17171a]' },
-          { label: 'Taxa Conversão', value: `${taxaConversao}%`, color: '#4ade80', bg: 'from-[#1a2a1f] to-[#121a15]' }
-        ].map((card, i) => (
-          <div key={i} className={`bg-gradient-to-br ${card.bg} p-5 rounded-2xl border border-[#2a2a2f]`}>
-            <p className="text-xs text-[#6a6a6f] font-medium uppercase tracking-wide mb-2">{card.label}</p>
-            <p className="text-3xl font-light" style={{ color: card.color }}>{card.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Exportação */}
-      <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6 mb-8">
-        <h3 className="text-sm font-semibold text-[#f5f5f4] mb-4 uppercase tracking-wider">📥 Exportar Relatório</h3>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <span className="text-xs text-[#6a6a6f]">Incluir colunas:</span>
-            {[{ key: 'marca', label: 'Marca' }, { key: 'categoria', label: 'Categoria' }, { key: 'status', label: 'Status' }, { key: 'fonte', label: 'Fonte' }].map((filter) => (
-              <label key={filter.key} className="flex items-center gap-2 cursor-pointer group">
-                <input type="checkbox" checked={exportFilters[filter.key]} onChange={() => setExportFilters(prev => ({ ...prev, [filter.key]: !prev[filter.key] }))} className="w-4 h-4 rounded bg-[#1f1f23] border-[#2a2a2f] accent-[#ee7b4d]" />
-                <span className="text-sm text-[#8a8a8f] group-hover:text-[#f5f5f4]">{filter.label}</span>
-              </label>
-            ))}
-          </div>
-          <button onClick={exportarCSV} className="flex items-center gap-2 px-5 py-2 bg-[#ee7b4d] text-[#0a0a0b] rounded-xl font-semibold text-sm hover:bg-[#d4663a] shadow-lg shadow-[#ee7b4d]/20">
-            <span>📥</span><span>Exportar CSV</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Gráficos */}
-      <div className="grid grid-cols-2 gap-6 mb-8">
-        <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6">
-          <h3 className="text-sm font-semibold text-[#f5f5f4] mb-6 uppercase tracking-wider">📊 Leads por Marca</h3>
-          <div className="space-y-4">
-            {Object.entries(leadsPorMarca).map(([marcaNome, { count, marca }]) => {
-              const percent = totalLeads > 0 ? (count / totalLeads) * 100 : 0
-              return (
-                <div key={marcaNome}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#8a8a8f] flex items-center gap-2"><span>{marca?.emoji || '🏢'}</span><span>{marcaNome}</span></span>
-                    <span className="text-[#f5f5f4] font-medium">{count} ({percent.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-3 bg-[#1f1f23] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${percent}%`, backgroundColor: marca?.cor || '#6a6a6f' }} />
-                  </div>
-                </div>
-              )
-            })}
-            {Object.keys(leadsPorMarca).length === 0 && <p className="text-center text-[#4a4a4f] text-sm py-8">Nenhum dado disponível</p>}
+    <header className="sticky top-0 z-40 bg-[#0a0a0b]/80 backdrop-blur-xl border-b border-[#1f1f23]/50">
+      <div className="px-8 py-5 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          {/* LOGO DO SISTEMA - Header */}
+          <Logo src={LOGO_SISTEMA} fallback="LC" size={40} />
+          <div>
+            <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-1">{tenant?.nome || 'LeadCapture Pro'}</p>
+            <h1 className="text-xl font-light text-[#f5f5f4]">Lead<span className="text-[#ee7b4d] font-semibold">Capture</span> Pro</h1>
           </div>
         </div>
-
-        <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6">
-          <h3 className="text-sm font-semibold text-[#f5f5f4] mb-6 uppercase tracking-wider">📈 Leads por Status</h3>
-          <div className="space-y-4">
-            {Object.entries(leadsPorStatus).map(([status, count]) => {
-              const percent = totalLeads > 0 ? (count / totalLeads) * 100 : 0
-              return (
-                <div key={status}>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-[#8a8a8f]">{STATUS_OPTIONS[status] || status}</span>
-                    <span className="text-[#f5f5f4] font-medium">{count} ({percent.toFixed(0)}%)</span>
-                  </div>
-                  <div className="h-3 bg-[#1f1f23] rounded-full overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${percent}%`, backgroundColor: statusColors[status] || '#6a6a6f' }} />
-                  </div>
-                </div>
-              )
-            })}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-4 py-2 bg-[#1a2e1a] border border-[#2d4a2d]/50 rounded-full">
+            <span className="w-2 h-2 bg-[#4ade80] rounded-full animate-pulse"></span>
+            <span className="text-[11px] font-medium text-[#4ade80]">Online</span>
           </div>
-        </div>
-      </div>
-
-      {/* Tabela Status x Marca */}
-      <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6 mb-8">
-        <h3 className="text-sm font-semibold text-[#f5f5f4] mb-6 uppercase tracking-wider">📊 Status por Marca</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[#1f1f23]">
-                <th className="text-left text-[10px] text-[#4a4a4f] uppercase py-3 px-2">Marca</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">🆕 Novo</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">📞 Contato</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">📅 Agendado</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">💼 Negociação</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">✅ Convertido</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">❌ Perdido</th>
-                <th className="text-center text-[10px] text-[#4a4a4f] uppercase py-3 px-2">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(leadsPorStatusMarca).map(([marcaNome, { marca, statuses }]) => {
-                const total = Object.values(statuses).reduce((a, b) => a + b, 0)
-                return (
-                  <tr key={marcaNome} className="border-b border-[#1f1f23]/50 hover:bg-[#1f1f23]/30">
-                    <td className="py-3 px-2"><span className="flex items-center gap-2 text-sm"><span>{marca?.emoji || '🏢'}</span><span className="text-[#f5f5f4]">{marcaNome}</span></span></td>
-                    <td className="text-center py-3 px-2 text-sm text-[#60a5fa]">{statuses.novo || 0}</td>
-                    <td className="text-center py-3 px-2 text-sm text-[#a78bfa]">{statuses.contato || 0}</td>
-                    <td className="text-center py-3 px-2 text-sm text-[#f472b6]">{statuses.agendado || 0}</td>
-                    <td className="text-center py-3 px-2 text-sm text-[#fbbf24]">{statuses.negociacao || 0}</td>
-                    <td className="text-center py-3 px-2 text-sm text-[#4ade80]">{statuses.convertido || 0}</td>
-                    <td className="text-center py-3 px-2 text-sm text-[#ef4444]">{statuses.perdido || 0}</td>
-                    <td className="text-center py-3 px-2 text-sm font-semibold text-[#f5f5f4]">{total}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Pizza */}
-      <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6">
-        <h3 className="text-sm font-semibold text-[#f5f5f4] mb-6 uppercase tracking-wider">🎯 Distribuição por Categoria</h3>
-        <div className="flex items-center justify-center gap-16">
-          <div className="relative w-48 h-48">
-            <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ee7b4d" strokeWidth="20" strokeDasharray={`${(leadsHot/totalLeads)*251.2 || 0} 251.2`} />
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#60a5fa" strokeWidth="20" strokeDasharray={`${(leadsWarm/totalLeads)*251.2 || 0} 251.2`} strokeDashoffset={`${-(leadsHot/totalLeads)*251.2 || 0}`} />
-              <circle cx="50" cy="50" r="40" fill="transparent" stroke="#4a4a4f" strokeWidth="20" strokeDasharray={`${(leadsCold/totalLeads)*251.2 || 0} 251.2`} strokeDashoffset={`${-((leadsHot+leadsWarm)/totalLeads)*251.2 || 0}`} />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="text-center"><p className="text-3xl font-light text-[#f5f5f4]">{totalLeads}</p><p className="text-[10px] text-[#4a4a4f] uppercase">Total</p></div>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm font-medium text-[#f5f5f4]">{usuario?.nome}</p>
+              <p className="text-[10px] text-[#4a4a4f] uppercase">{ROLES[usuario?.role]?.label}</p>
             </div>
-          </div>
-          <div className="space-y-4">
-            {[{ label: 'Hot (70+)', value: leadsHot, color: '#ee7b4d', emoji: '🔥' }, { label: 'Warm (40-69)', value: leadsWarm, color: '#60a5fa', emoji: '🌤' }, { label: 'Cold (0-39)', value: leadsCold, color: '#4a4a4f', emoji: '❄️' }].map((item, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
-                <span className="text-sm text-[#8a8a8f]">{item.emoji} {item.label}</span>
-                <span className="text-sm font-semibold text-[#f5f5f4]">{item.value}</span>
-              </div>
-            ))}
+            <button onClick={logout} className="w-10 h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-[#ef4444] hover:border-[#ef4444]/30" title="Sair">⏻</button>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   )
 }
 
-// Página de Marcas - CRUD com Supabase
-function MarcasPage() {
-  const { data: marcas, isLoading, error } = useMarcas()
-  const createMarca = useCreateMarca()
-  const updateMarca = useUpdateMarca()
-  
-  const [showModal, setShowModal] = useState(false)
-  const [editingMarca, setEditingMarca] = useState(null)
-  const [form, setForm] = useState({ nome: '', emoji: '🏢', cor: '#60a5fa', investimento_minimo: '', investimento_maximo: '', descricao: '' })
-  const [saving, setSaving] = useState(false)
-  const [errorMsg, setErrorMsg] = useState('')
-
-  const emojiOptions = ['🏢', '🧺', '🍦', '☕', '📚', '🏪', '🍕', '💼', '🏠', '🚗', '💇', '🏋️', '🎓', '🏥', '🛒', '🐕', '💊']
-  const corOptions = ['#60a5fa', '#f472b6', '#a78bfa', '#34d399', '#fbbf24', '#ef4444', '#06b6d4', '#84cc16']
-
-  const handleSubmit = async () => {
-    if (!form.nome.trim()) {
-      setErrorMsg('Nome da marca é obrigatório')
-      return
-    }
-    setSaving(true)
-    setErrorMsg('')
-    
-    try {
-      const dados = {
-        nome: form.nome.trim(),
-        emoji: form.emoji || '🏢',
-        cor: form.cor || '#60a5fa',
-        investimento_minimo: parseFloat(form.investimento_minimo) || 0,
-        investimento_maximo: parseFloat(form.investimento_maximo) || 0,
-        descricao: form.descricao || null
-      }
-
-      if (editingMarca) {
-        await updateMarca.mutateAsync({ id: editingMarca.id, ...dados })
-      } else {
-        await createMarca.mutateAsync(dados)
-      }
-      
-      setShowModal(false)
-      setEditingMarca(null)
-      setForm({ nome: '', emoji: '🏢', cor: '#60a5fa', investimento_minimo: '', investimento_maximo: '', descricao: '' })
-    } catch (err) {
-      setErrorMsg(err.message || 'Erro ao salvar marca')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleEdit = (marca) => {
-    setEditingMarca(marca)
-    setForm({
-      nome: marca.nome,
-      emoji: marca.emoji,
-      cor: marca.cor,
-      investimento_minimo: marca.investimento_minimo?.toString() || '',
-      investimento_maximo: marca.investimento_maximo?.toString() || '',
-      descricao: marca.descricao || ''
-    })
-    setErrorMsg('')
-    setShowModal(true)
-  }
-
-  const openNewModal = () => {
-    setEditingMarca(null)
-    setForm({ nome: '', emoji: '🏢', cor: '#60a5fa', investimento_minimo: '', investimento_maximo: '', descricao: '' })
-    setErrorMsg('')
-    setShowModal(true)
-  }
-
-  if (isLoading) return <div className="p-8 text-center text-[#4a4a4f]">Carregando marcas...</div>
-  if (error) return <div className="p-8 text-center text-[#ef4444]">Erro ao carregar marcas: {error.message}</div>
-
-  return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <p className="text-[10px] text-[#4a4a4f] font-medium tracking-[0.2em] uppercase mb-1">Cadastro</p>
-          <h1 className="text-2xl font-light tracking-tight">Mar<span className="text-[#ee7b4d] font-semibold">cas</span></h1>
-        </div>
-        <button onClick={openNewModal} className="flex items-center gap-2 px-5 py-2 bg-[#ee7b4d] text-[#0a0a0b] rounded-xl font-semibold text-sm hover:bg-[#d4663a] shadow-lg shadow-[#ee7b4d]/20 hover:scale-105 active:scale-95 transition-all">
-          <span>+</span><span>Nova Marca</span>
-        </button>
-      </div>
-
-      <div className="bg-[#1a2e1a] border border-[#2d4a2d]/50 rounded-2xl p-4 mb-6 flex items-center gap-3">
-        <span className="text-xl">💡</span>
-        <p className="text-sm text-[#4ade80]">Marcas cadastradas não podem ser excluídas pois estão vinculadas a leads. Você pode editar as informações a qualquer momento.</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        {marcas?.map((marca) => (
-          <div key={marca.id} className="bg-[#12121a] rounded-2xl border border-[#1f1f23] p-6 hover:border-[#2a2a2f] transition-all group hover:scale-[1.02] hover:-translate-y-1">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${marca.cor}20` }}>{marca.emoji}</div>
-                <div>
-                  <h3 className="text-lg font-semibold text-[#f5f5f4]">{marca.nome}</h3>
-                  <p className="text-xs text-[#4a4a4f]">{marca.investimento_minimo > 0 && <>R$ {marca.investimento_minimo?.toLocaleString()} - R$ {marca.investimento_maximo?.toLocaleString()}</>}</p>
-                </div>
-              </div>
-              <button onClick={() => handleEdit(marca)} className="w-8 h-8 rounded-lg bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-[#ee7b4d] hover:border-[#ee7b4d]/30 transition-all opacity-0 group-hover:opacity-100">✎</button>
-            </div>
-            {marca.descricao && <p className="text-sm text-[#6a6a6f] line-clamp-2">{marca.descricao}</p>}
-            <div className="mt-4 flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: marca.cor }} />
-              <span className="text-[10px] text-[#4a4a4f] uppercase tracking-wider">{marca.cor}</span>
-            </div>
-          </div>
-        ))}
-        {(!marcas || marcas.length === 0) && (
-          <div className="col-span-2 text-center py-16 text-[#4a4a4f]">
-            <p className="text-4xl mb-4 opacity-30">🏷</p>
-            <p className="text-sm">Nenhuma marca cadastrada</p>
-            <button onClick={openNewModal} className="mt-4 text-[#ee7b4d] text-sm hover:underline">Criar primeira marca</button>
-          </div>
-        )}
-      </div>
-
-      {showModal && (
-        <div className="fixed inset-0 bg-[#0a0a0b]/90 backdrop-blur-sm flex items-center justify-center z-[100]" onClick={() => setShowModal(false)}>
-          <div className="bg-[#12121a] border border-[#1f1f23] rounded-3xl p-8 w-full max-w-lg animate-modalIn" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl font-semibold text-[#f5f5f4] mb-6">{editingMarca ? 'Editar Marca' : 'Nova Marca'}</h2>
-            
-            {errorMsg && <div className="bg-[#2a1515] border border-[#ef4444]/30 text-[#ef4444] px-4 py-2 rounded-xl mb-4 text-sm">{errorMsg}</div>}
-            
-            <div className="space-y-5">
-              <div>
-                <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Nome da Marca *</label>
-                <input type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Lavanderia Express" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50" />
-                <p className="text-[10px] text-[#4a4a4f] mt-1">Padrão: "Tipo + Nome" (Ex: Lavanderia Opt, Escola de Idiomas Best)</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Emoji</label>
-                  <div className="flex flex-wrap gap-2">
-                    {emojiOptions.map((emoji) => (
-                      <button key={emoji} type="button" onClick={() => setForm({ ...form, emoji })} className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg transition-all ${form.emoji === emoji ? 'bg-[#ee7b4d]/20 border-2 border-[#ee7b4d]' : 'bg-[#1f1f23] border border-[#2a2a2f]'}`}>{emoji}</button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Cor</label>
-                  <div className="flex flex-wrap gap-2">
-                    {corOptions.map((cor) => (
-                      <button key={cor} type="button" onClick={() => setForm({ ...form, cor })} className={`w-9 h-9 rounded-lg transition-all ${form.cor === cor ? 'ring-2 ring-offset-2 ring-offset-[#12121a] ring-white' : ''}`} style={{ backgroundColor: cor }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Investimento Mínimo</label>
-                  <input type="number" value={form.investimento_minimo} onChange={(e) => setForm({ ...form, investimento_minimo: e.target.value })} placeholder="100000" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50" />
-                </div>
-                <div>
-                  <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Investimento Máximo</label>
-                  <input type="number" value={form.investimento_maximo} onChange={(e) => setForm({ ...form, investimento_maximo: e.target.value })} placeholder="200000" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50" />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Descrição</label>
-                <textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Breve descrição da marca..." rows={3} className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50 resize-none" />
-              </div>
-            </div>
-            <div className="flex gap-3 mt-8">
-              <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold text-sm hover:bg-[#1f1f23]">Cancelar</button>
-              <button type="button" onClick={handleSubmit} disabled={saving} className="flex-1 py-3 rounded-xl bg-[#ee7b4d] text-[#0a0a0b] font-semibold text-sm hover:bg-[#d4663a] disabled:opacity-50">
-                {saving ? 'Salvando...' : editingMarca ? 'Salvar' : 'Criar Marca'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Dashboard Page
-function DashboardPage({ leads, metrics, marcas }) {
+// =====================================================
+// MODAL DE DETALHES DO LEAD
+// =====================================================
+function LeadDetailModal({ lead, onClose, canEdit }) {
   const updateLead = useUpdateLead()
+  const { data: interacoes } = useInteracoes(lead.id)
+  const createInteracao = useCreateInteracao()
+  const [observacao, setObservacao] = useState(lead.observacao || '')
+  const [status, setStatus] = useState(lead.status || 'novo')
+  const [novaNota, setNovaNota] = useState('')
+  const [saving, setSaving] = useState(false)
+  const marca = lead.marca || { nome: 'Sem marca', emoji: '🏢', cor: '#6a6a6f' }
+
+  const handleSave = async () => {
+    if (!canEdit) return
+    setSaving(true)
+    try { await updateLead.mutateAsync({ id: lead.id, status, observacao }); onClose() }
+    catch (error) { alert('Erro ao salvar: ' + error.message) }
+    finally { setSaving(false) }
+  }
+
+  const handleAddNota = async () => {
+    if (!novaNota.trim()) return
+    try { await createInteracao.mutateAsync({ leadId: lead.id, tipo: 'nota', descricao: novaNota.trim() }); setNovaNota('') }
+    catch (err) { alert('Erro: ' + err.message) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-[#0a0a0b]/90 backdrop-blur-sm flex items-center justify-end z-[100]" onClick={onClose}>
+      <div className="h-full w-full max-w-xl bg-[#12121a] border-l border-[#1f1f23] p-8 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between mb-8">
+          <div><p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Detalhes do Lead</p><h2 className="text-2xl font-light text-[#f5f5f4]">{lead.nome || 'Lead'}</h2></div>
+          <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-[#f5f5f4]">✕</button>
+        </div>
+
+        <div className="mb-8">
+          <div className={`inline-flex items-center gap-3 px-5 py-3 rounded-2xl ${lead.score >= 70 ? 'bg-[#ee7b4d]/10 border border-[#ee7b4d]/20' : lead.score >= 40 ? 'bg-[#60a5fa]/10 border border-[#60a5fa]/20' : 'bg-[#4a4a4f]/10 border border-[#4a4a4f]/20'}`}>
+            <span className={`text-3xl font-light ${lead.score >= 70 ? 'text-[#ee7b4d]' : lead.score >= 40 ? 'text-[#60a5fa]' : 'text-[#6a6a6f]'}`}>{lead.score || 0}</span>
+            <div><p className={`text-sm font-semibold ${lead.score >= 70 ? 'text-[#ee7b4d]' : lead.score >= 40 ? 'text-[#60a5fa]' : 'text-[#6a6a6f]'}`}>{lead.score >= 70 ? 'Lead Hot 🔥' : lead.score >= 40 ? 'Lead Warm 🌤' : 'Lead Cold ❄️'}</p><p className="text-[10px] text-[#4a4a4f] uppercase">Score de Qualificação</p></div>
+          </div>
+        </div>
+
+        {lead.ia_justificativa && (<div className="mb-6 bg-[#1a1f2a] border border-[#2a3a4a]/50 rounded-2xl p-4"><p className="text-[10px] text-[#60a5fa] uppercase mb-2">🤖 Análise da IA</p><p className="text-sm text-[#8a8a8f]">{lead.ia_justificativa}</p></div>)}
+
+        <div className="space-y-4 mb-8">
+          {[{ label: 'E-mail', value: lead.email, icon: '✉' }, { label: 'Telefone', value: lead.telefone, icon: '✆' }, { label: 'Fonte', value: lead.fonte, icon: '◎' }, { label: 'Marca', value: marca.nome, icon: marca.emoji }, { label: 'Capital', value: lead.capital_disponivel ? `R$ ${lead.capital_disponivel?.toLocaleString()}` : null, icon: '💰' }, { label: 'Local', value: lead.cidade && lead.estado ? `${lead.cidade}/${lead.estado}` : null, icon: '📍' }].map((item, i) => (
+            <div key={i} className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-2xl p-4 flex items-center gap-4"><span className="text-xl opacity-50">{item.icon}</span><div><p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-0.5">{item.label}</p><p className="text-[#f5f5f4] font-medium">{item.value || '—'}</p></div></div>
+          ))}
+        </div>
+
+        <div className="mb-6"><p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-3">Observações</p><textarea value={observacao} onChange={(e) => setObservacao(e.target.value.slice(0, 700))} placeholder="Adicione observações..." rows={3} disabled={!canEdit} className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-2xl p-4 text-[#f5f5f4] text-sm focus:outline-none focus:border-[#ee7b4d]/50 resize-none disabled:opacity-50" /></div>
+
+        <div className="mb-6"><p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-3">Status do Lead</p><select value={status} onChange={(e) => setStatus(e.target.value)} disabled={!canEdit} className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-2xl p-4 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50 appearance-none cursor-pointer disabled:opacity-50">{Object.entries(STATUS_OPTIONS).filter(([k]) => k !== 'all').map(([key, nome]) => (<option key={key} value={key}>{nome}</option>))}</select></div>
+
+        <div className="mb-8"><p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-3">Histórico</p><div className="flex gap-2 mb-4"><input type="text" value={novaNota} onChange={(e) => setNovaNota(e.target.value)} placeholder="Adicionar nota..." className="flex-1 bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-2 text-sm text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50" /><button onClick={handleAddNota} disabled={!novaNota.trim()} className="px-4 py-2 bg-[#1f1f23] border border-[#2a2a2f] rounded-xl text-sm text-[#f5f5f4] hover:border-[#ee7b4d]/50 disabled:opacity-50">+</button></div>
+          <div className="space-y-3 max-h-48 overflow-y-auto">{interacoes?.map((inter) => (<div key={inter.id} className="bg-[#1f1f23]/30 border border-[#2a2a2f]/50 rounded-xl p-3"><div className="flex items-center justify-between mb-1"><span className="text-xs font-medium text-[#8a8a8f]">{inter.tipo === 'nota' ? '📝 Nota' : inter.tipo}</span><span className="text-[10px] text-[#4a4a4f]">{new Date(inter.created_at).toLocaleString('pt-BR')}</span></div>{inter.descricao && <p className="text-sm text-[#6a6a6f]">{inter.descricao}</p>}{inter.usuario && <p className="text-[10px] text-[#4a4a4f] mt-1">por {inter.usuario.nome}</p>}</div>))}{(!interacoes || interacoes.length === 0) && <p className="text-center text-[#4a4a4f] text-sm py-4">Nenhuma interação</p>}</div>
+        </div>
+
+        {canEdit && (<div className="flex gap-3"><button onClick={onClose} className="flex-1 py-4 rounded-2xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold text-sm hover:bg-[#1f1f23]">Cancelar</button><button onClick={handleSave} disabled={saving} className="flex-1 py-4 rounded-2xl bg-[#ee7b4d] text-[#0a0a0b] font-semibold text-sm hover:bg-[#d4663a] disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button></div>)}
+      </div>
+    </div>
+  )
+}
+
+// =====================================================
+// DASHBOARD
+// =====================================================
+function DashboardPage() {
+  const { data: leads, isLoading: leadsLoading } = useLeads()
+  const { data: metrics } = useMetrics()
+  const { data: marcas } = useMarcas()
+  const { hasPermission } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [marcaFilter, setMarcaFilter] = useState('all')
   const [fonteFilter, setFonteFilter] = useState('all')
@@ -456,98 +575,73 @@ function DashboardPage({ leads, metrics, marcas }) {
     return matchSearch && matchMarca && matchFonte && matchCategoria && matchStatus
   })
 
-  const countByCategory = (cat) => leads?.filter(l => l.categoria === cat).length || 0
-  const clearFilters = () => { setSearchTerm(''); setMarcaFilter('all'); setFonteFilter('all'); setCategoriaFilter('all'); setStatusFilter('all'); }
+  const clearFilters = () => { setSearchTerm(''); setMarcaFilter('all'); setFonteFilter('all'); setCategoriaFilter('all'); setStatusFilter('all') }
   const hasActiveFilters = searchTerm || marcaFilter !== 'all' || fonteFilter !== 'all' || categoriaFilter !== 'all' || statusFilter !== 'all'
+
+  if (leadsLoading) return <div className="p-8 text-center text-[#4a4a4f]">Carregando leads...</div>
 
   return (
     <div className="p-8">
-      {/* Metrics */}
+      {/* Métricas */}
       <section className="mb-10">
         <div className="grid grid-cols-4 gap-4">
-          <div onClick={() => setCategoriaFilter('all')} className="group bg-gradient-to-br from-[#1f1f23] to-[#17171a] p-6 rounded-2xl border border-[#2a2a2f] hover:border-[#ee7b4d]/50 transition-all cursor-pointer hover:scale-105 hover:-translate-y-1 active:scale-95">
-            <div className="flex items-start justify-between mb-4"><span className="text-2xl opacity-50 group-hover:opacity-100">◉</span><span className="text-[10px] font-medium text-[#4ade80] bg-[#4ade80]/10 px-2 py-1 rounded-full">+12%</span></div>
-            <p className="text-4xl font-light text-[#f5f5f4] mb-1 group-hover:text-[#ee7b4d]">{metrics?.total || 0}</p>
-            <p className="text-xs text-[#6a6a6f] font-medium uppercase">Total Leads</p>
-          </div>
-          <div onClick={() => setCategoriaFilter('hot')} className="group bg-gradient-to-br from-[#2a1f1a] to-[#1a1512] p-6 rounded-2xl border border-[#3a2a1f] hover:border-[#ee7b4d] transition-all cursor-pointer hover:scale-105 hover:-translate-y-1 active:scale-95">
-            <div className="flex items-start justify-between mb-4"><span className="text-2xl group-hover:animate-bounce">🔥</span><span className="text-[10px] font-medium text-[#ee7b4d] bg-[#ee7b4d]/10 px-2 py-1 rounded-full">Prioridade</span></div>
-            <p className="text-4xl font-light text-[#ee7b4d] mb-1">{countByCategory('hot')}</p>
-            <p className="text-xs text-[#6a6a6f] font-medium uppercase">Leads Hot</p>
-          </div>
-          <div onClick={() => setCategoriaFilter('warm')} className="group bg-gradient-to-br from-[#1a1f2a] to-[#12151a] p-6 rounded-2xl border border-[#2a2a3f] hover:border-[#60a5fa] transition-all cursor-pointer hover:scale-105 hover:-translate-y-1 active:scale-95">
-            <div className="flex items-start justify-between mb-4"><span className="text-2xl opacity-50 group-hover:opacity-100">🌤</span><span className="text-[10px] font-medium text-[#60a5fa] bg-[#60a5fa]/10 px-2 py-1 rounded-full">Análise</span></div>
-            <p className="text-4xl font-light text-[#60a5fa] mb-1">{countByCategory('warm')}</p>
-            <p className="text-xs text-[#6a6a6f] font-medium uppercase">Leads Warm</p>
-          </div>
-          <div onClick={() => setCategoriaFilter('cold')} className="group bg-gradient-to-br from-[#1f1f23] to-[#17171a] p-6 rounded-2xl border border-[#2a2a2f] hover:border-[#6a6a6f] transition-all cursor-pointer hover:scale-105 hover:-translate-y-1 active:scale-95">
-            <div className="flex items-start justify-between mb-4"><span className="text-2xl opacity-50 group-hover:opacity-100">❄️</span><span className="text-[10px] font-medium text-[#6a6a6f] bg-[#6a6a6f]/10 px-2 py-1 rounded-full">Frios</span></div>
-            <p className="text-4xl font-light text-[#6a6a6f] mb-1">{countByCategory('cold')}</p>
-            <p className="text-xs text-[#6a6a6f] font-medium uppercase">Leads Cold</p>
-          </div>
+          {[
+            { label: 'Total Leads', value: metrics?.total || 0, color: '#f5f5f4', icon: '◉', onClick: () => setCategoriaFilter('all') },
+            { label: 'Leads Hot', value: metrics?.hot || 0, color: '#ee7b4d', icon: '🔥', onClick: () => setCategoriaFilter('hot') },
+            { label: 'Leads Warm', value: metrics?.warm || 0, color: '#60a5fa', icon: '🌤', onClick: () => setCategoriaFilter('warm') },
+            { label: 'Leads Cold', value: metrics?.cold || 0, color: '#6a6a6f', icon: '❄️', onClick: () => setCategoriaFilter('cold') }
+          ].map((card, i) => (
+            <div key={i} onClick={card.onClick} className="group bg-gradient-to-br from-[#1f1f23] to-[#17171a] p-6 rounded-2xl border border-[#2a2a2f] hover:border-[#ee7b4d]/50 transition-all cursor-pointer hover:scale-105">
+              <div className="flex items-start justify-between mb-4"><span className="text-2xl opacity-50 group-hover:opacity-100">{card.icon}</span></div>
+              <p className="text-4xl font-light mb-1" style={{ color: card.color }}>{card.value}</p>
+              <p className="text-xs text-[#6a6a6f] font-medium uppercase">{card.label}</p>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Tabela */}
+      {/* Tabela de Leads */}
       <section className="bg-[#12121a] rounded-3xl border border-[#1f1f23] overflow-hidden">
         <div className="p-6 border-b border-[#1f1f23] bg-[#0f0f14]">
-          <div className="flex items-end gap-4">
-            <div className="flex-1">
+          <div className="flex items-end gap-4 flex-wrap">
+            <div className="flex-1 min-w-[200px]">
               <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Buscar</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#4a4a4f]">🔍</span>
-                <input type="text" placeholder="Nome, email ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl pl-11 pr-4 py-3 text-sm placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50" />
-              </div>
+              <input type="text" placeholder="Nome, email ou telefone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 text-sm placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50" />
             </div>
             <div>
               <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Marca</label>
-              <select value={marcaFilter} onChange={(e) => setMarcaFilter(e.target.value)} className="appearance-none bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 pr-10 text-sm text-[#f5f5f4] cursor-pointer min-w-[180px]">
-                <option value="all">◎ Todas as Marcas</option>
+              <select value={marcaFilter} onChange={(e) => setMarcaFilter(e.target.value)} className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 text-sm text-[#f5f5f4] min-w-[150px]">
+                <option value="all">Todas</option>
                 {marcas?.map((m) => (<option key={m.id} value={m.id}>{m.emoji} {m.nome}</option>))}
               </select>
             </div>
             <div>
               <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Fonte</label>
-              <select value={fonteFilter} onChange={(e) => setFonteFilter(e.target.value)} className="appearance-none bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 pr-10 text-sm text-[#f5f5f4] cursor-pointer min-w-[130px]">
+              <select value={fonteFilter} onChange={(e) => setFonteFilter(e.target.value)} className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 text-sm text-[#f5f5f4] min-w-[120px]">
                 {Object.entries(FONTES).map(([key, nome]) => (<option key={key} value={key}>{nome}</option>))}
               </select>
             </div>
             <div>
               <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Categoria</label>
-              <select value={categoriaFilter} onChange={(e) => setCategoriaFilter(e.target.value)} className="appearance-none bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 pr-10 text-sm text-[#f5f5f4] cursor-pointer min-w-[130px]">
+              <select value={categoriaFilter} onChange={(e) => setCategoriaFilter(e.target.value)} className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 text-sm text-[#f5f5f4] min-w-[120px]">
                 {Object.entries(CATEGORIAS).map(([key, nome]) => (<option key={key} value={key}>{nome}</option>))}
               </select>
             </div>
             <div>
               <label className="text-[10px] text-[#4a4a4f] uppercase tracking-wider block mb-2">Status</label>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="appearance-none bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 pr-10 text-sm text-[#f5f5f4] cursor-pointer min-w-[150px]">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl px-4 py-3 text-sm text-[#f5f5f4] min-w-[140px]">
                 {Object.entries(STATUS_OPTIONS).map(([key, nome]) => (<option key={key} value={key}>{nome}</option>))}
               </select>
             </div>
             {hasActiveFilters && (<button onClick={clearFilters} className="px-4 py-3 rounded-xl border border-[#ee7b4d]/30 text-[#ee7b4d] text-sm font-medium hover:bg-[#ee7b4d]/10">Limpar</button>)}
           </div>
-          {hasActiveFilters && (
-            <div className="mt-4 flex items-center gap-2 text-xs text-[#6a6a6f]">
-              <span>Filtros:</span>
-              {searchTerm && <span className="px-2 py-1 bg-[#1f1f23] rounded-lg text-[#f5f5f4]">"{searchTerm}"</span>}
-              {marcaFilter !== 'all' && <span className="px-2 py-1 bg-[#1f1f23] rounded-lg text-[#f5f5f4]">{marcas?.find(m => m.id === marcaFilter)?.nome}</span>}
-              <span className="ml-2">→ {filteredLeads?.length || 0} resultado(s)</span>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#1f1f23] text-[10px] font-semibold text-[#4a4a4f] uppercase bg-[#0d0d12]">
-          <div className="col-span-2">Lead</div>
-          <div className="col-span-2">Contato</div>
-          <div className="col-span-2">Marca</div>
-          <div className="col-span-1">Fonte</div>
-          <div className="col-span-1 text-center">Score</div>
-          <div className="col-span-1 text-center">Categoria</div>
-          <div className="col-span-2">Status</div>
-          <div className="col-span-1 text-right">Ações</div>
+          <div className="col-span-3">Lead</div><div className="col-span-2">Contato</div><div className="col-span-2">Marca</div><div className="col-span-1">Fonte</div><div className="col-span-1 text-center">Score</div><div className="col-span-1 text-center">Categoria</div><div className="col-span-2">Status</div>
         </div>
 
-        <div className="divide-y divide-[#1f1f23]/50">
+        <div className="divide-y divide-[#1f1f23]/50 max-h-[500px] overflow-y-auto">
           {filteredLeads?.length === 0 ? (
             <div className="px-6 py-16 text-center">
               <div className="text-4xl mb-4 opacity-30">🔍</div>
@@ -559,27 +653,13 @@ function DashboardPage({ leads, metrics, marcas }) {
               const marca = lead.marca || { nome: 'Sem marca', emoji: '🏢', cor: '#6a6a6f' }
               return (
                 <div key={lead.id} onClick={() => setSelectedLead(lead)} className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-[#1f1f23]/30 cursor-pointer group">
-                  <div className="col-span-2"><p className="font-medium text-[#f5f5f4] group-hover:text-[#ee7b4d] truncate">{lead.nome || 'Sem nome'}</p></div>
-                  <div className="col-span-2">
-                    <p className="text-sm text-[#8a8a8f] truncate">{lead.email || '—'}</p>
-                    <p className="text-xs text-[#4a4a4f]">{lead.telefone || '—'}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: `${marca.cor}15`, color: marca.cor }}>
-                      <span>{marca.emoji}</span><span className="truncate max-w-[100px]">{marca.nome}</span>
-                    </span>
-                  </div>
-                  <div className="col-span-1"><span className="text-xs text-[#6a6a6f] capitalize">{lead.fonte || 'Website'}</span></div>
-                  <div className="col-span-1 text-center">
-                    <span className={`inline-flex items-center justify-center w-10 h-7 rounded-lg text-xs font-bold ${lead.score >= 70 ? 'bg-[#ee7b4d]/20 text-[#ee7b4d]' : lead.score >= 40 ? 'bg-[#60a5fa]/20 text-[#60a5fa]' : 'bg-[#4a4a4f]/20 text-[#6a6a6f]'}`}>{lead.score || 0}</span>
-                  </div>
-                  <div className="col-span-1 text-center">
-                    <span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${lead.categoria === 'hot' ? 'bg-[#ee7b4d]/20 text-[#ee7b4d]' : lead.categoria === 'warm' ? 'bg-[#60a5fa]/20 text-[#60a5fa]' : 'bg-[#4a4a4f]/20 text-[#6a6a6f]'}`}>{lead.categoria || 'cold'}</span>
-                  </div>
+                  <div className="col-span-3"><p className="font-medium text-[#f5f5f4] group-hover:text-[#ee7b4d] truncate">{lead.nome || 'Sem nome'}</p><p className="text-xs text-[#4a4a4f]">{new Date(lead.created_at).toLocaleDateString('pt-BR')}</p></div>
+                  <div className="col-span-2"><p className="text-sm text-[#8a8a8f] truncate">{lead.email || '—'}</p><p className="text-xs text-[#4a4a4f]">{lead.telefone || '—'}</p></div>
+                  <div className="col-span-2"><span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: `${marca.cor}15`, color: marca.cor }}><span>{marca.emoji}</span><span className="truncate max-w-[80px]">{marca.nome}</span></span></div>
+                  <div className="col-span-1"><span className="text-xs text-[#6a6a6f] capitalize">{lead.fonte || '—'}</span></div>
+                  <div className="col-span-1 text-center"><span className={`inline-flex items-center justify-center w-10 h-7 rounded-lg text-xs font-bold ${lead.score >= 70 ? 'bg-[#ee7b4d]/20 text-[#ee7b4d]' : lead.score >= 40 ? 'bg-[#60a5fa]/20 text-[#60a5fa]' : 'bg-[#4a4a4f]/20 text-[#6a6a6f]'}`}>{lead.score || 0}</span></div>
+                  <div className="col-span-1 text-center"><span className={`inline-flex px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${lead.categoria === 'hot' ? 'bg-[#ee7b4d]/20 text-[#ee7b4d]' : lead.categoria === 'warm' ? 'bg-[#60a5fa]/20 text-[#60a5fa]' : 'bg-[#4a4a4f]/20 text-[#6a6a6f]'}`}>{lead.categoria || 'cold'}</span></div>
                   <div className="col-span-2"><span className="text-xs text-[#8a8a8f]">{STATUS_OPTIONS[lead.status] || '🆕 Novo'}</span></div>
-                  <div className="col-span-1 flex justify-end gap-2 opacity-0 group-hover:opacity-100">
-                    <button className="w-7 h-7 rounded-lg bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-[#f5f5f4] text-xs">✎</button>
-                  </div>
                 </div>
               )
             })
@@ -587,188 +667,209 @@ function DashboardPage({ leads, metrics, marcas }) {
         </div>
       </section>
 
-      {selectedLead && <LeadDetailModal lead={selectedLead} marcas={marcas} onClose={() => setSelectedLead(null)} updateLead={updateLead} />}
+      {selectedLead && <LeadDetailModal lead={selectedLead} onClose={() => setSelectedLead(null)} canEdit={hasPermission('leads', 'editar')} />}
     </div>
   )
 }
 
-// Modal de Detalhes do Lead
-function LeadDetailModal({ lead, marcas, onClose, updateLead }) {
-  const [observacao, setObservacao] = useState(lead.observacao || '')
-  const [status, setStatus] = useState(lead.status || 'novo')
-  const [saving, setSaving] = useState(false)
-  const marca = lead.marca || { nome: 'Sem marca', emoji: '🏢', cor: '#6a6a6f' }
+// =====================================================
+// RELATÓRIOS
+// =====================================================
+function RelatoriosPage() {
+  const { data: leads } = useLeads()
+  const { data: marcas } = useMarcas()
+  const [exportFilters, setExportFilters] = useState({ marca: true, categoria: true, status: true, fonte: true })
 
-  const handleSave = async () => {
+  const totalLeads = leads?.length || 0
+  const leadsHot = leads?.filter(l => l.categoria === 'hot').length || 0
+  const leadsWarm = leads?.filter(l => l.categoria === 'warm').length || 0
+  const leadsCold = leads?.filter(l => l.categoria === 'cold').length || 0
+  const convertidos = leads?.filter(l => l.status === 'convertido').length || 0
+  const taxaConversao = totalLeads > 0 ? ((convertidos / totalLeads) * 100).toFixed(1) : 0
+
+  const leadsPorMarca = leads?.reduce((acc, lead) => { const nome = lead.marca?.nome || 'Sem marca'; acc[nome] = (acc[nome] || 0) + 1; return acc }, {}) || {}
+
+  const exportarCSV = () => {
+    const headers = ['Nome', 'Email', 'Telefone']; if (exportFilters.fonte) headers.push('Fonte'); if (exportFilters.marca) headers.push('Marca'); headers.push('Score'); if (exportFilters.categoria) headers.push('Categoria'); if (exportFilters.status) headers.push('Status'); headers.push('Data')
+    const rows = leads?.map(l => { const row = [l.nome || '', l.email || '', l.telefone || '']; if (exportFilters.fonte) row.push(l.fonte || ''); if (exportFilters.marca) row.push(l.marca?.nome || ''); row.push(l.score || 0); if (exportFilters.categoria) row.push(l.categoria || ''); if (exportFilters.status) row.push(l.status || ''); row.push(new Date(l.created_at).toLocaleDateString('pt-BR')); return row }) || []
+    const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n'); const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `leads_${new Date().toISOString().split('T')[0]}.csv`; link.click()
+  }
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8"><h1 className="text-2xl font-light text-[#f5f5f4]">Rela<span className="text-[#ee7b4d] font-semibold">tórios</span></h1></div>
+
+      <div className="grid grid-cols-5 gap-4 mb-8">
+        {[{ label: 'Total', value: totalLeads, color: '#f5f5f4' }, { label: 'Hot', value: leadsHot, color: '#ee7b4d' }, { label: 'Warm', value: leadsWarm, color: '#60a5fa' }, { label: 'Cold', value: leadsCold, color: '#6a6a6f' }, { label: 'Conversão', value: `${taxaConversao}%`, color: '#4ade80' }].map((c, i) => (<div key={i} className="bg-[#12121a] p-5 rounded-2xl border border-[#1f1f23]"><p className="text-xs text-[#6a6a6f] uppercase mb-2">{c.label}</p><p className="text-3xl font-light" style={{ color: c.color }}>{c.value}</p></div>))}
+      </div>
+
+      <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6 mb-8">
+        <h3 className="text-sm font-semibold text-[#f5f5f4] mb-4 uppercase">📥 Exportar CSV</h3>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-6">
+            {['marca', 'categoria', 'status', 'fonte'].map((f) => (<label key={f} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={exportFilters[f]} onChange={() => setExportFilters(p => ({ ...p, [f]: !p[f] }))} className="w-4 h-4 rounded accent-[#ee7b4d]" /><span className="text-sm text-[#8a8a8f] capitalize">{f}</span></label>))}
+          </div>
+          <button onClick={exportarCSV} className="px-5 py-2 bg-[#ee7b4d] text-[#0a0a0b] rounded-xl font-semibold text-sm hover:bg-[#d4663a]">📥 Exportar</button>
+        </div>
+      </div>
+
+      <div className="bg-[#12121a] rounded-3xl border border-[#1f1f23] p-6">
+        <h3 className="text-sm font-semibold text-[#f5f5f4] mb-6 uppercase">📊 Leads por Marca</h3>
+        <div className="space-y-4">{Object.entries(leadsPorMarca).map(([nome, count]) => { const pct = totalLeads > 0 ? (count / totalLeads) * 100 : 0; const marca = marcas?.find(m => m.nome === nome); return (<div key={nome}><div className="flex justify-between text-xs mb-1"><span className="text-[#8a8a8f]">{marca?.emoji || '🏢'} {nome}</span><span className="text-[#f5f5f4] font-medium">{count} ({pct.toFixed(0)}%)</span></div><div className="h-3 bg-[#1f1f23] rounded-full overflow-hidden"><div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: marca?.cor || '#6a6a6f' }} /></div></div>) })}</div>
+      </div>
+    </div>
+  )
+}
+
+// =====================================================
+// MARCAS
+// =====================================================
+function MarcasPage() {
+  const { data: marcas, isLoading } = useMarcas()
+  const createMarca = useCreateMarca()
+  const updateMarca = useUpdateMarca()
+  const { isGerente } = useAuth()
+  const [showModal, setShowModal] = useState(false)
+  const [editingMarca, setEditingMarca] = useState(null)
+  const [form, setForm] = useState({ nome: '', emoji: '🏢', cor: '#60a5fa', investimento_minimo: '', investimento_maximo: '', descricao: '' })
+  const [saving, setSaving] = useState(false)
+
+  const emojiOptions = ['🏢', '🧺', '🍦', '☕', '📚', '🏪', '🍕', '💼', '🏠', '🚗', '💇', '🏋️', '🎓', '🏥', '🛒']
+  const corOptions = ['#60a5fa', '#f472b6', '#a78bfa', '#34d399', '#fbbf24', '#ef4444', '#06b6d4', '#84cc16']
+  const canEdit = isGerente()
+
+  const handleSubmit = async () => {
+    if (!form.nome.trim()) return
     setSaving(true)
     try {
-      await updateLead.mutateAsync({ id: lead.id, status, observacao })
-      onClose()
-    } catch (error) {
-      alert('Erro ao salvar: ' + error.message)
-    } finally {
-      setSaving(false)
-    }
+      const dados = { nome: form.nome.trim(), emoji: form.emoji, cor: form.cor, investimento_minimo: parseFloat(form.investimento_minimo) || 0, investimento_maximo: parseFloat(form.investimento_maximo) || 0, descricao: form.descricao }
+      if (editingMarca) await updateMarca.mutateAsync({ id: editingMarca.id, ...dados })
+      else await createMarca.mutateAsync(dados)
+      setShowModal(false); setEditingMarca(null); setForm({ nome: '', emoji: '🏢', cor: '#60a5fa', investimento_minimo: '', investimento_maximo: '', descricao: '' })
+    } catch (err) { alert('Erro: ' + err.message) }
+    finally { setSaving(false) }
   }
 
+  const handleEdit = (m) => { setEditingMarca(m); setForm({ nome: m.nome, emoji: m.emoji, cor: m.cor, investimento_minimo: m.investimento_minimo?.toString() || '', investimento_maximo: m.investimento_maximo?.toString() || '', descricao: m.descricao || '' }); setShowModal(true) }
+
+  if (isLoading) return <div className="p-8 text-center text-[#4a4a4f]">Carregando...</div>
+
   return (
-    <div className="fixed inset-0 bg-[#0a0a0b]/90 backdrop-blur-sm flex items-center justify-end z-[100]" onClick={onClose}>
-      <div className="h-full w-full max-w-xl bg-[#12121a] border-l border-[#1f1f23] p-8 overflow-y-auto animate-slideIn" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Detalhes do Lead</p>
-            <h2 className="text-2xl font-light text-[#f5f5f4]">{lead.nome || 'Lead'}</h2>
-          </div>
-          <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-[#f5f5f4]">✕</button>
-        </div>
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8"><h1 className="text-2xl font-light text-[#f5f5f4]">Mar<span className="text-[#ee7b4d] font-semibold">cas</span></h1>{canEdit && (<button onClick={() => { setEditingMarca(null); setForm({ nome: '', emoji: '🏢', cor: '#60a5fa', investimento_minimo: '', investimento_maximo: '', descricao: '' }); setShowModal(true) }} className="px-5 py-2 bg-[#ee7b4d] text-[#0a0a0b] rounded-xl font-semibold text-sm hover:bg-[#d4663a]">+ Nova Marca</button>)}</div>
 
-        <div className="mb-8">
-          <div className={`inline-flex items-center gap-3 px-5 py-3 rounded-2xl ${lead.score >= 70 ? 'bg-[#ee7b4d]/10 border border-[#ee7b4d]/20' : lead.score >= 40 ? 'bg-[#60a5fa]/10 border border-[#60a5fa]/20' : 'bg-[#4a4a4f]/10 border border-[#4a4a4f]/20'}`}>
-            <span className={`text-3xl font-light ${lead.score >= 70 ? 'text-[#ee7b4d]' : lead.score >= 40 ? 'text-[#60a5fa]' : 'text-[#6a6a6f]'}`}>{lead.score || 0}</span>
-            <div>
-              <p className={`text-sm font-semibold ${lead.score >= 70 ? 'text-[#ee7b4d]' : lead.score >= 40 ? 'text-[#60a5fa]' : 'text-[#6a6a6f]'}`}>{lead.score >= 70 ? 'Lead Hot 🔥' : lead.score >= 40 ? 'Lead Warm 🌤' : 'Lead Cold ❄️'}</p>
-              <p className="text-[10px] text-[#4a4a4f] uppercase">Score de Qualificação</p>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 gap-4">{marcas?.map((m) => (<div key={m.id} className="bg-[#12121a] rounded-2xl border border-[#1f1f23] p-6 hover:border-[#2a2a2f] group"><div className="flex items-start justify-between mb-4"><div className="flex items-center gap-4"><div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ backgroundColor: `${m.cor}20` }}>{m.emoji}</div><div><h3 className="text-lg font-semibold text-[#f5f5f4]">{m.nome}</h3>{m.investimento_minimo > 0 && <p className="text-xs text-[#4a4a4f]">R$ {m.investimento_minimo?.toLocaleString()} - R$ {m.investimento_maximo?.toLocaleString()}</p>}</div></div>{canEdit && <button onClick={() => handleEdit(m)} className="w-8 h-8 rounded-lg bg-[#1f1f23] flex items-center justify-center text-[#6a6a6f] hover:text-[#ee7b4d] opacity-0 group-hover:opacity-100">✎</button>}</div>{m.descricao && <p className="text-sm text-[#6a6a6f]">{m.descricao}</p>}</div>))}</div>
 
-        <div className="space-y-4 mb-8">
-          {[
-            { label: 'E-mail', value: lead.email, icon: '✉' },
-            { label: 'Telefone', value: lead.telefone, icon: '✆' },
-            { label: 'Fonte', value: lead.fonte, icon: '◎' },
-            { label: 'Marca', value: marca.nome, icon: marca.emoji },
-            { label: 'Capital Disponível', value: lead.capital_disponivel ? `R$ ${lead.capital_disponivel?.toLocaleString()}` : null, icon: '💰' }
-          ].map((item, i) => (
-            <div key={i} className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-2xl p-4 flex items-center gap-4">
-              <span className="text-xl opacity-50">{item.icon}</span>
-              <div>
-                <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-0.5">{item.label}</p>
-                <p className="text-[#f5f5f4] font-medium">{item.value || '—'}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+      {showModal && (<div className="fixed inset-0 bg-[#0a0a0b]/90 backdrop-blur-sm flex items-center justify-center z-[100]" onClick={() => setShowModal(false)}><div className="bg-[#12121a] border border-[#1f1f23] rounded-3xl p-8 w-full max-w-lg" onClick={(e) => e.stopPropagation()}><h2 className="text-xl font-semibold text-[#f5f5f4] mb-6">{editingMarca ? 'Editar Marca' : 'Nova Marca'}</h2><div className="space-y-5"><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Nome *</label><input type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome da marca" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50" /></div><div className="grid grid-cols-2 gap-4"><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Emoji</label><div className="flex flex-wrap gap-2">{emojiOptions.map((e) => (<button key={e} type="button" onClick={() => setForm({ ...form, emoji: e })} className={`w-9 h-9 rounded-lg flex items-center justify-center text-lg ${form.emoji === e ? 'bg-[#ee7b4d]/20 border-2 border-[#ee7b4d]' : 'bg-[#1f1f23] border border-[#2a2a2f]'}`}>{e}</button>))}</div></div><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Cor</label><div className="flex flex-wrap gap-2">{corOptions.map((c) => (<button key={c} type="button" onClick={() => setForm({ ...form, cor: c })} className={`w-9 h-9 rounded-lg ${form.cor === c ? 'ring-2 ring-white' : ''}`} style={{ backgroundColor: c }} />))}</div></div></div><div className="grid grid-cols-2 gap-4"><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Invest. Mín</label><input type="number" value={form.investimento_minimo} onChange={(e) => setForm({ ...form, investimento_minimo: e.target.value })} placeholder="100000" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none" /></div><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Invest. Máx</label><input type="number" value={form.investimento_maximo} onChange={(e) => setForm({ ...form, investimento_maximo: e.target.value })} placeholder="200000" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none" /></div></div><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Descrição</label><textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Descrição..." rows={3} className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] resize-none focus:outline-none" /></div></div><div className="flex gap-3 mt-8"><button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold hover:bg-[#1f1f23]">Cancelar</button><button onClick={handleSubmit} disabled={saving} className="flex-1 py-3 rounded-xl bg-[#ee7b4d] text-[#0a0a0b] font-semibold hover:bg-[#d4663a] disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button></div></div></div>)}
+    </div>
+  )
+}
 
-        {lead.mensagem_original && (
-          <div className="mb-6">
-            <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-3">Mensagem do Lead</p>
-            <div className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-2xl p-5">
-              <p className="text-sm text-[#8a8a8f] italic">"{lead.mensagem_original}"</p>
-            </div>
-          </div>
-        )}
+// =====================================================
+// USUÁRIOS
+// =====================================================
+function UsuariosPage() {
+  const { isAdmin, usuario: me } = useAuth()
+  const { data: usuarios, isLoading } = useUsuarios()
+  const createUsuario = useCreateUsuario()
+  const updateUsuario = useUpdateUsuario()
+  const [showModal, setShowModal] = useState(false)
+  const [editingUsuario, setEditingUsuario] = useState(null)
+  const [form, setForm] = useState({ nome: '', email: '', telefone: '', role: 'operador' })
+  const [saving, setSaving] = useState(false)
 
-        <div className="mb-6">
-          <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-3">Observações <span className="text-[#6a6a6f]">({observacao.length}/700)</span></p>
-          <textarea value={observacao} onChange={(e) => setObservacao(e.target.value.slice(0, 700))} placeholder="Adicione observações..." rows={4} className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-2xl p-4 text-[#f5f5f4] text-sm focus:outline-none focus:border-[#ee7b4d]/50 resize-none" />
-        </div>
+  if (!isAdmin()) return <div className="p-8 text-center"><div className="text-6xl mb-4 opacity-30">🔒</div><p className="text-[#6a6a6f]">Acesso restrito a administradores</p></div>
 
-        <div className="mb-8">
-          <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-3">Status do Lead</p>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-2xl p-4 text-[#f5f5f4] focus:outline-none focus:border-[#ee7b4d]/50 appearance-none cursor-pointer">
-            {Object.entries(STATUS_OPTIONS).filter(([k]) => k !== 'all').map(([key, nome]) => (<option key={key} value={key}>{nome}</option>))}
-          </select>
-        </div>
+  const handleSubmit = async () => {
+    if (!form.nome.trim() || (!editingUsuario && !form.email.trim())) return
+    setSaving(true)
+    try {
+      if (editingUsuario) await updateUsuario.mutateAsync({ id: editingUsuario.id, nome: form.nome, telefone: form.telefone, role: form.role })
+      else await createUsuario.mutateAsync({ nome: form.nome, email: form.email.toLowerCase(), telefone: form.telefone, role: form.role })
+      setShowModal(false); setEditingUsuario(null); setForm({ nome: '', email: '', telefone: '', role: 'operador' })
+    } catch (err) { alert('Erro: ' + err.message) }
+    finally { setSaving(false) }
+  }
 
-        <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-4 rounded-2xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold text-sm hover:bg-[#1f1f23] hover:text-[#f5f5f4]">Cancelar</button>
-          <button onClick={handleSave} disabled={saving} className="flex-1 py-4 rounded-2xl bg-[#ee7b4d] text-[#0a0a0b] font-semibold text-sm hover:bg-[#d4663a] shadow-lg shadow-[#ee7b4d]/20 disabled:opacity-50">
-            {saving ? 'Salvando...' : 'Salvar'}
-          </button>
-        </div>
+  const handleEdit = (u) => { setEditingUsuario(u); setForm({ nome: u.nome, email: u.email, telefone: u.telefone || '', role: u.role }); setShowModal(true) }
+
+  if (isLoading) return <div className="p-8 text-center text-[#4a4a4f]">Carregando...</div>
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-8"><h1 className="text-2xl font-light text-[#f5f5f4]">Usuá<span className="text-[#ee7b4d] font-semibold">rios</span></h1><button onClick={() => { setEditingUsuario(null); setForm({ nome: '', email: '', telefone: '', role: 'operador' }); setShowModal(true) }} className="px-5 py-2 bg-[#ee7b4d] text-[#0a0a0b] rounded-xl font-semibold text-sm hover:bg-[#d4663a]">+ Novo Usuário</button></div>
+
+      <div className="bg-[#1a1f2a] border border-[#2a3a4a]/50 rounded-2xl p-4 mb-6"><h3 className="text-sm font-semibold text-[#60a5fa] mb-3">📋 Níveis de Acesso</h3><div className="grid grid-cols-3 gap-4">{Object.entries(ROLES).map(([k, v]) => (<div key={k} className="flex items-center gap-3"><span className="text-xl">{v.emoji}</span><div><p className="font-medium text-[#f5f5f4] text-sm">{v.label}</p></div></div>))}</div></div>
+
+      <div className="bg-[#1a2e1a] border border-[#2d4a2d]/50 rounded-2xl p-4 mb-6">
+        <h3 className="text-sm font-semibold text-[#4ade80] mb-2">⚠️ Importante sobre Senhas</h3>
+        <p className="text-xs text-[#6a6a6f]">Após cadastrar o usuário aqui, é necessário criar o mesmo email no <strong>Supabase Auth</strong> com a senha desejada.</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">{usuarios?.filter(u => u.ativo).map((u) => { const role = ROLES[u.role] || ROLES.operador; const isMe = u.id === me?.id; return (<div key={u.id} className="bg-[#12121a] rounded-2xl border border-[#1f1f23] p-6 group hover:border-[#2a2a2f]"><div className="flex items-start justify-between mb-4"><div className="flex items-center gap-4"><div className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg" style={{ backgroundColor: role.color }}>{u.nome?.charAt(0).toUpperCase()}</div><div><div className="flex items-center gap-2"><h3 className="font-semibold text-[#f5f5f4]">{u.nome}</h3>{isMe && <span className="text-[10px] bg-[#ee7b4d]/20 text-[#ee7b4d] px-2 py-0.5 rounded-full">você</span>}</div><p className="text-xs text-[#4a4a4f]">{u.email}</p></div></div>{!isMe && <button onClick={() => handleEdit(u)} className="w-8 h-8 rounded-lg bg-[#1f1f23] flex items-center justify-center text-[#6a6a6f] hover:text-[#ee7b4d] opacity-0 group-hover:opacity-100">✎</button>}</div><span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium" style={{ backgroundColor: `${role.color}20`, color: role.color }}>{role.emoji} {role.label}</span></div>) })}</div>
+
+      {showModal && (<div className="fixed inset-0 bg-[#0a0a0b]/90 backdrop-blur-sm flex items-center justify-center z-[100]" onClick={() => setShowModal(false)}><div className="bg-[#12121a] border border-[#1f1f23] rounded-3xl p-8 w-full max-w-lg" onClick={(e) => e.stopPropagation()}><h2 className="text-xl font-semibold text-[#f5f5f4] mb-6">{editingUsuario ? 'Editar Usuário' : 'Novo Usuário'}</h2><div className="space-y-5"><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Nome *</label><input type="text" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Nome completo" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none" /></div><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Email *</label><input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@empresa.com" disabled={!!editingUsuario} className={`w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none ${editingUsuario ? 'opacity-50' : ''}`} /></div><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Telefone</label><input type="tel" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} placeholder="(11) 99999-9999" className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-[#f5f5f4] focus:outline-none" /></div><div><label className="text-[10px] text-[#4a4a4f] uppercase block mb-2">Nível de Acesso *</label><div className="grid grid-cols-3 gap-3">{Object.entries(ROLES).map(([k, v]) => (<button key={k} type="button" onClick={() => setForm({ ...form, role: k })} className={`p-4 rounded-xl border text-center ${form.role === k ? 'border-[#ee7b4d] bg-[#ee7b4d]/10' : 'border-[#2a2a2f]'}`}><span className="text-2xl block mb-1">{v.emoji}</span><span className="text-xs font-medium text-[#f5f5f4]">{v.label}</span></button>))}</div></div></div><div className="flex gap-3 mt-8"><button onClick={() => setShowModal(false)} className="flex-1 py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold hover:bg-[#1f1f23]">Cancelar</button><button onClick={handleSubmit} disabled={saving} className="flex-1 py-3 rounded-xl bg-[#ee7b4d] text-[#0a0a0b] font-semibold hover:bg-[#d4663a] disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button></div></div></div>)}
+    </div>
+  )
+}
+
+// =====================================================
+// CONFIGURAÇÕES
+// =====================================================
+function ConfigPage() {
+  return (
+    <div className="p-8 text-center">
+      <div className="text-6xl mb-4 opacity-30">⚙</div>
+      <p className="text-[#4a4a4f]">Configurações em desenvolvimento</p>
+    </div>
+  )
+}
+
+// =====================================================
+// APP PRINCIPAL
+// =====================================================
+function Dashboard() {
+  const [currentPage, setCurrentPage] = useState('dashboard')
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] text-[#f5f5f4]">
+      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      <main className="ml-20 min-h-screen">
+        <Header />
+        {currentPage === 'dashboard' && <DashboardPage />}
+        {currentPage === 'relatorios' && <RelatoriosPage />}
+        {currentPage === 'marcas' && <MarcasPage />}
+        {currentPage === 'usuarios' && <UsuariosPage />}
+        {currentPage === 'config' && <ConfigPage />}
+        <footer className="px-8 py-6 border-t border-[#1f1f23] mt-8"><p className="text-center text-[10px] text-[#3a3a3f] font-medium uppercase tracking-[0.5em]">© 2026 LeadCapture Pro — Desenvolvido por: Juliana Zafalão</p></footer>
+      </main>
+    </div>
+  )
+}
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-3 border-[#1f1f23] border-t-[#ee7b4d] rounded-full animate-spin mx-auto mb-4" style={{ borderWidth: '3px' }}></div>
+        <p className="text-[#ee7b4d] text-xs uppercase tracking-[0.3em]">Carregando</p>
       </div>
     </div>
   )
 }
 
-// Main Component
-function DashboardContent() {
-  const { data: leads, isLoading: leadsLoading, error: leadsError } = useLeads()
-  const { data: metrics } = useMetrics()
-  const { data: marcas, isLoading: marcasLoading } = useMarcas()
-  
-  const [currentPage, setCurrentPage] = useState('dashboard')
-
-  if (leadsLoading || marcasLoading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-[#ee7b4d]/20 border-t-[#ee7b4d] rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#ee7b4d] font-light tracking-[0.3em] text-xs uppercase">Carregando</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (leadsError) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <div className="text-center text-[#ef4444]">
-          <p className="text-xl mb-2">Erro ao carregar dados</p>
-          <p className="text-sm opacity-70">{leadsError.message}</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="min-h-screen bg-[#0a0a0b] text-[#f5f5f4] antialiased relative">
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-
-      <main className="ml-20 min-h-screen relative z-10">
-        <header className="sticky top-0 z-40 bg-[#0a0a0b]/80 backdrop-blur-xl border-b border-[#1f1f23]/50">
-          <div className="px-8 py-5 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-br from-[#ee7b4d] to-[#d4663a]">
-                <img src="/logo.jpg" alt="Logo" className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none' }} />
-              </div>
-              <div>
-                <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-1">
-                  {currentPage === 'dashboard' && 'Visão Geral'}
-                  {currentPage === 'relatorios' && 'Análise'}
-                  {currentPage === 'marcas' && 'Cadastro'}
-                  {currentPage === 'config' && 'Sistema'}
-                </p>
-                <h1 className="text-2xl font-light">Lead<span className="text-[#ee7b4d] font-semibold">Capture</span> Pro</h1>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-[#1a2e1a] border border-[#2d4a2d]/50 rounded-full">
-              <span className="w-2 h-2 bg-[#4ade80] rounded-full animate-pulse"></span>
-              <span className="text-[11px] font-medium text-[#4ade80]">Sistema Online</span>
-            </div>
-          </div>
-        </header>
-
-        {currentPage === 'dashboard' && <DashboardPage leads={leads} metrics={metrics} marcas={marcas} />}
-        {currentPage === 'relatorios' && <RelatoriosPage leads={leads} marcas={marcas} />}
-        {currentPage === 'marcas' && <MarcasPage />}
-        {currentPage === 'config' && (<div className="p-8 text-center text-[#4a4a4f]"><p className="text-4xl mb-4 opacity-30">⚙</p><p>Configurações em desenvolvimento</p></div>)}
-
-        <footer className="px-8 py-6 border-t border-[#1f1f23] mt-8">
-          <p className="text-center text-[10px] text-slate-700 font-black uppercase tracking-[0.5em] opacity-30">© 2026 LeadCapture Pro — Desenvolvido por: Juliana Zafalão</p>
-        </footer>
-      </main>
-
-      <style>{`
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .animate-slideIn { animation: slideIn 0.3s ease-out forwards; }
-        .animate-modalIn { animation: modalIn 0.2s ease-out forwards; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #12121a; }
-        ::-webkit-scrollbar-thumb { background: #2a2a2f; border-radius: 3px; }
-        ::selection { background: #ee7b4d30; }
-        select option { background: #1f1f23; color: #f5f5f4; }
-      `}</style>
-    </div>
-  )
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth()
+  if (loading) return <LoadingScreen />
+  return isAuthenticated ? <Dashboard /> : <LoginPage />
 }
 
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <DashboardContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </QueryClientProvider>
   )
 }
