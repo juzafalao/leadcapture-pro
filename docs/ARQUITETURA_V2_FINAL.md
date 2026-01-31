@@ -433,7 +433,9 @@ TWILIO_AUTH_TOKEN=...
 | **Projeto** | LeadCapture Pro |
 | **Versão** | 2.0 |
 | **Desenvolvedor** | Juliana Zafalão |
-| **Tech Lead** | Claude (Anthropic) |
+| **Tech Lead** | Juliana Zafalao |
+| **Arquiteto** | Juliana Zafalao |
+| **Agentes** | Claude , Gemini, GPT, Copilot |
 | **Início** | Janeiro 2026 |
 | **Status** | Em Desenvolvimento (78%) |
 
