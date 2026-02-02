@@ -1,0 +1,497 @@
+{
+  "name": "LeadCapture Pro - FINAL v4.1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-capture",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1600,
+        112
+      ],
+      "id": "09d59296-37a7-4989-8f14-2426d9a580b1",
+      "name": "Webhook Receber Lead",
+      "webhookId": "a1f2bf21-e005-42d8-8533-bbebf341381b"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "tenants"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1376,
+        112
+      ],
+      "id": "dab3d998-fee7-404b-87e4-463d686b6735",
+      "name": "Buscar Tenant",
+      "credentials": {
+        "supabaseApi": {
+          "id": "dq2sKVGBdJ6FnYO4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "marcas",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "tenant_id",
+              "condition": "eq",
+              "keyValue": "={{ $node[\"Buscar Tenant\"].json.id }}"
+            },
+            {
+              "keyName": "=ativo",
+              "condition": "eq",
+              "keyValue": "=true"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        112
+      ],
+      "id": "b43b83c0-4fcf-4712-ac0b-fe8e1a80128b",
+      "name": "Buscar Marca Padrao",
+      "credentials": {
+        "supabaseApi": {
+          "id": "dq2sKVGBdJ6FnYO4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Você é um especialista em qualificação de leads para franquias.\n\nDADOS DO LEAD:\n- Nome: {{ $('Webhook Receber Lead').item.json.body?.nome || $('Webhook Receber Lead').item.json.nome || 'Não informado' }}\n- Email: {{ $('Webhook Receber Lead').item.json.body?.email || $('Webhook Receber Lead').item.json.email || 'Não informado' }}\n- Telefone: {{ $('Webhook Receber Lead').item.json.body?.telefone || $('Webhook Receber Lead').item.json.telefone || 'Não informado' }}\n- Capital Disponível: R$ {{ $('Webhook Receber Lead').item.json.body?.capital_disponivel || $('Webhook Receber Lead').item.json.capital_disponivel || 0 }}\n- Cidade/Estado: {{ $('Webhook Receber Lead').item.json.body?.cidade || $('Webhook Receber Lead').item.json.cidade || '' }}/{{ $('Webhook Receber Lead').item.json.body?.estado || $('Webhook Receber Lead').item.json.estado || '' }}\n- Fonte: {{ $('Webhook Receber Lead').item.json.body?.fonte || $('Webhook Receber Lead').item.json.fonte || 'website' }}\n- Mensagem: {{ $('Webhook Receber Lead').item.json.body?.mensagem || $('Webhook Receber Lead').item.json.mensagem || 'Sem mensagem' }}\n\nDADOS DA MARCA ESCOLHIDA:\n- Nome: {{ $('Buscar Marca Padrao').item.json.nome }}\n- Investimento Mínimo: R$ {{ $('Buscar Marca Padrao').item.json.investimento_minimo }}\n- Investimento Máximo: R$ {{ $('Buscar Marca Padrao').item.json.investimento_maximo }}\n\nREGRAS DE QUALIFICAÇÃO:\n1. Se capital >= investimento_maximo da marca → HOT (score 80-100)\n2. Se capital >= investimento_minimo da marca → WARM (score 50-79)\n3. Se capital < investimento_minimo da marca → COLD (score 0-49)\n\nBONUS:\n- Informações completas (nome, email, telefone): +10 pontos\n- Cidade definida: +5 pontos\n- Mensagem demonstra interesse claro: +5 pontos\n\nResponda APENAS em JSON válido:\n{\n  \"score\": <número 0-100>,\n  \"categoria\": \"hot\" | \"warm\" | \"cold\",\n  \"justificativa\": \"<explicação breve, máx 150 caracteres>\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 300,
+          "temperature": 0.3
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -928,
+        112
+      ],
+      "id": "be655203-8aec-4f10-be5e-0e72bec482a1",
+      "name": "IA Qualificar Lead",
+      "credentials": {
+        "openAiApi": {
+          "id": "8iJYNKOfJJk9KMKT",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Pegar resposta do OpenAI de forma robusta\nconst openaiResponse = $('IA Qualificar Lead').first().json;\n\n// Tenta encontrar o texto em todos os caminhos possíveis do n8n\nconst content = openaiResponse.text || \n                openaiResponse.message?.content || \n                (openaiResponse.output && openaiResponse.output[0]?.content && openaiResponse.output[0]?.content[0]?.text) || \n                openaiResponse.response?.text || \n                '{}';\n\n// 2. Pegar dados originais do webhook\nconst webhookRaw = $('Webhook Receber Lead').first().json;\nconst webhookData = webhookRaw.body || webhookRaw;\n\n// 3. Pegar dados do tenant e marca\nconst tenant = $('Buscar Tenant').first().json;\nconst marca = $('Buscar Marca Padrao').first().json;\n\n// 4. Parse do JSON retornado pela IA\nlet iaResult;\ntry {\n  // Limpa marcações de markdown se houver\n  let cleanContent = content\n    .replace(/```json\\n?/g, '')\n    .replace(/```\\n?/g, '')\n    .trim();\n  iaResult = JSON.parse(cleanContent);\n} catch (e) {\n  iaResult = {\n    score: 0,\n    categoria: 'cold',\n    justificativa: 'Erro no parse da IA'\n  };\n}\n\n// 5. Garantir tipos e consistência\niaResult.score = parseInt(iaResult.score) || 0;\niaResult.justificativa = iaResult.justificativa || 'Sem justificativa';\n\nif (iaResult.score >= 70) iaResult.categoria = 'hot';\nelse if (iaResult.score >= 40) iaResult.categoria = 'warm';\nelse iaResult.categoria = 'cold';\n\n// 6. Retorno Final\nreturn [{\n  json: {\n    tenant_id: tenant.id,\n    marca_id: marca?.id || null,\n    nome: webhookData.nome || null,\n    email: webhookData.email || null,\n    telefone: webhookData.telefone || null,\n    capital_disponivel: parseFloat(webhookData.capital_disponivel) || 0,\n    cidade: webhookData.cidade || null,\n    estado: webhookData.estado || null,\n    mensagem_original: webhookData.mensagem || null,\n    fonte: webhookData.fonte || 'website',\n    score: iaResult.score,\n    categoria: iaResult.categoria,\n    ia_justificativa: iaResult.justificativa,\n    ia_analise: JSON.stringify(iaResult),\n    status: 'novo'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        112
+      ],
+      "id": "85a95860-4340-46f5-8c3b-82c34792ac71",
+      "name": "Processar Dados"
+    },
+    {
+      "parameters": {
+        "tableId": "leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "tenant_id",
+              "fieldValue": "={{ $json.tenant_id }}"
+            },
+            {
+              "fieldId": "marca_id",
+              "fieldValue": "={{ $json.marca_id }}"
+            },
+            {
+              "fieldId": "nome",
+              "fieldValue": "={{ $json.nome }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "telefone",
+              "fieldValue": "={{ $json.telefone }}"
+            },
+            {
+              "fieldId": "capital_disponivel",
+              "fieldValue": "={{ $json.capital_disponivel }}"
+            },
+            {
+              "fieldId": "cidade",
+              "fieldValue": "={{ $json.cidade }}"
+            },
+            {
+              "fieldId": "estado",
+              "fieldValue": "={{ $json.estado }}"
+            },
+            {
+              "fieldId": "fonte",
+              "fieldValue": "={{ $json.fonte }}"
+            },
+            {
+              "fieldId": "mensagem_original",
+              "fieldValue": "={{ $json.mensagem_original }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ $json.score }}"
+            },
+            {
+              "fieldId": "categoria",
+              "fieldValue": "={{ $json.categoria }}"
+            },
+            {
+              "fieldId": "ia_justificativa",
+              "fieldValue": "={{ $json.ia_justificativa }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -496,
+        112
+      ],
+      "id": "3ac3c554-307c-4dcd-98c1-43ed5ef821a3",
+      "name": "Salvar Lead",
+      "credentials": {
+        "supabaseApi": {
+          "id": "dq2sKVGBdJ6FnYO4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "38188081-5752-43f6-b3cc-939add0b1507",
+              "leftValue": "={{ $('Processar Dados').item.json.categoria }}",
+              "rightValue": "hot",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -256,
+        112
+      ],
+      "id": "1ba63f47-4ab6-42ef-bad9-7258fbe1668e",
+      "name": "E Lead Hot?"
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "={{ $('Processar Dados').item.json.telefone }}",
+        "toWhatsapp": true,
+        "message": "=🔥 *LEAD QUENTE CAPTURADO!*\n\n*Nome:* {{ $('Processar Dados').item.json.nome }}\n*Email:* {{ $('Processar Dados').item.json.email }}\n*Telefone:* {{ $('Processar Dados').item.json.telefone }}\n*Capital:* R$ {{ $('Processar Dados').item.json.capital_disponivel }}\n*Cidade:* {{ $('Processar Dados').item.json.cidade }}/{{ $('Processar Dados').item.json.estado }}\n\n*Score:* {{ $('Processar Dados').item.json.score }}/100\n*Análise:* {{ $('Processar Dados').item.json.ia_justificativa }}\n\n⚡ Entre em contato imediatamente!",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "82f8d26b-b107-41e6-8c3b-779c04375fe8",
+      "name": "Notificar WhatsApp",
+      "credentials": {
+        "twilioApi": {
+          "id": "63kftCdelomY1g3w",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "interacoes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "tenant_id",
+              "fieldValue": "={{ $('Processar Dados').item.json.tenant_id }}"
+            },
+            {
+              "fieldId": "lead_id",
+              "fieldValue": "={{ $('Salvar Lead').item.json.id }}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "sistema"
+            },
+            {
+              "fieldId": "conteudo",
+              "fieldValue": "=🔥 LEAD HOT! Score: {{ $('Processar Dados').item.json.score }}/100. {{ $('Processar Dados').item.json.ia_justificativa }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "dad2d4f4-db4b-40ec-8d25-daf6e72299b8",
+      "name": "Registrar Interacao Hot",
+      "credentials": {
+        "supabaseApi": {
+          "id": "dq2sKVGBdJ6FnYO4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "interacoes",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "tenant_id",
+              "fieldValue": "={{ $('Processar Dados').item.json.tenant_id }}"
+            },
+            {
+              "fieldId": "lead_id",
+              "fieldValue": "={{ $('Salvar Lead').item.json.id }}"
+            },
+            {
+              "fieldId": "tipo",
+              "fieldValue": "sistema"
+            },
+            {
+              "fieldId": "conteudo",
+              "fieldValue": "=Lead capturado via {{ $('Processar Dados').item.json.fonte }}. Score: {{ $('Processar Dados').item.json.score }}/100 ({{ $('Processar Dados').item.json.categoria }})"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        0,
+        256
+      ],
+      "id": "ccceb0c2-b55a-4e2a-9b37-572468d1df44",
+      "name": "Registrar Interacao Normal",
+      "credentials": {
+        "supabaseApi": {
+          "id": "dq2sKVGBdJ6FnYO4",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resposta final para lead HOT\nconst leadData = $('Salvar Lead').first().json;\nconst processData = $('Processar Dados').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    lead_id: leadData.id,\n    score: processData.score,\n    categoria: processData.categoria,\n    notificado: true,\n    message: 'Lead HOT capturado e notificado!'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "4c096a89-b008-4b5d-bd90-15238b39dc52",
+      "name": "Resposta Hot"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Resposta final para lead normal\nconst leadData = $('Salvar Lead').first().json;\nconst processData = $('Processar Dados').first().json;\n\nreturn [{\n  json: {\n    success: true,\n    lead_id: leadData.id,\n    score: processData.score,\n    categoria: processData.categoria,\n    message: 'Lead capturado com sucesso!'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        256
+      ],
+      "id": "a9803195-0abd-4f62-bdd3-491f36bb1066",
+      "name": "Resposta Normal"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Receber Lead": {
+      "main": [
+        [
+          {
+            "node": "Buscar Tenant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Tenant": {
+      "main": [
+        [
+          {
+            "node": "Buscar Marca Padrao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Marca Padrao": {
+      "main": [
+        [
+          {
+            "node": "IA Qualificar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IA Qualificar Lead": {
+      "main": [
+        [
+          {
+            "node": "Processar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Dados": {
+      "main": [
+        [
+          {
+            "node": "Salvar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar Lead": {
+      "main": [
+        [
+          {
+            "node": "E Lead Hot?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E Lead Hot?": {
+      "main": [
+        [
+          {
+            "node": "Notificar WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Registrar Interacao Normal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Registrar Interacao Hot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Interacao Hot": {
+      "main": [
+        [
+          {
+            "node": "Resposta Hot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Interacao Normal": {
+      "main": [
+        [
+          {
+            "node": "Resposta Normal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "3301d558-6fc9-4dfd-9c26-cb4fde35bbcc",
+  "meta": {
+    "instanceId": "a4fae007f3bf7152c74e451053eadf32d4b32a6a9b092130718e307369ecb477"
+  },
+  "id": "UvJZq92ZsGB6RoSaP_ldM",
+  "tags": []
+}
