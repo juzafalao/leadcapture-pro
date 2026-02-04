@@ -1,35 +1,40 @@
-import React from 'react'
-import Logo from '../../assets/logo-leadcapture.png'
+import React from 'react';
+import { useAuth } from '../AuthContext';
 
-export function Header({ tenant, tenants, onSelectTenant }) {
+export default function Header() {
+  const { usuario, logout } = useAuth();
+  
   return (
-    <header className="flex items-center justify-between bg-gray-900/50 border-b border-gray-800 p-4 backdrop-blur-md sticky top-0 z-30">
-      <div className="flex items-center gap-4">
-        <div className="h-10 w-10 rounded-lg overflow-hidden">
-          <img src={Logo} alt="LeadCapture" className="h-full w-full object-cover" />
+    <header className="fixed top-0 left-20 right-0 z-40 bg-[#0a0a0b] border-b border-white/5 h-24">
+      <div className="h-full px-10 flex items-center justify-between">
+        <div className="flex items-center gap-4 text-left">
+          <div className="w-12 h-12 bg-[#ee7b4d] flex items-center justify-center font-black text-[#0a0a0b] text-base rounded-2xl shadow-lg shadow-[#ee7b4d]/20">LC</div>
+          <div className="text-left">
+            <h1 className="text-2xl font-light text-white tracking-tight italic leading-none">
+              Lead<span className="text-[#ee7b4d] font-bold">Capture</span> Pro
+            </h1>
+            <p className="text-[8px] text-gray-500 font-extralight uppercase tracking-[0.6em] mt-2 ml-1 opacity-70">
+              Franqueadora
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-bold text-white leading-tight">LeadCapture PRO</h1>
-          <p className="text-xs text-gray-500">Gestão Inteligente de Leads</p>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-3">
-        {tenants.length > 1 && (
-          <select
-            value={tenant?.id || ''}
-            onChange={(e) => onSelectTenant(tenants.find(t => t.id === e.target.value))}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-orange-500"
+        
+        <div className="flex items-center gap-6">
+          <div className="text-right">
+            <p className="text-sm font-bold text-white leading-none mb-1">{usuario?.nome || 'Juliana Zafalao'}</p>
+            <p className="text-[9px] text-gray-600 font-black uppercase tracking-widest leading-none opacity-50">
+              {usuario?.role || 'GERENTE'}
+            </p>
+          </div>
+          
+          <button 
+            onClick={logout}
+            className="w-11 h-11 flex items-center justify-center bg-white/5 border border-white/5 rounded-xl text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all active:scale-90"
           >
-            {tenants.map(t => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        )}
-        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white text-xs font-bold">
-          {tenant?.name?.charAt(0) || 'U'}
+            <span className="text-xl font-light">⏻</span>
+          </button>
         </div>
       </div>
     </header>
-  )
+  );
 }
