@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import SegmentoModal from '../components/segmentos/SegmentoModal'; // ✅ CORRIGIDO
+import SegmentoModal from '../components/segmentos/SegmentoModal';
 
 export default function SegmentosPage() {
   const { usuario, isGestor } = useAuth();
@@ -11,49 +11,64 @@ export default function SegmentosPage() {
   const [selectedSegmento, setSelectedSegmento] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  // Buscar segmentos do banco
+  // ✅ BUSCAR SEGMENTOS (sem COUNT de marcas para evitar erro)
   const { data: segmentos = [], isLoading } = useQuery({
     queryKey: ['segmentos', usuario?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('segmentos')
-        .select(`
-          *,
-          marcas:marcas(count)
-        `)
+        .select('id, tenant_id, nome, emoji, created_at')
         .eq('tenant_id', usuario.tenant_id)
-        .eq('ativo', true)
         .order('nome');
       
-      if (error) throw error;
-      return data || [];
+      if (error) {
+        console.error('Erro ao buscar segmentos:', error);
+        throw error;
+      }
+      
+      return (data || []).map(s => ({
+        ...s,
+        ativo: true,
+        descricao: ''
+      }));
     },
     enabled: !!usuario?.tenant_id
   });
 
-  // Criar ou atualizar segmento
+  // ✅ SALVAR SEGMENTO
   const saveSegmento = useMutation({
     mutationFn: async (segmentoData) => {
+      const dbData = {
+        nome: segmentoData.nome,
+        emoji: segmentoData.emoji
+      };
+
       if (segmentoData.id) {
         // Atualizar
         const { data, error } = await supabase
           .from('segmentos')
-          .update(segmentoData)
+          .update(dbData)
           .eq('id', segmentoData.id)
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar segmento:', error);
+          throw error;
+        }
         return data;
       } else {
         // Criar
         const { data, error } = await supabase
           .from('segmentos')
-          .insert({ ...segmentoData, tenant_id: usuario.tenant_id })
+          .insert({ ...dbData, tenant_id: usuario.tenant_id })
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao criar segmento:', error);
+          throw error;
+        }
         return data;
       }
     },
@@ -61,6 +76,9 @@ export default function SegmentosPage() {
       queryClient.invalidateQueries(['segmentos']);
       setShowModal(false);
       setSelectedSegmento(null);
+    },
+    onError: (error) => {
+      alert('Erro ao salvar segmento: ' + error.message);
     }
   });
 
@@ -99,7 +117,6 @@ export default function SegmentosPage() {
           <h1 className="text-3xl lg:text-4xl font-light text-white mb-3">
             Gestão de <span className="text-[#ee7b4d] font-bold">Segmentos</span>
           </h1>
-          {/* ✅ LINHA MAIS FINA */}
           <div className="w-24 h-0.5 bg-[#ee7b4d] rounded-full mb-4"></div>
           <p className="text-[9px] lg:text-[10px] text-[#6a6a6f] uppercase tracking-[0.25em] font-bold">
             Categorização e Análise de Mercado
@@ -137,7 +154,7 @@ export default function SegmentosPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             
-            {/* ✅ CARD + NOVO SEGMENTO (PRIMEIRO ITEM) */}
+            {/* CARD + NOVO SEGMENTO */}
             <button
               onClick={handleNewSegmento}
               className="bg-[#12121a] border-2 border-dashed border-[#2a2a2f] rounded-2xl p-8 hover:border-[#ee7b4d]/50 hover:bg-[#1f1f23]/30 transition-all group min-h-[200px] flex flex-col items-center justify-center"
@@ -162,12 +179,6 @@ export default function SegmentosPage() {
                 <h3 className="text-lg font-semibold text-white text-center mb-2">
                   {segmento.nome}
                 </h3>
-                <div className="text-center">
-                  <span className="text-2xl font-bold text-[#ee7b4d]">
-                    {segmento.marcas?.[0]?.count || 0}
-                  </span>
-                  <p className="text-xs text-[#6a6a6f] mt-1">marcas vinculadas</p>
-                </div>
               </div>
             ))}
           </div>

@@ -47,7 +47,6 @@ export default function DashboardPage() {
     if (filtroKpi === 'Warm') matchKpi = (l.score || 0) >= 50 && (l.score || 0) < 80;
     return matchBusca && matchStatus && matchKpi;
   });
-
   return (
     <div className="p-4 md:p-10 pt-20 md:pt-32 bg-[#0a0a0b] min-h-screen text-left">
       <div className="mb-8">

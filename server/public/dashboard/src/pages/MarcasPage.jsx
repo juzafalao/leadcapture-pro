@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../components/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import MarcaModal from '../components/marcas/MarcaModal'; // ✅ CORRIGIDO
+import MarcaModal from '../components/marcas/MarcaModal';
 
 export default function MarcasPage() {
   const { usuario, isGestor } = useAuth();
@@ -11,63 +11,109 @@ export default function MarcasPage() {
   const [selectedMarca, setSelectedMarca] = useState(null);
   const [showModal, setShowModal] = useState(false);
 
-  // Buscar marcas do banco
+  // ✅ BUSCAR MARCAS (usando nomes reais do banco)
   const { data: marcas = [], isLoading } = useQuery({
     queryKey: ['marcas', usuario?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('marcas')
-        .select('*, segmento:segmentos(id, nome)')
+        .select(`
+          id,
+          tenant_id,
+          nome,
+          emoji,
+          ativo,
+          id_segmento,
+          invest_min,
+          invest_max,
+          created_at,
+          segmento:segmentos!id_segmento(id, nome, emoji)
+        `)
         .eq('tenant_id', usuario.tenant_id)
         .eq('ativo', true)
-        .order('ordem');
+        .order('nome');
       
-      if (error) throw error;
-      return data || [];
+      if (error) {
+        console.error('Erro ao buscar marcas:', error);
+        throw error;
+      }
+      
+      // ✅ Mapear para formato que o frontend espera
+      return (data || []).map(m => ({
+        id: m.id,
+        nome: m.nome,
+        emoji: m.emoji || '🏢',
+        cor: '#60a5fa', // Cor padrão (não existe no banco)
+        segmento_id: m.id_segmento,
+        segmento: m.segmento,
+        investimento_minimo: parseFloat(m.invest_min) || 0,
+        investimento_maximo: parseFloat(m.invest_max) || 0,
+        descricao: '', // Não existe no banco
+        ativo: m.ativo
+      }));
     },
     enabled: !!usuario?.tenant_id
   });
 
-  // Buscar segmentos (para o select)
+  // Buscar segmentos
   const { data: segmentos = [] } = useQuery({
     queryKey: ['segmentos', usuario?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('segmentos')
-        .select('*')
+        .select('id, nome, emoji, tenant_id, created_at')
         .eq('tenant_id', usuario.tenant_id)
-        .eq('ativo', true)
         .order('nome');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao buscar segmentos:', error);
+        throw error;
+      }
+      
       return data || [];
     },
     enabled: !!usuario?.tenant_id
   });
 
-  // Criar ou atualizar marca
+  // ✅ SALVAR MARCA (convertendo nomes para o banco)
   const saveMarca = useMutation({
     mutationFn: async (marcaData) => {
+      // ✅ Converter para nomes do banco
+      const dbData = {
+        nome: marcaData.nome,
+        emoji: marcaData.emoji,
+        id_segmento: marcaData.segmento_id || null, // ✅ nome do banco
+        invest_min: marcaData.investimento_minimo.toString(), // ✅ nome do banco
+        invest_max: marcaData.investimento_maximo.toString(), // ✅ nome do banco
+        ativo: true
+      };
+
       if (marcaData.id) {
         // Atualizar
         const { data, error } = await supabase
           .from('marcas')
-          .update(marcaData)
+          .update(dbData)
           .eq('id', marcaData.id)
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao atualizar marca:', error);
+          throw error;
+        }
         return data;
       } else {
         // Criar
         const { data, error } = await supabase
           .from('marcas')
-          .insert({ ...marcaData, tenant_id: usuario.tenant_id })
+          .insert({ ...dbData, tenant_id: usuario.tenant_id })
           .select()
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Erro ao criar marca:', error);
+          throw error;
+        }
         return data;
       }
     },
@@ -75,6 +121,9 @@ export default function MarcasPage() {
       queryClient.invalidateQueries(['marcas']);
       setShowModal(false);
       setSelectedMarca(null);
+    },
+    onError: (error) => {
+      alert('Erro ao salvar marca: ' + error.message);
     }
   });
 
@@ -113,7 +162,6 @@ export default function MarcasPage() {
           <h1 className="text-3xl lg:text-4xl font-light text-white mb-3">
             Gestão de <span className="text-[#ee7b4d] font-bold">Marcas</span>
           </h1>
-          {/* ✅ LINHA MAIS FINA */}
           <div className="w-24 h-0.5 bg-[#ee7b4d] rounded-full mb-4"></div>
           <p className="text-[9px] lg:text-[10px] text-[#6a6a6f] uppercase tracking-[0.25em] font-bold">
             Portfólio de Ativos e Unidades Operacionais
@@ -151,7 +199,7 @@ export default function MarcasPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             
-            {/* ✅ CARD + NOVA MARCA (PRIMEIRO ITEM) */}
+            {/* CARD + NOVA MARCA */}
             <button
               onClick={handleNewMarca}
               className="bg-[#12121a] border-2 border-dashed border-[#2a2a2f] rounded-2xl p-8 hover:border-[#ee7b4d]/50 hover:bg-[#1f1f23]/30 transition-all group min-h-[200px] flex flex-col items-center justify-center"
@@ -180,7 +228,9 @@ export default function MarcasPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-white mb-1 truncate">{marca.nome}</h3>
                     {marca.segmento && (
-                      <p className="text-xs text-[#6a6a6f] mb-2">{marca.segmento.nome}</p>
+                      <p className="text-xs text-[#6a6a6f] mb-2">
+                        {marca.segmento.emoji} {marca.segmento.nome}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -189,13 +239,13 @@ export default function MarcasPage() {
                   <div className="flex justify-between text-xs">
                     <span className="text-[#6a6a6f]">Invest. Mínimo</span>
                     <span className="text-[#ee7b4d] font-bold">
-                      R$ {marca.investimento_minimo?.toLocaleString('pt-BR') || '—'}
+                      R$ {marca.investimento_minimo?.toLocaleString('pt-BR') || '0'}
                     </span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-[#6a6a6f]">Invest. Máximo</span>
                     <span className="text-[#ee7b4d] font-bold">
-                      R$ {marca.investimento_maximo?.toLocaleString('pt-BR') || '—'}
+                      R$ {marca.investimento_maximo?.toLocaleString('pt-BR') || '0'}
                     </span>
                   </div>
                 </div>
