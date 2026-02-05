@@ -1,128 +1,133 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import React, { useState } from 'react';
 
-export default function LeadModal({ lead, onClose, onRefresh }) {
-  // Mantendo seus estados originais integralmente
-  const [status, setStatus] = useState(lead.status || 'Novo');
-  const [observacao, setObservacao] = useState(lead.observacao || '');
-  const [isSaving, setIsSaving] = useState(false);
-  const [motivos, setMotivos] = useState([]);
-  const [idMotivo, setIdMotivo] = useState(lead.id_motivo_desistencia || '');
+export default function LeadModal({ lead, onClose, onSave }) {
+  const [formData, setFormData] = useState({
+    status: lead?.status || 'novo',
+    observacao: lead?.observacao || '',
+  });
 
-  const statusOptions = [
-    'Novo Lead', 'Em Contato', 'Agendado', 'Em Negociação', 'Vendido', 'Perdido'
-  ];
-
-  useEffect(() => {
-    async function loadMotivos() {
-      const { data } = await supabase
-        .from('motivos_desistencia')
-        .select('*')
-        .eq('ativo', true)
-        .order('nome', { ascending: true });
-      if (data) setMotivos(data);
-    }
-    loadMotivos();
-  }, []);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const motivoFinal = status === 'Perdido' ? idMotivo : null;
-      const { error } = await supabase
-        .from('leads')
-        .update({ 
-          status: status,
-          observacao: observacao,
-          id_motivo_desistencia: motivoFinal 
-        })
-        .eq('id', lead.id);
-
-      if (error) throw error;
-      if (onRefresh) onRefresh();
-      onClose();
-    } catch (error) {
-      console.error('Erro ao salvar alterações:', error.message);
-    } finally {
-      setIsSaving(false);
-    }
+  const handleSave = () => {
+    onSave?.({ ...lead, ...formData });
+    onClose?.();
   };
 
+  if (!lead) return null;
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 backdrop-blur-xl bg-black/90">
-      <div className="bg-[#0d0d12] border border-white/5 w-full max-w-2xl rounded-[3.5rem] p-10 md:p-14 shadow-2xl relative text-left">
-        <button onClick={onClose} className="absolute top-10 right-10 text-gray-700 hover:text-white text-2xl transition-colors">✕</button>
-        
-        <h2 className="text-4xl font-black text-[#ee7b4d] italic mb-10 leading-tight uppercase tracking-tighter">
-          {lead.nome} <br/> 
-          <span className="text-[10px] text-gray-600 uppercase not-italic tracking-[0.3em] font-black">Informação do Lead</span>
-        </h2>
+    <>
+      {/* Overlay */}
+      <div 
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+        onClick={onClose}
+      />
 
-        {/* INFO GRID - MANTIDO E CORRIGIDO PARA RECEBER DADOS ANINHADOS */}
-        <div className="bg-[#12121a] border border-white/5 rounded-[2.5rem] p-8 md:p-10 grid grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-4 mb-10">
-          <InfoItem label="Telefone" value={lead.telefone} icon="📱" />
-          <InfoItem label="E-mail" value={lead.email} icon="📧" />
-          <InfoItem label="Localização" value={lead.cidade ? `${lead.cidade}/${lead.estado}` : '---'} icon="📍" />
-          <InfoItem label="Investimento" value={`R$ ${parseFloat(lead.capital_disponivel || 0).toLocaleString()}`} icon="💰" />
-          <InfoItem label="Fonte Original" value={lead.fonte} icon="🌐" />
-          <InfoItem label="Marca / Unidade" value={lead.marcas?.nome} icon="🏢" />
-          {/* Esta linha agora funcionará pois o Dashboard buscará o dado */}
-          <InfoItem label="Segmento" value={lead.marcas?.segmentos?.nome} icon="⚫" />
-          <InfoItem label="Score IA" value={`${lead.score} pts`} icon="🤖" color="text-[#ee7b4d]" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <label className="text-[9px] text-gray-600 uppercase font-black tracking-widest ml-1">Status Comercial</label>
-              <div className="relative">
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full bg-[#12121a] border border-white/5 p-5 rounded-2xl text-white text-sm outline-none appearance-none cursor-pointer">
-                  {statusOptions.map(opt => <option key={opt} value={opt} className="bg-[#0d0d12]">{opt}</option>)}
-                </select>
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-600 text-xs">▼</div>
+      {/* Modal */}
+      <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center p-0 lg:p-4">
+        <div 
+          className="bg-[#12121a] border-t lg:border border-[#1f1f23] rounded-t-3xl lg:rounded-2xl w-full lg:max-w-2xl max-h-[90vh] lg:max-h-[85vh] overflow-hidden flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          
+          {/* Header - Fixo */}
+          <div className="flex-shrink-0 p-6 border-b border-[#1f1f23]">
+            {/* Handle Mobile */}
+            <div className="w-12 h-1 bg-[#2a2a2f] rounded-full mx-auto mb-4 lg:hidden"></div>
+            
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h2 className="text-xl lg:text-2xl font-semibold text-white mb-1">
+                  {lead.nome || 'Lead'}
+                </h2>
+                <p className="text-xs text-[#6a6a6f]">{lead.email || 'Sem email'}</p>
               </div>
+              <button 
+                onClick={onClose}
+                className="w-10 h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-white transition-colors"
+              >
+                ✕
+              </button>
             </div>
+          </div>
 
-            {status === 'Perdido' && (
-              <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                <label className="text-[9px] text-[#ee7b4d] uppercase font-black tracking-widest ml-1 italic">Motivo da Perda</label>
-                <div className="relative">
-                  <select value={idMotivo} onChange={(e) => setIdMotivo(e.target.value)} className="w-full bg-[#1a1212] border border-[#ee7b4d]/20 p-5 rounded-2xl text-white text-sm outline-none appearance-none cursor-pointer">
-                    <option value="" className="text-gray-500">Selecione o motivo...</option>
-                    {motivos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                  </select>
+          {/* Content - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            
+            {/* Score Badge */}
+            {lead.score && (
+              <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-[#ee7b4d]/10 border border-[#ee7b4d]/20">
+                <span className="text-3xl font-light text-[#ee7b4d]">{lead.score}</span>
+                <div>
+                  <p className="text-sm font-semibold text-[#ee7b4d]">
+                    {lead.score >= 70 ? 'Lead Hot 🔥' : lead.score >= 40 ? 'Lead Warm 🌤' : 'Lead Cold ❄️'}
+                  </p>
+                  <p className="text-[10px] text-[#4a4a4f] uppercase">Score</p>
                 </div>
               </div>
             )}
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl p-4">
+                <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-1">Telefone</p>
+                <p className="text-white font-medium">{lead.telefone || '—'}</p>
+              </div>
+              <div className="bg-[#1f1f23]/50 border border-[#2a2a2f] rounded-xl p-4">
+                <p className="text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-1">Fonte</p>
+                <p className="text-white font-medium capitalize">{lead.fonte || '—'}</p>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
+                Status do Lead
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ee7b4d]/50"
+              >
+                <option value="novo">🆕 Novo</option>
+                <option value="contato">📞 Em Contato</option>
+                <option value="agendado">📅 Agendado</option>
+                <option value="negociacao">💼 Negociação</option>
+                <option value="convertido">✅ Convertido</option>
+                <option value="perdido">❌ Perdido</option>
+              </select>
+            </div>
+
+            {/* Observações */}
+            <div>
+              <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
+                Observações
+              </label>
+              <textarea
+                value={formData.observacao}
+                onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
+                placeholder="Adicione observações sobre este lead..."
+                rows={4}
+                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 resize-none"
+              />
+            </div>
           </div>
 
-          <div className="space-y-3">
-            <label className="text-[9px] text-gray-600 uppercase font-black tracking-widest ml-1">Observações</label>
-            <textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Notas sobre o atendimento..." className="w-full bg-[#12121a] border border-white/5 p-5 rounded-2xl text-white text-sm outline-none h-full min-h-[120px] resize-none" />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <button className="w-full py-5 bg-[#00d95f] text-[#0a0a0b] font-black rounded-2xl uppercase text-[11px] tracking-widest flex items-center justify-center gap-3 hover:scale-[1.01] transition-all" onClick={() => window.open(`https://wa.me/${lead.telefone?.replace(/\D/g,'')}`, '_blank')}>
-            📱 WhatsApp
-          </button>
-          <div className="grid grid-cols-2 gap-4">
-             <button onClick={onClose} className="py-5 bg-white/5 text-gray-600 font-black rounded-2xl uppercase text-[11px]">Cancelar</button>
-             <button onClick={handleSave} disabled={isSaving || (status === 'Perdido' && !idMotivo)} className="py-5 bg-[#ee7b4d] text-[#0a0a0b] font-black rounded-2xl uppercase text-[11px] shadow-lg shadow-[#ee7b4d]/20">
-                {isSaving ? 'Salvando...' : 'Salvar Alterações'}
-             </button>
+          {/* Footer - Fixo */}
+          <div className="flex-shrink-0 p-6 border-t border-[#1f1f23] flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold hover:bg-[#1f1f23] transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-1 py-3 rounded-xl bg-[#ee7b4d] text-black font-semibold hover:bg-[#d4663a] transition-colors"
+            >
+              Salvar
+            </button>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InfoItem({ label, value, icon, color = "text-white" }) {
-  return (
-    <div className="overflow-hidden">
-      <p className="text-[8px] text-gray-600 uppercase font-black mb-2 flex items-center gap-1.5 opacity-60"><span>{icon}</span> {label}</p>
-      <p className={`text-[12px] font-bold truncate ${color}`}>{value || '---'}</p>
-    </div>
+    </>
   );
 }
