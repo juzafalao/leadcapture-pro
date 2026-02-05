@@ -19,53 +19,29 @@ export default function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppLayout />
+        <div className="flex bg-[#0a0a0b] min-h-screen font-sans text-white overflow-x-hidden">
+          <Sidebar />
+          {/* Ajuste Cirúrgico: pl-0 no mobile, pl-32 no Desktop */}
+          <main className="flex-1 min-h-screen flex flex-col md:pl-32">
+            <Header />
+            <div className="flex-1 pb-24 md:pb-0"> 
+              <Routes>
+                <Route path="/" element={<Navigate to="/dashboard" />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/inteligencia" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><InteligenciaPage /></PrivateRoute>} />
+                <Route path="/marcas" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><MarcasPage /></PrivateRoute>} />
+                <Route path="/segmentos" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><SegmentosPage /></PrivateRoute>} />
+                <Route path="/usuarios" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor']}><UsuariosPage /></PrivateRoute>} />
+              </Routes>
+            </div>
+            <footer className="p-10 border-t border-white/5 flex flex-col items-center bg-[#0a0a0b] text-center">
+              <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em] italic">
+                © 2026 LeadCapture Pro — Desenvolvido por: Juliana Zafalão
+              </p>
+            </footer>
+          </main>
+        </div>
       </Router>
     </AuthProvider>
-  );
-}
-
-function AppLayout() {
-  return (
-    <div className="flex bg-[#0a0a0b] min-h-screen font-sans text-white overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 h-screen overflow-y-auto pl-28 lg:pl-32 flex flex-col">
-        <Header />
-        
-        <div className="flex-1">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/inteligencia" element={
-              <PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}>
-                <InteligenciaPage />
-              </PrivateRoute>
-            } />
-            <Route path="/marcas" element={
-              <PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}>
-                <MarcasPage />
-              </PrivateRoute>
-            } />
-            <Route path="/segmentos" element={
-              <PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}>
-                <SegmentosPage />
-              </PrivateRoute>
-            } />
-            <Route path="/usuarios" element={
-              <PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}>
-                <UsuariosPage />
-              </PrivateRoute>
-            } />
-          </Routes>
-        </div>
-
-        {/* RODAPÉ SEM O BOTÃO DE SAIR */}
-        <footer className="p-10 border-t border-white/5 flex flex-col items-center bg-[#0a0a0b]">
-          <p className="text-[10px] text-gray-600 font-black uppercase tracking-[0.2em] italic">
-            © 2026 LeadCapture Pro — Desenvolvido por: Juliana Zafalão
-          </p>
-        </footer>
-      </main>
-    </div>
   );
 }
