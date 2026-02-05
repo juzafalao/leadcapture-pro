@@ -27,6 +27,20 @@ export function AuthProvider({ children }) {
       }
 
       if (userData) {
+        // ✅ VERIFICAR SE USUÁRIO ESTÁ ATIVO
+        if (!userData.ativo) {
+          console.error('🚫 Usuário inativo:', userData.email)
+          
+          await supabase.auth.signOut()
+          
+          setUsuario(null)
+          setTenant(null)
+          setLoading(false)
+          
+          alert('❌ Seu usuário está inativo. Entre em contato com o administrador.')
+          return
+        }
+        
         console.log('✅ Usuário carregado:', userData.nome, userData.role)
         setUsuario(userData)
         
@@ -56,7 +70,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     console.log('🚀 AuthContext iniciando...')
     
-    // Carregar sessão inicial
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('📝 Sessão atual:', session)
       
@@ -69,7 +82,6 @@ export function AuthProvider({ children }) {
       }
     })
 
-    // Escutar mudanças de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔔 Auth state changed:', event, session?.user?.email)
       
@@ -85,7 +97,6 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ✅ FUNÇÃO DE LOGIN
   const login = async (email, password) => {
     console.log('🔐 Tentando login:', email)
     
@@ -108,7 +119,6 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // ✅ FUNÇÃO DE LOGOUT
   const logout = async () => {
     console.log('👋 Fazendo logout...')
     
@@ -122,21 +132,32 @@ export function AuthProvider({ children }) {
     }
   }
 
-  // ✅ FUNÇÕES DE PERMISSÃO (EM PORTUGUÊS)
+  // ============================================
+  // FUNÇÕES DE PERMISSÃO - MULTI-TENANT
+  // ============================================
+
+  const isSuperAdmin = () => {
+    const result = usuario?.is_super_admin === true || usuario?.role === 'Administrador'
+    console.log('👑 isSuperAdmin?', result, 'is_super_admin:', usuario?.is_super_admin, 'role:', usuario?.role)
+    return result
+  }
+
   const isAdministrador = () => {
-    const result = usuario?.role === 'Administrador'
+    const result = isSuperAdmin()
     console.log('🔍 isAdministrador?', result, 'role:', usuario?.role)
     return result
   }
   
   const isDiretor = () => {
-    const result = ['Administrador', 'Diretor'].includes(usuario?.role)
+    if (isSuperAdmin()) return true
+    const result = usuario?.role === 'Diretor'
     console.log('🔍 isDiretor?', result, 'role:', usuario?.role)
     return result
   }
   
   const isGestor = () => {
-    const result = ['Administrador', 'Diretor', 'Gestor'].includes(usuario?.role)
+    if (isSuperAdmin()) return true
+    const result = ['Diretor', 'Gestor'].includes(usuario?.role)
     console.log('🔍 isGestor?', result, 'role:', usuario?.role)
     return result
   }
@@ -144,14 +165,36 @@ export function AuthProvider({ children }) {
   const isConsultor = () => usuario?.role === 'Consultor'
   const isOperador = () => usuario?.role === 'Operador'
 
-  // Função genérica de permissões
+  const canManageUsers = () => {
+    if (isSuperAdmin()) return true
+    return usuario?.role === 'Diretor'
+  }
+
+  const canManageMarcas = () => {
+    if (isSuperAdmin()) return true
+    return usuario?.role === 'Diretor'
+  }
+
+  const canManageSegmentos = () => {
+    if (isSuperAdmin()) return true
+    return usuario?.role === 'Diretor'
+  }
+
+  const canViewAllLeads = () => {
+    if (isSuperAdmin()) return true
+    return ['Diretor', 'Gestor'].includes(usuario?.role)
+  }
+
+  const canEditAllLeads = () => {
+    if (isSuperAdmin()) return true
+    return ['Diretor', 'Gestor'].includes(usuario?.role)
+  }
+
   const hasPermission = (resource, action) => {
     if (!usuario) return false
     
-    // Administrador tem acesso total
-    if (isAdministrador()) return true
+    if (isSuperAdmin()) return true
     
-    // Mapa de permissões por role
     const permissions = {
       'Diretor': {
         leads: ['visualizar', 'editar', 'criar', 'excluir'],
@@ -184,10 +227,11 @@ export function AuthProvider({ children }) {
     return userPerms[resource].includes(action)
   }
 
-  // Log do estado atual (útil para debug)
   console.log('📊 AuthContext State:', {
     usuario: usuario?.nome,
     role: usuario?.role,
+    is_super_admin: usuario?.is_super_admin,
+    ativo: usuario?.ativo,
     tenant: tenant?.nome,
     loading,
     isAuthenticated: !!usuario
@@ -206,7 +250,13 @@ export function AuthProvider({ children }) {
       isConsultor,
       isOperador,
       hasPermission,
-      isAuthenticated: !!usuario 
+      isAuthenticated: !!usuario,
+      isSuperAdmin,
+      canManageUsers,
+      canManageMarcas,
+      canManageSegmentos,
+      canViewAllLeads,
+      canEditAllLeads
     }}>
       {children}
     </AuthContext.Provider>

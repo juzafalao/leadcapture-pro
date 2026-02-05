@@ -1,98 +1,200 @@
 // ============================================
-// CONSTANTES DO SISTEMA - LEADCAPTURE PRO
-// Roles em PORTUGUÊS (sincronizado com banco)
+// ROLES - HIERARQUIA DE PERFIS
+// LeadCapture Pro - Multi-Tenant System
+// Data: 2026-02-05
 // ============================================
 
 export const ROLES = {
+  // ============================================
+  // SUPER ADMIN (Nível Sistema - Vocês)
+  // ============================================
   Administrador: {
     key: 'Administrador',
     label: 'Administrador',
     emoji: '👑',
-    color: '#ee7b4d',
     nivel: 5,
-    descricao: 'Acesso total ao sistema'
+    color: '#ef4444',
+    descricao: 'Super Admin - Acesso total ao sistema',
+    isSuperAdmin: true,
+    permissoes: ['*'] // Todas as permissões em todos os tenants
   },
+  
+  // ============================================
+  // ROLES POR TENANT (Níveis do Cliente)
+  // ============================================
   Diretor: {
     key: 'Diretor',
     label: 'Diretor',
     emoji: '🎯',
-    color: '#f97316',
     nivel: 4,
-    descricao: 'Acesso administrativo completo'
+    color: '#f59e0b',
+    descricao: 'Gestão estratégica do tenant',
+    isSuperAdmin: false,
+    permissoes: [
+      'usuarios.ver',
+      'usuarios.criar',
+      'usuarios.editar',
+      'usuarios.excluir',
+      'leads.ver_todos',
+      'leads.criar',
+      'leads.editar_todos',
+      'leads.excluir',
+      'leads.atribuir',
+      'leads.exportar',
+      'marcas.ver',
+      'marcas.criar',
+      'marcas.editar',
+      'marcas.excluir',
+      'segmentos.ver',
+      'segmentos.criar',
+      'segmentos.editar',
+      'segmentos.excluir',
+      'bi.dashboard',
+      'bi.relatorios_avancados',
+      'bi.metricas_financeiras',
+      'configuracoes.tenant'
+    ]
   },
+  
   Gestor: {
     key: 'Gestor',
     label: 'Gestor',
     emoji: '📊',
-    color: '#a78bfa',
     nivel: 3,
-    descricao: 'Gerenciar leads, marcas e segmentos'
+    color: '#3b82f6',
+    descricao: 'Gestão operacional',
+    isSuperAdmin: false,
+    permissoes: [
+      'usuarios.ver',
+      'leads.ver_todos',
+      'leads.criar',
+      'leads.editar_todos',
+      'leads.excluir',
+      'leads.atribuir',
+      'leads.exportar',
+      'marcas.ver',
+      'segmentos.ver',
+      'bi.dashboard',
+      'bi.relatorios_avancados'
+    ]
   },
+  
   Consultor: {
     key: 'Consultor',
     label: 'Consultor',
-    emoji: '👓',
-    color: '#60a5fa',
+    emoji: '💼',
     nivel: 2,
-    descricao: 'Visualizar leads e relatórios'
-  },
-  Operador: {
-    key: 'Operador',
-    label: 'Operador',
-    emoji: '👤',
-    color: '#22c55e',
-    nivel: 1,
-    descricao: 'Editar leads básicos'
+    color: '#8b5cf6',
+    descricao: 'Atendimento e qualificação',
+    isSuperAdmin: false,
+    permissoes: [
+      'leads.ver_atribuidos',
+      'leads.criar',
+      'leads.editar_atribuidos',
+      'marcas.ver',
+      'bi.dashboard_proprio'
+    ]
   }
-}
+};
 
-export const STATUS_OPTIONS = {
-  all: 'Todos',
-  novo: '🆕 Novo',
-  contato: '📞 Em Contato',
-  agendado: '📅 Agendado',
-  negociacao: '💼 Negociação',
-  convertido: '✅ Convertido',
-  perdido: '❌ Perdido'
-}
+// ============================================
+// HELPERS DE PERMISSÃO
+// ============================================
 
-export const CATEGORIAS = {
-  all: 'Todas',
-  hot: '🔥 Hot',
-  warm: '🌤 Warm',
-  cold: '❄️ Cold'
-}
+/**
+ * Verifica se é Super Admin (ignora tenant)
+ */
+export const isSuperAdmin = (user) => {
+  return user?.is_super_admin === true || user?.role === 'Administrador';
+};
 
-export const FONTES = {
-  all: 'Todas',
-  website: 'Website',
-  instagram: 'Instagram',
-  whatsapp: 'WhatsApp',
-  indicacao: 'Indicação',
-  evento: 'Evento',
-  google_ads: 'Google Ads'
-}
+/**
+ * Verifica permissão (Super Admin tem todas)
+ */
+export const hasPermission = (user, permission) => {
+  if (isSuperAdmin(user)) return true;
+  
+  const role = ROLES[user?.role];
+  if (!role) return false;
+  
+  if (role.permissoes.includes('*')) return true;
+  return role.permissoes.includes(permission);
+};
 
-// HELPER FUNCTIONS
-export const getRoleInfo = (roleKey) => {
-  return ROLES[roleKey] || {
-    key: roleKey,
-    label: roleKey,
-    emoji: '❓',
-    color: '#6b7280',
-    nivel: 0
+/**
+ * Verifica se pode editar outro usuário
+ */
+export const canEditUser = (editor, target) => {
+  // Super Admin pode editar qualquer um
+  if (isSuperAdmin(editor)) return true;
+  
+  // Não pode editar usuários de outro tenant
+  if (editor.tenant_id !== target.tenant_id) return false;
+  
+  const editorRole = ROLES[editor.role];
+  const targetRole = ROLES[target.role];
+  
+  if (!editorRole || !targetRole) return false;
+  
+  // Diretor pode editar Gestor e Consultor
+  if (editorRole.nivel === 4 && targetRole.nivel < 4) return true;
+  
+  return false;
+};
+
+/**
+ * Retorna roles que um usuário pode atribuir
+ */
+export const getAssignableRoles = (user) => {
+  // Super Admin pode atribuir qualquer role (inclusive outro admin)
+  if (isSuperAdmin(user)) {
+    return Object.values(ROLES);
   }
-}
+  
+  const userRole = ROLES[user?.role];
+  if (!userRole) return [];
+  
+  // Diretor pode atribuir Gestor e Consultor
+  if (userRole.nivel === 4) {
+    return Object.values(ROLES).filter(r => r.nivel <= 3 && !r.isSuperAdmin);
+  }
+  
+  // Gestor e Consultor não podem atribuir roles
+  return [];
+};
 
-export const getRoleLabel = (roleKey) => getRoleInfo(roleKey).label
-export const getRoleColor = (roleKey) => getRoleInfo(roleKey).color
-export const getRoleEmoji = (roleKey) => getRoleInfo(roleKey).emoji
-export const getRoleNivel = (roleKey) => getRoleInfo(roleKey).nivel
+/**
+ * Verifica se pode acessar página
+ */
+export const canAccessPage = (user, page) => {
+  if (isSuperAdmin(user)) return true;
+  
+  const permissions = {
+    'usuarios': ['usuarios.ver'],
+    'marcas': ['marcas.ver'],
+    'segmentos': ['segmentos.ver'],
+    'inteligencia': ['bi.dashboard'],
+    'leads': ['leads.ver_atribuidos', 'leads.ver_todos']
+  };
+  
+  const required = permissions[page];
+  if (!required) return true;
+  
+  return required.some(perm => hasPermission(user, perm));
+};
 
-// Verifica se role1 tem nível maior ou igual a role2
-export const hasRoleLevel = (role1, role2) => {
-  return getRoleNivel(role1) >= getRoleNivel(role2)
-}
+/**
+ * Retorna o nível de acesso de um usuário
+ */
+export const getUserLevel = (userRole) => {
+  return ROLES[userRole]?.nivel || 0;
+};
 
-// Lista de roles ordenada por nível (maior para menor)
-export const ROLES_ORDENADAS = Object.values(ROLES).sort((a, b) => b.nivel - a.nivel)
+/**
+ * Verifica se um usuário tem nível maior ou igual a outro
+ */
+export const hasEqualOrHigherLevel = (userRole, targetRole) => {
+  const userLevel = getUserLevel(userRole);
+  const targetLevel = getUserLevel(targetRole);
+  return userLevel >= targetLevel;
+};

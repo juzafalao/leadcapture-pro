@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ROLES } from '../../lib/constants';
+import { ROLES, getAssignableRoles } from '../../lib/constants';
+import { useAuth } from '../AuthContext';
 
 export default function UserModal({ user, onClose, onSave, isSaving }) {
+  const { usuario: currentUser } = useAuth();
+  
   const [formData, setFormData] = useState({
     nome: '',
     email: '',
     telefone: '',
-    role: 'Operador',
+    role: 'Consultor',
     ativo: true
   });
 
@@ -18,11 +21,14 @@ export default function UserModal({ user, onClose, onSave, isSaving }) {
         nome: user.nome || '',
         email: user.email || '',
         telefone: user.telefone || '',
-        role: user.role || 'Operador',
+        role: user.role || 'Consultor',
         ativo: user.ativo !== false
       });
     }
   }, [user]);
+
+  // ✅ OBTER ROLES QUE O USUÁRIO LOGADO PODE ATRIBUIR
+  const assignableRoles = getAssignableRoles(currentUser);
 
   const validate = () => {
     const newErrors = {};
@@ -70,7 +76,6 @@ export default function UserModal({ user, onClose, onSave, isSaving }) {
           
           {/* Header - Fixo */}
           <div className="flex-shrink-0 p-4 lg:p-6 border-b border-[#1f1f23]">
-            {/* Handle Mobile */}
             <div className="w-12 h-1 bg-[#2a2a2f] rounded-full mx-auto mb-3 lg:hidden"></div>
             
             <div className="flex items-start justify-between gap-3">
@@ -146,7 +151,7 @@ export default function UserModal({ user, onClose, onSave, isSaving }) {
               />
             </div>
 
-            {/* Role (Perfil) */}
+            {/* Role (Perfil) - ✅ FILTRADO POR PERMISSÃO */}
             <div>
               <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
                 Perfil de Acesso *
@@ -154,38 +159,44 @@ export default function UserModal({ user, onClose, onSave, isSaving }) {
               <select
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                disabled={isSaving}
+                disabled={isSaving || assignableRoles.length === 0}
                 className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-3 lg:px-4 py-2.5 lg:py-3 text-sm lg:text-base text-white focus:outline-none focus:border-[#ee7b4d]/50 disabled:opacity-50"
               >
-                {Object.values(ROLES).sort((a, b) => b.nivel - a.nivel).map((role) => (
-                  <option key={role.key} value={role.key}>
-                    {role.emoji} {role.label}
-                  </option>
-                ))}
+                {assignableRoles.length === 0 ? (
+                  <option>Sem permissão para atribuir perfis</option>
+                ) : (
+                  assignableRoles.map((role) => (
+                    <option key={role.key} value={role.key}>
+                      {role.emoji} {role.label}
+                    </option>
+                  ))
+                )}
               </select>
               
               {/* Preview compacto */}
-              <div className="mt-2 p-3 bg-[#1f1f23] border border-[#2a2a2f] rounded-xl">
-                <div className="flex items-center gap-2">
-                  <div 
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
-                    style={{ backgroundColor: `${ROLES[formData.role]?.color}20` }}
-                  >
-                    {ROLES[formData.role]?.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs lg:text-sm font-semibold text-white truncate">
-                      {ROLES[formData.role]?.label}
-                    </p>
-                    <p className="text-[10px] lg:text-xs text-[#6a6a6f] truncate">
-                      {ROLES[formData.role]?.descricao}
-                    </p>
+              {assignableRoles.length > 0 && (
+                <div className="mt-2 p-3 bg-[#1f1f23] border border-[#2a2a2f] rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
+                      style={{ backgroundColor: `${ROLES[formData.role]?.color}20` }}
+                    >
+                      {ROLES[formData.role]?.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs lg:text-sm font-semibold text-white truncate">
+                        {ROLES[formData.role]?.label}
+                      </p>
+                      <p className="text-[10px] lg:text-xs text-[#6a6a6f] truncate">
+                        {ROLES[formData.role]?.descricao}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Status Ativo/Inativo - Compacto */}
+            {/* Status Ativo/Inativo */}
             <div>
               <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
                 Status

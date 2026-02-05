@@ -35,7 +35,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
       path: '/usuarios', 
       icon: '🧑🏻‍💻', 
       label: 'Time', 
-      show: isDiretor() 
+      show: isGestor() // ✅ MUDOU: de isDiretor() para isGestor()
     }
   ];
 

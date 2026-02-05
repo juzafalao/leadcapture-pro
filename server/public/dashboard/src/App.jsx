@@ -33,19 +33,16 @@ function PrivateRoute({ children, allowedRoles }) {
 }
 
 function AuthenticatedLayout({ children }) {
-  // ✅ ESTADO PARA CONTROLAR MENU MOBILE
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <div className="flex bg-[#0a0a0b] min-h-screen font-sans text-white">
-      {/* Sidebar - passa estado do menu */}
       <Sidebar 
         mobileOpen={mobileMenuOpen} 
         setMobileOpen={setMobileMenuOpen} 
       />
       
       <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
-        {/* Header - passa função para abrir menu */}
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
         
         <div className="flex-1">
@@ -79,7 +76,8 @@ export default function App() {
           
           <Route path="/segmentos" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><SegmentosPage /></AuthenticatedLayout></PrivateRoute>} />
           
-          <Route path="/usuarios" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor']}><AuthenticatedLayout><UsuariosPage /></AuthenticatedLayout></PrivateRoute>} />
+          {/* ✅ CORRIGIDO: Adicionado 'Gestor' */}
+          <Route path="/usuarios" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><UsuariosPage /></AuthenticatedLayout></PrivateRoute>} />
           
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
