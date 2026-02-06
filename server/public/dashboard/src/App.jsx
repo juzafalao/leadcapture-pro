@@ -8,7 +8,10 @@ import DashboardPage from './pages/DashboardPage';
 function ProtectedRoute({ children }) {
   const { usuario, loading } = useAuth();
 
+  console.log('🛡️ ProtectedRoute - usuario:', usuario?.nome || 'null', 'loading:', loading);
+
   if (loading) {
+    console.log('⏳ Ainda carregando...');
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
@@ -20,9 +23,11 @@ function ProtectedRoute({ children }) {
   }
 
   if (!usuario) {
+    console.log('❌ Sem usuário, redirecionando para login');
     return <Navigate to="/login" replace />;
   }
 
+  console.log('✅ Usuário autenticado, renderizando dashboard');
   return <>{children}</>;
 }
 

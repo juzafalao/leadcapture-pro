@@ -15,27 +15,40 @@ export function AuthProvider({ children }) {
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  console.log('🔄 AuthProvider render - usuario:', usuario?.nome || 'null', 'loading:', loading);
+
   useEffect(() => {
     let isMounted = true;
     
     const initialize = async () => {
+      console.log('🚀 Inicializando AuthContext...');
+      
       await checkSession();
       
       const { data: authListener } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-          if (!isMounted) return;
+          if (!isMounted) {
+            console.log('⚠️ Componente desmontado, ignorando evento');
+            return;
+          }
           
-          console.log('🔔 Auth event:', event);
+          console.log('🔔 Auth event:', event, 'session:', !!session);
           
           if (event === 'SIGNED_IN' && session) {
+            console.log('✅ SIGNED_IN detectado, carregando dados...');
             await loadUserData(session.user.id);
           } else if (event === 'SIGNED_OUT') {
+            console.log('👋 SIGNED_OUT detectado');
             setUsuario(null);
+            setLoading(false);
+          } else if (event === 'INITIAL_SESSION') {
+            console.log('🔵 INITIAL_SESSION - já tratado no checkSession');
           }
         }
       );
 
       return () => {
+        console.log('🧹 Limpando AuthContext...');
         isMounted = false;
         authListener?.subscription?.unsubscribe();
       };
@@ -46,23 +59,26 @@ export function AuthProvider({ children }) {
 
   const checkSession = async () => {
     try {
+      console.log('🔍 Verificando sessão existente...');
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('Erro ao verificar sessão:', error);
+        console.error('❌ Erro ao verificar sessão:', error);
         setUsuario(null);
         setLoading(false);
         return;
       }
 
       if (session?.user) {
+        console.log('✅ Sessão encontrada:', session.user.email);
         await loadUserData(session.user.id);
       } else {
+        console.log('⚠️ Nenhuma sessão ativa');
         setUsuario(null);
         setLoading(false);
       }
     } catch (error) {
-      console.error('Erro na verificação de sessão:', error);
+      console.error('💥 Erro na verificação de sessão:', error);
       setUsuario(null);
       setLoading(false);
     }
@@ -70,44 +86,68 @@ export function AuthProvider({ children }) {
 
   const loadUserData = async (authUserId) => {
     try {
+      console.log('👤 Buscando usuário com auth_id:', authUserId);
+      
       const { data: usuarioData, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('auth_id', authUserId)
         .maybeSingle();
 
+      console.log('📊 Query retornou:', { 
+        temDados: !!usuarioData, 
+        temErro: !!error,
+        nome: usuarioData?.nome,
+        email: usuarioData?.email 
+      });
+
       if (error) {
-        console.error('Erro ao carregar usuário:', error);
+        console.error('❌ Erro na query:', error);
         setLoading(false);
         return;
       }
 
       if (usuarioData) {
+        console.log('✅ Dados do usuário encontrados');
+        
         // Buscar tenant
         if (usuarioData.tenant_id) {
-          const { data: tenantData } = await supabase
+          console.log('🏢 Buscando tenant:', usuarioData.tenant_id);
+          
+          const { data: tenantData, error: tenantError } = await supabase
             .from('tenants')
             .select('*')
             .eq('id', usuarioData.tenant_id)
             .maybeSingle();
           
-          if (tenantData) {
+          if (!tenantError && tenantData) {
+            console.log('✅ Tenant encontrado:', tenantData.nome);
             usuarioData.tenant = tenantData;
+          } else {
+            console.log('⚠️ Tenant não encontrado ou erro:', tenantError);
           }
         }
         
+        console.log('💾 Setando usuário no estado:', usuarioData.nome);
         setUsuario(usuarioData);
-        console.log('✅ Usuário carregado:', usuarioData.nome);
+        console.log('✅ setState(usuario) chamado');
+        
+        setLoading(false);
+        console.log('✅ setState(loading = false) chamado');
+      } else {
+        console.log('⚠️ Query não retornou dados');
+        setUsuario(null);
+        setLoading(false);
       }
     } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
-    } finally {
+      console.error('💥 Exceção ao carregar usuário:', error);
       setLoading(false);
     }
   };
 
   const login = async (email, password) => {
     try {
+      console.log('🔐 Iniciando login:', email);
       setLoading(true);
       
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -115,13 +155,20 @@ export function AuthProvider({ children }) {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro no login:', error);
+        setLoading(false);
+        throw error;
+      }
 
       if (data.user) {
+        console.log('✅ Auth bem-sucedido, auth_id:', data.user.id);
         await loadUserData(data.user.id);
+        console.log('✅ loadUserData completado');
         return { success: true };
       }
     } catch (error) {
+      console.error('💥 Exceção no login:', error);
       setLoading(false);
       throw error;
     }
@@ -129,57 +176,13 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
+      console.log('👋 Fazendo logout...');
       await supabase.auth.signOut();
       setUsuario(null);
+      setLoading(false);
       window.location.href = '/login';
     } catch (error) {
-      console.error('Erro no logout:', error);
-    }
-  };
-
-  const signup = async (email, password, nome, empresaNome) => {
-    try {
-      setLoading(true);
-
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) throw authError;
-
-      if (authData.user) {
-        const { data: tenant, error: tenantError } = await supabase
-          .from('tenants')
-          .insert({
-            nome: empresaNome,
-            slug: empresaNome.toLowerCase().replace(/\s+/g, '-'),
-          })
-          .select()
-          .single();
-
-        if (tenantError) throw tenantError;
-
-        const { error: userError } = await supabase
-          .from('usuarios')
-          .insert({
-            auth_id: authData.user.id,
-            email: email,
-            nome: nome,
-            tenant_id: tenant.id,
-            role: 'Administrador',
-            ativo: true,
-            is_super_admin: false,
-          });
-
-        if (userError) throw userError;
-
-        return { success: true, user: authData.user };
-      }
-    } catch (error) {
-      throw error;
-    } finally {
-      setLoading(false);
+      console.error('❌ Erro no logout:', error);
     }
   };
 
@@ -188,12 +191,17 @@ export function AuthProvider({ children }) {
     loading,
     login,
     logout,
-    signup,
   };
+
+  console.log('📤 AuthContext value:', { 
+    temUsuario: !!usuario, 
+    nomeUsuario: usuario?.nome,
+    loading 
+  });
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
