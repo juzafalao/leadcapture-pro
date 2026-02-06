@@ -1,55 +1,87 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './components/AuthContext';
-import LoginPage from './pages/LoginPage';
+import Sidebar from './components/Sidebar';
+import Header from './components/layout/Header';
 import DashboardPage from './pages/DashboardPage';
+import InteligenciaPage from './pages/InteligenciaPage';
+import MarcasPage from './pages/MarcasPage';
+import SegmentosPage from './pages/SegmentosPage';
+import UsuariosPage from './pages/UsuariosPage';
+import LoginPage from './pages/LoginPage';
+import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 
-// Componente para rotas protegidas
-function ProtectedRoute({ children }) {
-  const { usuario, loading } = useAuth();
-
-  console.log('🛡️ ProtectedRoute - usuario:', usuario?.nome || 'null', 'loading:', loading);
-
+function PrivateRoute({ children, allowedRoles }) {
+  const { usuario, loading, isAuthenticated } = useAuth();
+  
   if (loading) {
-    console.log('⏳ Ainda carregando...');
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-white text-lg">Carregando...</p>
-        </div>
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+        <div className="text-6xl animate-pulse">⏳</div>
       </div>
     );
   }
-
-  if (!usuario) {
-    console.log('❌ Sem usuário, redirecionando para login');
+  
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
-
-  console.log('✅ Usuário autenticado, renderizando dashboard');
-  return <>{children}</>;
+  
+  if (allowedRoles && !allowedRoles.includes(usuario?.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
 }
 
-function App() {
+function AuthenticatedLayout({ children }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <div className="flex bg-[#0a0a0b] min-h-screen font-sans text-white">
+      <Sidebar 
+        mobileOpen={mobileMenuOpen} 
+        setMobileOpen={setMobileMenuOpen} 
+      />
+      
+      <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
+        <Header onMenuClick={() => setMobileMenuOpen(true)} />
+        
+        <div className="flex-1">
+          {children}
+        </div>
+        
+        <footer className="border-t border-white/5 py-6 text-center bg-[#0a0a0b]">
+          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
+            © 2026 LeadCapture Pro — Desenvolvido por: Juliana Zafalão
+          </p>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
+          
+          <Route path="/" element={<PrivateRoute><Navigate to="/dashboard" replace /></PrivateRoute>} />
+          
+          <Route path="/dashboard" element={<PrivateRoute><AuthenticatedLayout><DashboardPage /></AuthenticatedLayout></PrivateRoute>} />
+          
+          <Route path="/inteligencia" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><InteligenciaPage /></AuthenticatedLayout></PrivateRoute>} />
+          
+          <Route path="/marcas" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><MarcasPage /></AuthenticatedLayout></PrivateRoute>} />
+          
+          <Route path="/segmentos" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><SegmentosPage /></AuthenticatedLayout></PrivateRoute>} />
+          
+          {/* ✅ CORRIGIDO: Adicionado 'Gestor' */}
+          <Route path="/usuarios" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><UsuariosPage /></AuthenticatedLayout></PrivateRoute>} />
+          
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
   );
 }
-
-export default App;

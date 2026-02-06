@@ -1,226 +1,456 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../components/AuthContext';
+import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../components/AuthContext';
+import KPIFilter from '../components/dashboard/KPIFilter';
+import LeadModal from '../components/leads/LeadModal';
+import AtribuirOperadorModal from '../components/leads/AtribuirOperadorModal';
+import FAB from '../components/dashboard/FAB';
 
 export default function DashboardPage() {
-  const { usuario, logout } = useAuth();
+  const { usuario } = useAuth();
   const [leads, setLeads] = useState([]);
+  const [leadsFiltrados, setLeadsFiltrados] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    hot: 0,
-    warm: 0,
-    cold: 0,
-  });
+  const [kpiAtivo, setKpiAtivo] = useState('All');
+  const [busca, setBusca] = useState('');
+  const [filtroMeusLeads, setFiltroMeusLeads] = useState(false);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAtribuirModalOpen, setIsAtribuirModalOpen] = useState(false);
+  const [leadParaAtribuir, setLeadParaAtribuir] = useState(null);
 
   useEffect(() => {
-    loadLeads();
-  }, []);
+    fetchLeads();
+  }, [usuario]);
 
-  const loadLeads = async () => {
-    try {
-      setLoading(true);
+  useEffect(() => {
+    filtrarLeads();
+  }, [kpiAtivo, busca, leads, filtroMeusLeads]);
 
-      // Buscar leads
-      const { data: leadsData, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+  const fetchLeads = async () => {
+    if (!usuario?.tenant_id) return;
+    setLoading(true);
 
-      if (error) throw error;
+    const { data, error } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        marcas (nome, emoji),
+        operador:id_operador_responsavel (
+          id,
+          nome,
+          role
+        )
+      `)
+      .eq('tenant_id', usuario.tenant_id)
+      .order('created_at', { ascending: false });
 
-      setLeads(leadsData || []);
-
-      // Calcular stats
-      const hot = leadsData?.filter(l => l.categoria === 'HOT').length || 0;
-      const warm = leadsData?.filter(l => l.categoria === 'WARM').length || 0;
-      const cold = leadsData?.filter(l => l.categoria === 'COLD').length || 0;
-
-      setStats({
-        total: leadsData?.length || 0,
-        hot,
-        warm,
-        cold,
-      });
-    } catch (error) {
-      console.error('Erro ao carregar leads:', error);
-    } finally {
-      setLoading(false);
+    if (!error && data) {
+      setLeads(data);
+      setLeadsFiltrados(data);
     }
+    setLoading(false);
   };
 
-  const getCategoriaColor = (categoria) => {
-    switch (categoria) {
-      case 'HOT':
-        return 'bg-red-100 text-red-700 border-red-200';
-      case 'WARM':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'COLD':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+  const filtrarLeads = () => {
+    let filtrados = [...leads];
+
+    // Filtrar por "Meus Leads"
+    if (filtroMeusLeads) {
+      filtrados = filtrados.filter(lead => 
+        lead.id_operador_responsavel === usuario.id
+      );
     }
+
+    // Filtrar por categoria (Hot, Warm, Cold)
+    if (kpiAtivo !== 'All') {
+      filtrados = filtrados.filter(lead => 
+        lead.categoria?.toLowerCase() === kpiAtivo.toLowerCase()
+      );
+    }
+
+    // Filtrar por busca
+    if (busca) {
+      filtrados = filtrados.filter(lead =>
+        lead.nome?.toLowerCase().includes(busca.toLowerCase()) ||
+        lead.email?.toLowerCase().includes(busca.toLowerCase()) ||
+        lead.telefone?.includes(busca) ||
+        lead.cidade?.toLowerCase().includes(busca.toLowerCase())
+      );
+    }
+
+    setLeadsFiltrados(filtrados);
   };
+
+  const handleOpenModal = (lead) => {
+    setSelectedLead(lead);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedLead(null);
+    fetchLeads();
+  };
+
+  const handleAtribuir = (lead) => {
+    setLeadParaAtribuir(lead);
+    setIsAtribuirModalOpen(true);
+  };
+
+  const handleCloseAtribuirModal = () => {
+    setIsAtribuirModalOpen(false);
+    setLeadParaAtribuir(null);
+  };
+
+  const handleAtribuirSuccess = () => {
+    fetchLeads();
+  };
+
+  // KPIs
+  const kpis = {
+    total: leads.length,
+    hot: leads.filter(l => l.categoria?.toLowerCase() === 'hot').length,
+    warm: leads.filter(l => l.categoria?.toLowerCase() === 'warm').length,
+    cold: leads.filter(l => l.categoria?.toLowerCase() === 'cold').length,
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="text-6xl"
+        >
+          ⏳
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">LeadCapture Pro</h1>
-                <p className="text-xs text-slate-500">{usuario?.tenant?.nome || 'Dashboard'}</p>
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+      
+      {/* HEADER */}
+      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
+            Olá, <span className="text-[#ee7b4d] font-bold">{usuario?.nome?.split(' ')[0]}</span> 👋
+          </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full"></div>
+            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
+              Dashboard de Gestão de Leads
+            </p>
+          </div>
+        </motion.div>
+      </div>
 
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-slate-900">{usuario?.nome}</p>
-                <p className="text-xs text-slate-500">{usuario?.role}</p>
-              </div>
+      {/* KPI FILTER */}
+      <div className="px-4 lg:px-10 mb-8">
+        <KPIFilter
+          kpis={kpis}
+          kpiAtivo={kpiAtivo}
+          setKpiAtivo={setKpiAtivo}
+        />
+      </div>
+
+      {/* SEARCH BAR + FILTRO MEUS LEADS */}
+      <div className="px-4 lg:px-10 mb-8">
+        <div className="flex flex-col lg:flex-row gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="🔍 Buscar lead por nome, email, telefone ou cidade..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              className="
+                w-full
+                bg-[#12121a]
+                border border-white/5
+                rounded-2xl
+                px-5 py-4
+                lg:px-6 lg:py-4
+                text-sm lg:text-base
+                text-white
+                placeholder:text-gray-600
+                focus:outline-none
+                focus:border-[#ee7b4d]/50
+                focus:ring-2
+                focus:ring-[#ee7b4d]/20
+                transition-all
+              "
+            />
+            {busca && (
               <button
-                onClick={logout}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors text-sm font-medium"
+                onClick={() => setBusca('')}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
               >
-                Sair
+                ✕
               </button>
-            </div>
+            )}
           </div>
+
+          {/* Filtro Meus Leads */}
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => setFiltroMeusLeads(!filtroMeusLeads)}
+            className={`
+              flex items-center justify-center gap-2
+              px-6 py-4
+              rounded-2xl
+              font-bold
+              transition-all
+              whitespace-nowrap
+              ${filtroMeusLeads
+                ? 'bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black shadow-lg shadow-[#ee7b4d]/20'
+                : 'bg-[#12121a] border border-white/5 text-white hover:bg-white/5'
+              }
+            `}
+          >
+            <span className="text-xl">
+              {filtroMeusLeads ? '✓' : '👤'}
+            </span>
+            <span className="hidden lg:inline">
+              Meus Leads
+            </span>
+            {filtroMeusLeads && (
+              <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs">
+                {leadsFiltrados.length}
+              </span>
+            )}
+          </motion.button>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-600">Total de Leads</h3>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-slate-900">{stats.total}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-600">Leads HOT</h3>
-              <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-red-600">{stats.hot}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-600">Leads WARM</h3>
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-yellow-600">{stats.warm}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-slate-600">Leads COLD</h3>
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-              </div>
-            </div>
-            <p className="text-3xl font-bold text-blue-600">{stats.cold}</p>
-          </div>
-        </div>
-
-        {/* Leads Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-          <div className="px-6 py-4 border-b border-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900">Últimos Leads</h2>
-          </div>
-
-          {loading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-orange-500 border-t-transparent mx-auto mb-4"></div>
-              <p className="text-slate-600">Carregando leads...</p>
-            </div>
-          ) : leads.length === 0 ? (
-            <div className="p-12 text-center">
-              <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <p className="text-slate-600 font-medium">Nenhum lead encontrado</p>
-              <p className="text-slate-500 text-sm mt-1">Os leads aparecerão aqui quando forem criados</p>
-            </div>
-          ) : (
+      {/* LEADS TABLE */}
+      <div className="px-4 lg:px-10">
+        {leadsFiltrados.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div className="text-6xl mb-4 opacity-30">📭</div>
+            <p className="text-xl text-gray-400 mb-2">
+              {busca || kpiAtivo !== 'All' || filtroMeusLeads ? 'Nenhum lead encontrado' : 'Nenhum lead cadastrado'}
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              {busca || kpiAtivo !== 'All' || filtroMeusLeads ? 'Tente ajustar os filtros' : 'Comece importando ou criando seus leads!'}
+            </p>
+            {(busca || kpiAtivo !== 'All' || filtroMeusLeads) && (
+              <button
+                onClick={() => {
+                  setBusca('');
+                  setKpiAtivo('All');
+                  setFiltroMeusLeads(false);
+                }}
+                className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
+              >
+                Limpar Filtros
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Nome</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Telefone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Categoria</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Score</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">Status</th>
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">
+                      Lead
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      Contato
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">
+                      Localização
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      Score
+                    </th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                      Responsável
+                    </th>
+                    <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">
+                      Ações
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {leads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-slate-900">{lead.nome}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-600">{lead.email || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-slate-600">{lead.telefone || '-'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md border ${getCategoriaColor(lead.categoria)}`}>
-                          {lead.categoria || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-slate-200 rounded-full h-2 max-w-[60px]">
-                            <div
-                              className="bg-orange-500 h-2 rounded-full"
-                              style={{ width: `${lead.score || 0}%` }}
-                            ></div>
+                <tbody>
+                  {leadsFiltrados.map((lead, index) => (
+                    <motion.tr
+                      key={lead.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                    >
+                      {/* Lead */}
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-white font-bold">
+                            {lead.nome?.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-sm font-medium text-slate-700">{lead.score || 0}</span>
+                          <div>
+                            <div className="font-bold text-white">{lead.nome}</div>
+                            <div className="text-xs text-gray-400">
+                              {lead.marcas?.emoji} {lead.marcas?.nome || 'Sem marca'}
+                            </div>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-slate-600">{lead.status || 'PENDING'}</span>
+
+                      {/* Contato */}
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        <div className="text-sm text-gray-300">{lead.email || '-'}</div>
+                        <div className="text-xs text-gray-500">{lead.telefone || '-'}</div>
                       </td>
-                    </tr>
+
+                      {/* Localização */}
+                      <td className="px-4 py-4 hidden xl:table-cell">
+                        <div className="text-sm text-gray-300">
+                          {lead.cidade ? `${lead.cidade} - ${lead.estado}` : '-'}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-4">
+                        <span className={`
+                          inline-flex items-center gap-1
+                          px-3 py-1
+                          rounded-full
+                          text-xs font-bold
+                          ${lead.categoria?.toLowerCase() === 'hot' 
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/30' 
+                            : lead.categoria?.toLowerCase() === 'warm'
+                            ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                            : 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                          }
+                        `}>
+                          {lead.categoria?.toLowerCase() === 'hot' && '🔥'}
+                          {lead.categoria?.toLowerCase() === 'warm' && '🌤️'}
+                          {lead.categoria?.toLowerCase() === 'cold' && '❄️'}
+                          {lead.categoria || 'Cold'}
+                        </span>
+                      </td>
+
+                      {/* Score */}
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 bg-white/5 rounded-full h-2 overflow-hidden">
+                            <div 
+                              className={`h-full transition-all ${
+                                lead.score >= 70 ? 'bg-red-500' :
+                                lead.score >= 40 ? 'bg-yellow-500' :
+                                'bg-blue-500'
+                              }`}
+                              style={{ width: `${lead.score}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-gray-400 w-8 text-right">
+                            {lead.score || 0}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Responsável */}
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        {lead.operador ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                              {lead.operador.nome?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="text-sm text-gray-300">
+                              {lead.operador.nome}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-500">Não atribuído</span>
+                        )}
+                      </td>
+
+                      {/* Ações */}
+                      <td className="px-4 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {/* Botão Atribuir */}
+                          <button
+                            onClick={() => handleAtribuir(lead)}
+                            className="
+                              px-3 py-2
+                              rounded-lg
+                              bg-blue-500/10
+                              border border-blue-500/30
+                              text-blue-400
+                              text-xs
+                              font-bold
+                              hover:bg-blue-500/20
+                              transition-all
+                              flex items-center gap-1
+                            "
+                            title="Atribuir operador"
+                          >
+                            <span>👤</span>
+                            <span className="hidden lg:inline">Atribuir</span>
+                          </button>
+
+                          {/* Botão Ver Detalhes */}
+                          <button
+                            onClick={() => handleOpenModal(lead)}
+                            className="
+                              px-3 py-2
+                              rounded-lg
+                              bg-white/5
+                              border border-white/10
+                              text-white
+                              text-xs
+                              font-bold
+                              hover:bg-white/10
+                              transition-all
+                            "
+                          >
+                            Ver detalhes
+                          </button>
+                        </div>
+                      </td>
+                    </motion.tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-      </main>
+          </div>
+        )}
+      </div>
+
+      {/* FAB */}
+      <FAB onClick={() => handleOpenModal(null)} />
+
+      {/* MODALS */}
+      {isModalOpen && (
+        <LeadModal
+          lead={selectedLead}
+          onClose={handleCloseModal}
+        />
+      )}
+
+      {isAtribuirModalOpen && leadParaAtribuir && (
+        <AtribuirOperadorModal
+          lead={leadParaAtribuir}
+          onClose={handleCloseAtribuirModal}
+          onSuccess={handleAtribuirSuccess}
+        />
+      )}
     </div>
   );
 }
