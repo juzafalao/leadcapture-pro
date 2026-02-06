@@ -1,254 +1,249 @@
 import React, { useState, useEffect } from 'react';
-import { ROLES, getAssignableRoles } from '../../lib/constants';
-import { useAuth } from '../AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '../../lib/supabase';
 
-export default function UserModal({ user, onClose, onSave, isSaving }) {
-  const { usuario: currentUser } = useAuth();
-  
+export default function UserModal({ usuario, onClose }) {
   const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    role: 'Consultor',
-    ativo: true
+    role: usuario?.role || 'Operador'
   });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [errors, setErrors] = useState({});
+  const roles = [
+    { value: 'Administrador', label: 'Administrador', icon: '👑', color: 'purple' },
+    { value: 'Diretor', label: 'Diretor', icon: '🎯', color: 'blue' },
+    { value: 'Gestor', label: 'Gestor', icon: '📊', color: 'green' },
+    { value: 'Consultor', label: 'Consultor', icon: '💼', color: 'orange' },
+    { value: 'Operador', label: 'Operador', icon: '⚙️', color: 'gray' }
+  ];
 
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        nome: user.nome || '',
-        email: user.email || '',
-        telefone: user.telefone || '',
-        role: user.role || 'Consultor',
-        ativo: user.ativo !== false
-      });
-    }
-  }, [user]);
-
-  // ✅ OBTER ROLES QUE O USUÁRIO LOGADO PODE ATRIBUIR
-  const assignableRoles = getAssignableRoles(currentUser);
-
-  const validate = () => {
-    const newErrors = {};
-
-    if (!formData.nome.trim()) {
-      newErrors.nome = 'Nome é obrigatório';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email inválido';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const roleColors = {
+    purple: 'bg-purple-500/10 border-purple-500/30 text-purple-400',
+    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+    green: 'bg-green-500/10 border-green-500/30 text-green-400',
+    orange: 'bg-orange-500/10 border-orange-500/30 text-orange-400',
+    gray: 'bg-gray-500/10 border-gray-500/30 text-gray-400'
   };
 
-  const handleSubmit = async () => {
-    if (!validate()) return;
+  const handleSave = async () => {
+    if (!usuario?.id) return;
+
+    setIsSaving(true);
 
     try {
-      await onSave({
-        ...(user?.id && { id: user.id }),
-        nome: formData.nome.trim(),
-        email: formData.email.trim().toLowerCase(),
-        telefone: formData.telefone.trim(),
-        role: formData.role,
-        ativo: formData.ativo
-      });
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ role: formData.role })
+        .eq('id', usuario.id);
+
+      if (error) throw error;
+
+      alert('✅ Perfil atualizado com sucesso!');
+      onClose();
     } catch (error) {
-      console.error('Erro ao salvar usuário:', error);
+      console.error('Erro ao atualizar perfil:', error);
+      alert('❌ Erro ao atualizar perfil: ' + error.message);
+    } finally {
+      setIsSaving(false);
     }
   };
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={onClose} />
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        {/* Overlay */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        />
 
-      <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center p-0 lg:p-4">
-        <div 
-          className="bg-[#12121a] border-t lg:border border-[#1f1f23] rounded-t-3xl lg:rounded-2xl w-full lg:max-w-lg max-h-[85vh] lg:max-h-[90vh] overflow-hidden flex flex-col"
-          onClick={(e) => e.stopPropagation()}
+        {/* Modal */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="relative w-full max-w-md bg-[#1a1a1f] rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
         >
-          
-          {/* Header - Fixo */}
-          <div className="flex-shrink-0 p-4 lg:p-6 border-b border-[#1f1f23]">
-            <div className="w-12 h-1 bg-[#2a2a2f] rounded-full mx-auto mb-3 lg:hidden"></div>
-            
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg lg:text-xl font-semibold text-white truncate">
-                  {user ? 'Editar Usuário' : 'Novo Usuário'}
-                </h2>
-                <p className="text-[10px] lg:text-xs text-[#6a6a6f] mt-1 truncate">
-                  {user ? user.nome : 'Cadastrar novo membro'}
-                </p>
+          {/* Header */}
+          <div className="px-6 py-5 border-b border-white/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {/* Avatar */}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-white font-bold text-lg">
+                  {usuario?.nome?.charAt(0).toUpperCase() || '?'}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">
+                    Editar Perfil
+                  </h2>
+                  <p className="text-sm text-gray-400">
+                    {usuario?.nome}
+                  </p>
+                </div>
               </div>
-              <button 
+              <button
                 onClick={onClose}
-                disabled={isSaving}
-                className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-white transition-colors disabled:opacity-50 flex-shrink-0"
+                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all"
               >
                 ✕
               </button>
             </div>
           </div>
 
-          {/* Content - Scrollable */}
-          <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-4">
-            
-            {/* Nome */}
-            <div>
-              <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
-                Nome Completo *
-              </label>
-              <input
-                type="text"
-                value={formData.nome}
-                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                placeholder="Ex: João Silva"
-                disabled={isSaving}
-                className={`w-full bg-[#1f1f23] border ${errors.nome ? 'border-red-500' : 'border-[#2a2a2f]'} rounded-xl px-3 lg:px-4 py-2.5 lg:py-3 text-sm lg:text-base text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 disabled:opacity-50`}
-              />
-              {errors.nome && (
-                <p className="text-xs text-red-500 mt-1">{errors.nome}</p>
-              )}
-            </div>
+          {/* Body */}
+          <div className="px-6 py-6 space-y-6">
+            {/* Info do Usuário */}
+            <div className="bg-white/5 rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                  Email
+                </span>
+              </div>
+              <p className="text-sm text-gray-300">
+                {usuario?.email}
+              </p>
 
-            {/* Email */}
-            <div>
-              <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
-                Email *
-              </label>
-              <input
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="usuario@empresa.com"
-                disabled={isSaving}
-                className={`w-full bg-[#1f1f23] border ${errors.email ? 'border-red-500' : 'border-[#2a2a2f]'} rounded-xl px-3 lg:px-4 py-2.5 lg:py-3 text-sm lg:text-base text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 disabled:opacity-50`}
-              />
-              {errors.email && (
-                <p className="text-xs text-red-500 mt-1">{errors.email}</p>
-              )}
-            </div>
-
-            {/* Telefone */}
-            <div>
-              <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
-                Telefone
-              </label>
-              <input
-                type="tel"
-                value={formData.telefone}
-                onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                placeholder="(11) 98765-4321"
-                disabled={isSaving}
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-3 lg:px-4 py-2.5 lg:py-3 text-sm lg:text-base text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 disabled:opacity-50"
-              />
-            </div>
-
-            {/* Role (Perfil) - ✅ FILTRADO POR PERMISSÃO */}
-            <div>
-              <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
-                Perfil de Acesso *
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                disabled={isSaving || assignableRoles.length === 0}
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-3 lg:px-4 py-2.5 lg:py-3 text-sm lg:text-base text-white focus:outline-none focus:border-[#ee7b4d]/50 disabled:opacity-50"
-              >
-                {assignableRoles.length === 0 ? (
-                  <option>Sem permissão para atribuir perfis</option>
-                ) : (
-                  assignableRoles.map((role) => (
-                    <option key={role.key} value={role.key}>
-                      {role.emoji} {role.label}
-                    </option>
-                  ))
-                )}
-              </select>
-              
-              {/* Preview compacto */}
-              {assignableRoles.length > 0 && (
-                <div className="mt-2 p-3 bg-[#1f1f23] border border-[#2a2a2f] rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
-                      style={{ backgroundColor: `${ROLES[formData.role]?.color}20` }}
-                    >
-                      {ROLES[formData.role]?.emoji}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs lg:text-sm font-semibold text-white truncate">
-                        {ROLES[formData.role]?.label}
-                      </p>
-                      <p className="text-[10px] lg:text-xs text-[#6a6a6f] truncate">
-                        {ROLES[formData.role]?.descricao}
-                      </p>
-                    </div>
+              {usuario?.telefone && (
+                <>
+                  <div className="flex items-center gap-2 mt-4">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      Telefone
+                    </span>
                   </div>
-                </div>
+                  <p className="text-sm text-gray-300">
+                    {usuario.telefone}
+                  </p>
+                </>
               )}
             </div>
 
-            {/* Status Ativo/Inativo */}
+            {/* Seletor de Role */}
             <div>
-              <label className="block text-[9px] lg:text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
-                Status
+              <label className="block text-sm font-bold text-gray-400 mb-3">
+                Perfil de Acesso
               </label>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, ativo: true })}
-                  disabled={isSaving}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
-                    formData.ativo
-                      ? 'bg-green-500 text-black'
-                      : 'bg-[#1f1f23] border border-[#2a2a2f] text-[#6a6a6f]'
-                  }`}
-                >
-                  ● Ativo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, ativo: false })}
-                  disabled={isSaving}
-                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 ${
-                    !formData.ativo
-                      ? 'bg-red-500 text-black'
-                      : 'bg-[#1f1f23] border border-[#2a2a2f] text-[#6a6a6f]'
-                  }`}
-                >
-                  ● Inativo
-                </button>
+              <div className="space-y-2">
+                {roles.map((role) => {
+                  const isSelected = formData.role === role.value;
+                  return (
+                    <motion.button
+                      key={role.value}
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setFormData({ ...formData, role: role.value })}
+                      className={`
+                        w-full
+                        flex items-center gap-3
+                        px-4 py-3
+                        rounded-xl
+                        border-2
+                        transition-all
+                        ${isSelected
+                          ? roleColors[role.color] + ' shadow-lg'
+                          : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'
+                        }
+                      `}
+                    >
+                      <span className="text-2xl">{role.icon}</span>
+                      <span className="flex-1 text-left font-bold">
+                        {role.label}
+                      </span>
+                      {isSelected && (
+                        <motion.span
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className="text-lg"
+                        >
+                          ✓
+                        </motion.span>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Info sobre mudança */}
+            <div className="bg-[#ee7b4d]/10 border border-[#ee7b4d]/30 rounded-xl p-4">
+              <div className="flex gap-3">
+                <span className="text-xl">ℹ️</span>
+                <div>
+                  <p className="text-xs font-bold text-[#ee7b4d] mb-1">
+                    Sobre a mudança de perfil
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Alterar o perfil do usuário irá modificar suas permissões de acesso ao sistema.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Footer - Fixo */}
-          <div className="flex-shrink-0 p-4 lg:p-6 border-t border-[#1f1f23] flex gap-3">
-            <button
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-white/5 flex gap-3">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 py-2.5 lg:py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] text-sm lg:text-base font-semibold hover:bg-[#1f1f23] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="
+                flex-1
+                px-6 py-3
+                rounded-xl
+                bg-white/5
+                border border-white/10
+                text-white
+                font-bold
+                hover:bg-white/10
+                transition-all
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+              "
             >
               Cancelar
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={isSaving}
-              className="flex-1 py-2.5 lg:py-3 rounded-xl bg-[#ee7b4d] text-black text-sm lg:text-base font-semibold hover:bg-[#d4663a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            </motion.button>
+
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSave}
+              disabled={isSaving || formData.role === usuario?.role}
+              className="
+                flex-1
+                px-6 py-3
+                rounded-xl
+                bg-gradient-to-r from-[#ee7b4d] to-[#f59e42]
+                text-black
+                font-bold
+                hover:shadow-lg hover:shadow-[#ee7b4d]/20
+                transition-all
+                disabled:opacity-50
+                disabled:cursor-not-allowed
+                flex items-center justify-center gap-2
+              "
             >
-              {isSaving ? 'Salvando...' : 'Salvar'}
-            </button>
+              {isSaving ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  >
+                    ⏳
+                  </motion.div>
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  ✓ Salvar Alterações
+                </>
+              )}
+            </motion.button>
           </div>
-        </div>
+        </motion.div>
       </div>
-    </>
+    </AnimatePresence>
   );
 }

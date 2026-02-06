@@ -5,6 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import UserCard from '../components/dashboard/UserCard';
 import FAB from '../components/dashboard/FAB';
 import UserModal from '../components/usuarios/UserModal';
+import { exportUsuariosToExcel, exportUsuariosToPDF } from '../utils/exportUtils.js';
 
 export default function UsuariosPage() {
   const { usuario } = useAuth();
@@ -14,6 +15,7 @@ export default function UsuariosPage() {
   const [filtroRole, setFiltroRole] = useState('todos');
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const fetchUsuarios = async () => {
     if (!usuario?.tenant_id) return;
@@ -53,6 +55,16 @@ export default function UsuariosPage() {
     fetchUsuarios();
   };
 
+  const handleExportExcel = () => {
+    exportUsuariosToExcel(usuariosFiltrados);
+    setShowExportMenu(false);
+  };
+
+  const handleExportPDF = () => {
+    exportUsuariosToPDF(usuariosFiltrados);
+    setShowExportMenu(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
@@ -89,7 +101,7 @@ export default function UsuariosPage() {
         </motion.div>
       </div>
 
-      {/* SEARCH BAR & FILTER */}
+      {/* SEARCH BAR & FILTERS & EXPORT */}
       <div className="px-4 lg:px-10 mb-8 space-y-4">
         {/* Search */}
         <div className="relative">
@@ -125,36 +137,113 @@ export default function UsuariosPage() {
           )}
         </div>
 
-        {/* Role filter */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {['todos', 'Administrador', 'Diretor', 'Gestor', 'Consultor', 'Operador'].map((role) => (
+        {/* Role filter + Export button */}
+        <div className="flex items-center gap-3">
+          {/* Filtros */}
+          <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {['todos', 'Administrador', 'Diretor', 'Gestor', 'Consultor', 'Operador'].map((role) => (
+              <motion.button
+                key={role}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setFiltroRole(role)}
+                className={`
+                  px-4 py-2.5 lg:px-5 lg:py-3
+                  rounded-full
+                  text-xs lg:text-sm
+                  font-bold
+                  uppercase
+                  tracking-wide
+                  whitespace-nowrap
+                  transition-all
+                  ${filtroRole === role
+                    ? 'bg-[#ee7b4d]/30 text-white shadow-lg shadow-[#ee7b4d]/20 border border-[#ee7b4d]/50'
+                    : 'bg-[#12121a] text-gray-400 border border-white/5 hover:bg-white/5'
+                  }
+                `}
+              >
+                {role === 'todos' && '⚪ Todos'}
+                {role === 'Administrador' && '👑 Admin'}
+                {role === 'Diretor' && '🎯 Diretor'}
+                {role === 'Gestor' && '📊 Gestor'}
+                {role === 'Consultor' && '💼 Consultor'}
+                {role === 'Operador' && '⚙️ Operador'}
+              </motion.button>
+            ))}
+          </div>
+
+          {/* BOTÃO EXPORT - AO LADO DOS FILTROS */}
+          <div className="relative flex-shrink-0">
             <motion.button
-              key={role}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setFiltroRole(role)}
-              className={`
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="
+                flex items-center gap-2
                 px-4 py-2.5 lg:px-5 lg:py-3
-                rounded-full
-                text-xs lg:text-sm
-                font-bold
-                uppercase
-                tracking-wide
-                whitespace-nowrap
+                bg-[#12121a]
+                border border-white/10
+                rounded-xl
+                text-sm font-bold
+                text-white
+                hover:bg-white/5
                 transition-all
-                ${filtroRole === role
-                  ? 'bg-[#ee7b4d] text-black shadow-lg shadow-[#ee7b4d]/30'
-                  : 'bg-[#12121a] text-gray-400 border border-white/5 hover:bg-white/5'
-                }
-              `}
+                whitespace-nowrap
+              "
             >
-              {role === 'todos' && '⚪ Todos'}
-              {role === 'Administrador' && '👑 Admin'}
-              {role === 'Diretor' && '🎯 Diretor'}
-              {role === 'Gestor' && '📊 Gestor'}
-              {role === 'Consultor' && '💼 Consultor'}
-              {role === 'Operador' && '⚙️ Operador'}
+              <span className="text-lg">📥</span>
+              <span className="hidden lg:inline">Exportar</span>
             </motion.button>
-          ))}
+
+            {/* MENU EXPORT */}
+            {showExportMenu && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="
+                  absolute right-0 top-full mt-2
+                  bg-[#1a1a1f]
+                  border border-white/10
+                  rounded-xl
+                  shadow-2xl
+                  overflow-hidden
+                  z-50
+                  min-w-[200px]
+                "
+              >
+                <button
+                  onClick={handleExportExcel}
+                  className="
+                    w-full
+                    flex items-center gap-3
+                    px-4 py-3
+                    text-left text-sm font-semibold
+                    text-white
+                    hover:bg-green-500/10
+                    transition-colors
+                  "
+                >
+                  <span className="text-xl">📗</span>
+                  <span>Excel (.xlsx)</span>
+                </button>
+                <button
+                  onClick={handleExportPDF}
+                  className="
+                    w-full
+                    flex items-center gap-3
+                    px-4 py-3
+                    text-left text-sm font-semibold
+                    text-white
+                    hover:bg-red-500/10
+                    transition-colors
+                    border-t border-white/5
+                  "
+                >
+                  <span className="text-xl">📕</span>
+                  <span>PDF (.pdf)</span>
+                </button>
+              </motion.div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -207,6 +296,14 @@ export default function UsuariosPage() {
         <UserModal
           usuario={selectedUser}
           onClose={handleCloseModal}
+        />
+      )}
+
+      {/* Overlay para fechar menu export */}
+      {showExportMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowExportMenu(false)}
         />
       )}
     </div>
