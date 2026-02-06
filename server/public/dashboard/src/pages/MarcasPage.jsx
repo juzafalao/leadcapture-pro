@@ -1,278 +1,241 @@
-import React, { useState } from 'react';
-import { useAuth } from '../components/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../components/AuthContext';
+import MarcaCard from '../components/dashboard/MarcaCard';
+import FAB from '../components/dashboard/FAB';
 import MarcaModal from '../components/marcas/MarcaModal';
 
 export default function MarcasPage() {
-  const { usuario, isGestor } = useAuth();
-  const queryClient = useQueryClient();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { usuario } = useAuth();
+  const [marcas, setMarcas] = useState([]);
+  const [segmentos, setSegmentos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
   const [selectedMarca, setSelectedMarca] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // ✅ BUSCAR MARCAS (usando nomes reais do banco)
-  const { data: marcas = [], isLoading } = useQuery({
-    queryKey: ['marcas', usuario?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('marcas')
-        .select(`
+  const fetchMarcas = async () => {
+    if (!usuario?.tenant_id) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('marcas')
+      .select(`
+        *,
+        segmentos (
           id,
-          tenant_id,
           nome,
-          emoji,
-          ativo,
-          id_segmento,
-          invest_min,
-          invest_max,
-          created_at,
-          segmento:segmentos!id_segmento(id, nome, emoji)
-        `)
-        .eq('tenant_id', usuario.tenant_id)
-        .eq('ativo', true)
-        .order('nome');
-      
-      if (error) {
-        console.error('Erro ao buscar marcas:', error);
-        throw error;
-      }
-      
-      // ✅ Mapear para formato que o frontend espera
-      return (data || []).map(m => ({
-        id: m.id,
-        nome: m.nome,
-        emoji: m.emoji || '🏢',
-        cor: '#60a5fa', // Cor padrão (não existe no banco)
-        segmento_id: m.id_segmento,
-        segmento: m.segmento,
-        investimento_minimo: parseFloat(m.invest_min) || 0,
-        investimento_maximo: parseFloat(m.invest_max) || 0,
-        descricao: '', // Não existe no banco
-        ativo: m.ativo
-      }));
-    },
-    enabled: !!usuario?.tenant_id
-  });
+          emoji
+        ),
+        leads (id)
+      `)
+      .eq('tenant_id', usuario.tenant_id)
+      .order('created_at', { ascending: false });
 
-  // Buscar segmentos
-  const { data: segmentos = [] } = useQuery({
-    queryKey: ['segmentos', usuario?.tenant_id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('segmentos')
-        .select('id, nome, emoji, tenant_id, created_at')
-        .eq('tenant_id', usuario.tenant_id)
-        .order('nome');
-      
-      if (error) {
-        console.error('Erro ao buscar segmentos:', error);
-        throw error;
-      }
-      
-      return data || [];
-    },
-    enabled: !!usuario?.tenant_id
-  });
+    if (!error && data) {
+      setMarcas(data);
+    }
+    setLoading(false);
+  };
 
-  // ✅ SALVAR MARCA (convertendo nomes para o banco)
-  const saveMarca = useMutation({
-    mutationFn: async (marcaData) => {
-      // ✅ Converter para nomes do banco
-      const dbData = {
+  const fetchSegmentos = async () => {
+    if (!usuario?.tenant_id) return;
+
+    const { data, error } = await supabase
+      .from('segmentos')
+      .select('id, nome, emoji')
+      .eq('tenant_id', usuario.tenant_id)
+      .order('nome');
+
+    if (!error && data) {
+      setSegmentos(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarcas();
+    fetchSegmentos();
+  }, [usuario]);
+
+  const marcasFiltradas = marcas.filter(m =>
+    m.nome?.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const handleOpenModal = (marca = null) => {
+    setSelectedMarca(marca);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMarca(null);
+    setIsSaving(false);
+  };
+
+  const handleSaveMarca = async (marcaData) => {
+    setIsSaving(true);
+    
+    try {
+      const dataToSave = {
+        tenant_id: usuario.tenant_id,
         nome: marcaData.nome,
         emoji: marcaData.emoji,
-        id_segmento: marcaData.segmento_id || null, // ✅ nome do banco
-        invest_min: marcaData.investimento_minimo.toString(), // ✅ nome do banco
-        invest_max: marcaData.investimento_maximo.toString(), // ✅ nome do banco
+        id_segmento: marcaData.segmento_id || null,
+        invest_min: marcaData.investimento_minimo || 0,
+        invest_max: marcaData.investimento_maximo || 0,
         ativo: true
       };
 
       if (marcaData.id) {
-        // Atualizar
-        const { data, error } = await supabase
+        // Editar
+        const { error } = await supabase
           .from('marcas')
-          .update(dbData)
-          .eq('id', marcaData.id)
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Erro ao atualizar marca:', error);
-          throw error;
-        }
-        return data;
+          .update(dataToSave)
+          .eq('id', marcaData.id);
+
+        if (error) throw error;
       } else {
         // Criar
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('marcas')
-          .insert({ ...dbData, tenant_id: usuario.tenant_id })
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Erro ao criar marca:', error);
-          throw error;
-        }
-        return data;
+          .insert(dataToSave);
+
+        if (error) throw error;
       }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['marcas']);
-      setShowModal(false);
-      setSelectedMarca(null);
-    },
-    onError: (error) => {
+
+      await fetchMarcas();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Erro ao salvar marca:', error);
       alert('Erro ao salvar marca: ' + error.message);
+    } finally {
+      setIsSaving(false);
     }
-  });
-
-  const filteredMarcas = marcas.filter(m => 
-    m.nome.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleNewMarca = () => {
-    setSelectedMarca(null);
-    setShowModal(true);
   };
 
-  const handleEditMarca = (marca) => {
-    setSelectedMarca(marca);
-    setShowModal(true);
-  };
-
-  if (!isGestor()) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🔒</div>
-          <p className="text-[#6a6a6f]">Acesso restrito a Gestores e Administradores</p>
-        </div>
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="text-6xl"
+        >
+          ⏳
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] flex flex-col">
+    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
       
-      {/* STICKY HEADER */}
-      <div className="sticky top-[52px] lg:top-[56px] z-30 bg-[#0a0a0b] pb-6">
-        
-        <div className="px-6 lg:px-10 pt-8 lg:pt-10 mb-6">
-          <h1 className="text-3xl lg:text-4xl font-light text-white mb-3">
+      {/* HEADER */}
+      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
             Gestão de <span className="text-[#ee7b4d] font-bold">Marcas</span>
           </h1>
-          <div className="w-24 h-0.5 bg-[#ee7b4d] rounded-full mb-4"></div>
-          <p className="text-[9px] lg:text-[10px] text-[#6a6a6f] uppercase tracking-[0.25em] font-bold">
-            Portfólio de Ativos e Unidades Operacionais
-          </p>
-        </div>
-
-        <div className="px-6 lg:px-10">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="🔍 Buscar marca..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-[#1a1a1f] border border-[#2a2a2f] rounded-xl px-4 py-3 pl-10 text-white text-sm placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50"
-            />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4a4a4f]">🔍</span>
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full"></div>
+            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
+              {marcas.length} {marcas.length === 1 ? 'marca cadastrada' : 'marcas cadastradas'}
+            </p>
           </div>
+        </motion.div>
+      </div>
+
+      {/* SEARCH BAR */}
+      <div className="px-4 lg:px-10 mb-8">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="🔍 Buscar marca..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="
+              w-full
+              bg-[#12121a]
+              border border-white/5
+              rounded-2xl
+              px-5 py-4
+              lg:px-6 lg:py-4
+              text-sm lg:text-base
+              text-white
+              placeholder:text-gray-600
+              focus:outline-none
+              focus:border-[#ee7b4d]/50
+              focus:ring-2
+              focus:ring-[#ee7b4d]/20
+              transition-all
+            "
+          />
+          {busca && (
+            <button
+              onClick={() => setBusca('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT */}
-      <div className="flex-1 px-6 lg:px-10 overflow-y-auto pb-8">
-        
-        <div className="mb-4">
-          <p className="text-xs text-[#6a6a6f]">
-            <span className="text-[#ee7b4d] font-bold">{filteredMarcas.length}</span> marcas cadastradas
-          </p>
-        </div>
-
-        {isLoading ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4 animate-pulse">⏳</div>
-            <p className="text-[#6a6a6f]">Carregando marcas...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            
-            {/* CARD + NOVA MARCA */}
-            <button
-              onClick={handleNewMarca}
-              className="bg-[#12121a] border-2 border-dashed border-[#2a2a2f] rounded-2xl p-8 hover:border-[#ee7b4d]/50 hover:bg-[#1f1f23]/30 transition-all group min-h-[200px] flex flex-col items-center justify-center"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-[#ee7b4d]/10 flex items-center justify-center text-4xl text-[#ee7b4d] mb-4 group-hover:scale-110 transition-transform">
-                +
-              </div>
-              <p className="text-lg font-semibold text-white">Nova Marca</p>
-              <p className="text-xs text-[#6a6a6f] mt-1">Adicionar ao portfólio</p>
-            </button>
-
-            {/* MARCAS EXISTENTES */}
-            {filteredMarcas.map((marca) => (
-              <div
-                key={marca.id}
-                onClick={() => handleEditMarca(marca)}
-                className="bg-[#12121a] border border-[#1f1f23] rounded-2xl p-6 hover:border-[#ee7b4d]/30 transition-all group cursor-pointer"
+      {/* MARCAS GRID */}
+      <div className="px-4 lg:px-10">
+        {marcasFiltradas.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div className="text-6xl mb-4 opacity-30">🏢</div>
+            <p className="text-xl text-gray-400 mb-2">
+              {busca ? 'Nenhuma marca encontrada' : 'Nenhuma marca cadastrada'}
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              {busca ? 'Tente ajustar sua busca' : 'Comece criando sua primeira marca!'}
+            </p>
+            {busca && (
+              <button
+                onClick={() => setBusca('')}
+                className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
               >
-                <div className="flex items-start gap-4 mb-4">
-                  <div 
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
-                    style={{ backgroundColor: `${marca.cor}20` }}
-                  >
-                    {marca.emoji}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-white mb-1 truncate">{marca.nome}</h3>
-                    {marca.segmento && (
-                      <p className="text-xs text-[#6a6a6f] mb-2">
-                        {marca.segmento.emoji} {marca.segmento.nome}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#6a6a6f]">Invest. Mínimo</span>
-                    <span className="text-[#ee7b4d] font-bold">
-                      R$ {marca.investimento_minimo?.toLocaleString('pt-BR') || '0'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-[#6a6a6f]">Invest. Máximo</span>
-                    <span className="text-[#ee7b4d] font-bold">
-                      R$ {marca.investimento_maximo?.toLocaleString('pt-BR') || '0'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+                Limpar Busca
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+            {marcasFiltradas.map((marca, index) => (
+              <MarcaCard
+                key={marca.id}
+                marca={marca}
+                index={index}
+                onClick={() => handleOpenModal(marca)}
+              />
             ))}
           </div>
         )}
-
-        {!isLoading && filteredMarcas.length === 0 && (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4 opacity-30">🏢</div>
-            <p className="text-[#6a6a6f]">Nenhuma marca encontrada</p>
-          </div>
-        )}
       </div>
 
+      {/* FAB */}
+      <FAB onClick={() => handleOpenModal(null)} />
+
       {/* MODAL */}
-      {showModal && (
+      {isModalOpen && (
         <MarcaModal
           marca={selectedMarca}
           segmentos={segmentos}
-          onClose={() => {
-            setShowModal(false);
-            setSelectedMarca(null);
-          }}
-          onSave={(data) => saveMarca.mutate(data)}
-          isSaving={saveMarca.isPending}
+          onClose={handleCloseModal}
+          onSave={handleSaveMarca}
+          isSaving={isSaving}
         />
       )}
     </div>
