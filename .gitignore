@@ -47,3 +47,8 @@ node_modules/
 dist/
 .DS_Storeserver/env
 server/env
+# Backups
+backups/
+*.backup
+*.dump
+*.sql.gz
