@@ -34,3 +34,22 @@ yarn-debug.log*
 .idea/
 *.swp
 *.swo
+
+# Arquivos com senhas/chaves
+server/env
+server/.env
+.env
+*.env
+
+# Arquivos com senhas/chaves
+server/env
+server/.env
+.env
+*.env
+
+# Arquivos com credenciais (NUNCA COMMITAR!)
+server/env
+server/.env
+.env
+*.env
+!.env.example
