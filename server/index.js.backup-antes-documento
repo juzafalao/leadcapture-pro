@@ -56,7 +56,7 @@ app.post('/api/leads', async (req, res) => {
     
     const leadData = req.body
     
-    // Validações de campos obrigatórios
+    // Validações
     const required = ['tenant_id', 'marca_id', 'nome', 'email', 'telefone']
     for (const field of required) {
       if (!leadData[field]) {
@@ -65,45 +65,6 @@ app.post('/api/leads', async (req, res) => {
           error: `Campo obrigatório: ${field}` 
         })
       }
-    }
-    
-    // Validações específicas
-    if (leadData.nome.trim().length < 3) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Nome deve ter pelo menos 3 caracteres' 
-      })
-    }
-    
-    if (!leadData.email.includes('@')) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Email inválido' 
-      })
-    }
-    
-    if (leadData.telefone.length < 10) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Telefone inválido' 
-      })
-    }
-    
-    // Campos opcionais - validar se fornecidos
-    if (leadData.documento) {
-      const documentoLimpo = leadData.documento.replace(/\D/g, '')
-      
-      // Validar tamanho (CPF: 11, CNPJ: 14)
-      if (documentoLimpo.length !== 11 && documentoLimpo.length !== 14) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Documento inválido. Deve ser CPF (11 dígitos) ou CNPJ (14 dígitos)' 
-        })
-      }
-      
-      // Atualizar com documento limpo
-      leadData.documento = documentoLimpo
-      leadData.tipo_documento = documentoLimpo.length === 11 ? 'CPF' : 'CNPJ'
     }
     
     // Salvar no Supabase
@@ -118,9 +79,6 @@ app.post('/api/leads', async (req, res) => {
     console.log('   Nome:', data[0].nome)
     console.log('   Email:', data[0].email)
     console.log('   Marca:', data[0].marca_id)
-    if (data[0].documento) {
-      console.log('   Documento:', data[0].tipo_documento, '-', data[0].documento)
-    }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
     res.json({ 

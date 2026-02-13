@@ -49,6 +49,7 @@
   
   <div id="bubbles" class="fixed inset-0 overflow-hidden pointer-events-none z-0"></div>
 
+  <!-- Header -->
   <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -60,6 +61,7 @@
     </div>
   </header>
 
+  <!-- Hero Section -->
   <section class="relative min-h-screen flex items-center pt-20">
     <div class="max-w-7xl mx-auto px-4 py-20 grid lg:grid-cols-2 gap-12 items-center relative z-10">
       <div class="space-y-8">
@@ -96,6 +98,7 @@
     </div>
   </section>
 
+  <!-- Stats Section -->
   <section class="py-20 border-y border-slate-800">
     <div class="max-w-7xl mx-auto px-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -119,6 +122,7 @@
     </div>
   </section>
 
+  <!-- Benefícios -->
   <section id="beneficios" class="py-20">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-16">
@@ -147,6 +151,7 @@
     </div>
   </section>
 
+  <!-- Formulário -->
   <section id="formulario" class="py-20 bg-slate-800/30">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-12">
@@ -177,8 +182,8 @@
               <input type="tel" id="telefone" name="telefone" required placeholder="(11) 99999-9999" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
             </div>
             <div>
-              <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">CPF ou CNPJ (opcional)</label>
-              <input type="text" id="documento" name="documento" placeholder="000.000.000-00" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
+              <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">CPF ou CNPJ *</label>
+              <input type="text" id="documento" name="documento" required placeholder="000.000.000-00" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
               <p class="text-xs text-slate-500 mt-1" id="documento-hint">Digite apenas números</p>
             </div>
           </div>
@@ -244,6 +249,7 @@
     </div>
   </section>
 
+  <!-- Footer -->
   <footer class="py-12 border-t border-slate-800">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -256,7 +262,11 @@
     </div>
   </footer>
 
+  <!-- JavaScript -->
   <script>
+    // ============================================
+    // CONFIGURAÇÃO DA LANDING PAGE
+    // ============================================
     const CONFIG = {
       TENANT_ID: '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
       MARCA_ID: '22222222-2222-2222-2222-222222222222',
@@ -264,6 +274,10 @@
       API_URL: 'http://localhost:4000/api/leads'
     }
 
+    // ============================================
+    // ANIMAÇÕES
+    // ============================================
+    
     // Bubbles
     const bubblesContainer = document.getElementById('bubbles')
     for (let i = 0; i < 20; i++) {
@@ -288,7 +302,11 @@
       }
     })
 
-    // Máscaras
+    // ============================================
+    // MÁSCARAS E VALIDAÇÕES
+    // ============================================
+    
+    // Telefone
     document.getElementById('telefone').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
       if (value.length > 11) value = value.slice(0, 11)
@@ -306,7 +324,7 @@
       e.target.value = value
     })
 
-    // CPF ou CNPJ (OPCIONAL)
+    // CPF ou CNPJ
     const documentoInput = document.getElementById('documento')
     const documentoHint = document.getElementById('documento-hint')
     
@@ -314,6 +332,7 @@
       let value = e.target.value.replace(/\D/g, '')
       
       if (value.length <= 11) {
+        // CPF: 000.000.000-00
         if (value.length > 11) value = value.slice(0, 11)
         
         if (value.length > 9) {
@@ -324,10 +343,11 @@
           value = value.replace(/^(\d{3})(\d{0,3})/, '$1.$2')
         }
         
-        documentoHint.textContent = value.length > 0 ? 'CPF' : 'Digite apenas números'
+        documentoHint.textContent = 'CPF'
         documentoInput.placeholder = '000.000.000-00'
         
       } else {
+        // CNPJ: 00.000.000/0000-00
         if (value.length > 14) value = value.slice(0, 14)
         
         if (value.length > 12) {
@@ -350,17 +370,23 @@
     // Validar CPF
     function validarCPF(cpf) {
       cpf = cpf.replace(/\D/g, '')
+      
       if (cpf.length !== 11) return false
       if (/^(\d)\1{10}$/.test(cpf)) return false
       
       let soma = 0
-      for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i)
+      for (let i = 0; i < 9; i++) {
+        soma += parseInt(cpf.charAt(i)) * (10 - i)
+      }
       let resto = 11 - (soma % 11)
       let digito1 = resto === 10 || resto === 11 ? 0 : resto
+      
       if (digito1 !== parseInt(cpf.charAt(9))) return false
       
       soma = 0
-      for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i)
+      for (let i = 0; i < 10; i++) {
+        soma += parseInt(cpf.charAt(i)) * (11 - i)
+      }
       resto = 11 - (soma % 11)
       let digito2 = resto === 10 || resto === 11 ? 0 : resto
       
@@ -370,6 +396,7 @@
     // Validar CNPJ
     function validarCNPJ(cnpj) {
       cnpj = cnpj.replace(/\D/g, '')
+      
       if (cnpj.length !== 14) return false
       if (/^(\d)\1{13}$/.test(cnpj)) return false
       
@@ -404,6 +431,7 @@
     // Capital
     document.getElementById('capital').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
+      
       if (value === '') {
         e.target.value = ''
         return
@@ -419,7 +447,10 @@
       e.target.value = 'R$ ' + inteiroFormatado + ',' + decimal
     })
 
-    // Formulário
+    // ============================================
+    // FORMULÁRIO
+    // ============================================
+    
     const form = document.getElementById('leadForm')
     const errorDiv = document.getElementById('error')
     const successDiv = document.getElementById('success')
@@ -436,8 +467,28 @@
       const formData = new FormData(form)
       
       const telefone = formData.get('telefone').replace(/\D/g, '')
+      const documento = formData.get('documento').replace(/\D/g, '')
       const capitalStr = formData.get('capital').replace(/[R$.\s]/g, '').replace(',', '.')
       const capital = parseFloat(capitalStr) || 0
+
+      // Validar documento
+      const isDocumentoValido = documento.length === 11 ? validarCPF(documento) : validarCNPJ(documento)
+      if (!isDocumentoValido) {
+        errorDiv.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">❌</span>
+            <div>
+              <div class="font-bold mb-1">Documento inválido</div>
+              <div class="text-sm">${documento.length === 11 ? 'CPF' : 'CNPJ'} inválido. Verifique os dados.</div>
+            </div>
+          </div>
+        `
+        errorDiv.classList.remove('hidden')
+        errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        submitBtn.disabled = false
+        submitBtn.textContent = 'Quero ser um franqueado →'
+        return
+      }
 
       // Calcular score
       let score = 50
@@ -461,48 +512,15 @@
         nome: formData.get('nome'),
         email: formData.get('email'),
         telefone: telefone,
+        documento: documento,
+        tipo_documento: documento.length === 11 ? 'CPF' : 'CNPJ',
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
         capital_disponivel: capital,
         score: score,
         categoria: categoria,
         status: 'novo',
-        observacao: `Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava`
-      }
-
-      // DOCUMENTO É OPCIONAL - só adicionar se preenchido
-      const documentoValue = formData.get('documento')
-      if (documentoValue && documentoValue.trim()) {
-        const documento = documentoValue.replace(/\D/g, '')
-        
-        // Validar se foi preenchido
-        if (documento.length > 0) {
-          const isDocumentoValido = documento.length === 11 ? validarCPF(documento) : validarCNPJ(documento)
-          
-          if (!isDocumentoValido && documento.length >= 11) {
-            errorDiv.innerHTML = `
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">❌</span>
-                <div>
-                  <div class="font-bold mb-1">Documento inválido</div>
-                  <div class="text-sm">${documento.length === 11 ? 'CPF' : 'CNPJ'} inválido. Deixe em branco ou corrija.</div>
-                </div>
-              </div>
-            `
-            errorDiv.classList.remove('hidden')
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            submitBtn.disabled = false
-            submitBtn.textContent = 'Quero ser um franqueado →'
-            return
-          }
-          
-          // Adicionar documento válido ao leadData
-          if (documento.length === 11 || documento.length === 14) {
-            leadData.documento = documento
-            leadData.tipo_documento = documento.length === 11 ? 'CPF' : 'CNPJ'
-            leadData.observacao += ` | ${leadData.tipo_documento}: ${documentoValue}`
-          }
-        }
+        observacao: `Capital: ${formData.get('capital')} | ${documento.length === 11 ? 'CPF' : 'CNPJ'}: ${formData.get('documento')} | Origem: Landing Page Lava Lava`
       }
 
       try {

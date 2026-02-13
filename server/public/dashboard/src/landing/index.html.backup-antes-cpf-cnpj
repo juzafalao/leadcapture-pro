@@ -49,6 +49,7 @@
   
   <div id="bubbles" class="fixed inset-0 overflow-hidden pointer-events-none z-0"></div>
 
+  <!-- Header -->
   <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -60,6 +61,7 @@
     </div>
   </header>
 
+  <!-- Hero Section -->
   <section class="relative min-h-screen flex items-center pt-20">
     <div class="max-w-7xl mx-auto px-4 py-20 grid lg:grid-cols-2 gap-12 items-center relative z-10">
       <div class="space-y-8">
@@ -96,6 +98,7 @@
     </div>
   </section>
 
+  <!-- Stats Section -->
   <section class="py-20 border-y border-slate-800">
     <div class="max-w-7xl mx-auto px-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -119,6 +122,7 @@
     </div>
   </section>
 
+  <!-- Benefícios -->
   <section id="beneficios" class="py-20">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-16">
@@ -147,6 +151,7 @@
     </div>
   </section>
 
+  <!-- Formulário -->
   <section id="formulario" class="py-20 bg-slate-800/30">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-12">
@@ -177,17 +182,16 @@
               <input type="tel" id="telefone" name="telefone" required placeholder="(11) 99999-9999" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
             </div>
             <div>
-              <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">CPF ou CNPJ (opcional)</label>
-              <input type="text" id="documento" name="documento" placeholder="000.000.000-00" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
-              <p class="text-xs text-slate-500 mt-1" id="documento-hint">Digite apenas números</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
               <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Capital disponível *</label>
               <input type="text" id="capital" name="capital" required placeholder="R$ 100.000,00" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
               <p class="text-xs text-slate-500 mt-1">Investimento mínimo: R$ 80.000,00</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Cidade *</label>
+              <input type="text" name="cidade" required placeholder="Sua cidade" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
             </div>
             <div>
               <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Estado *</label>
@@ -225,8 +229,8 @@
           </div>
 
           <div>
-            <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Cidade *</label>
-            <input type="text" name="cidade" required placeholder="Sua cidade" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
+            <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Mensagem (opcional)</label>
+            <textarea name="mensagem" rows="3" placeholder="Conte-nos sobre você..." class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all resize-none"></textarea>
           </div>
 
           <div id="error" class="hidden p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 text-sm"></div>
@@ -244,6 +248,7 @@
     </div>
   </section>
 
+  <!-- Footer -->
   <footer class="py-12 border-t border-slate-800">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -256,7 +261,11 @@
     </div>
   </footer>
 
+  <!-- JavaScript -->
   <script>
+    // ============================================
+    // CONFIGURAÇÃO DA LANDING PAGE
+    // ============================================
     const CONFIG = {
       TENANT_ID: '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
       MARCA_ID: '22222222-2222-2222-2222-222222222222',
@@ -264,6 +273,10 @@
       API_URL: 'http://localhost:4000/api/leads'
     }
 
+    // ============================================
+    // ANIMAÇÕES
+    // ============================================
+    
     // Bubbles
     const bubblesContainer = document.getElementById('bubbles')
     for (let i = 0; i < 20; i++) {
@@ -288,7 +301,11 @@
       }
     })
 
-    // Máscaras
+    // ============================================
+    // MÁSCARAS
+    // ============================================
+    
+    // Telefone
     document.getElementById('telefone').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
       if (value.length > 11) value = value.slice(0, 11)
@@ -306,104 +323,10 @@
       e.target.value = value
     })
 
-    // CPF ou CNPJ (OPCIONAL)
-    const documentoInput = document.getElementById('documento')
-    const documentoHint = document.getElementById('documento-hint')
-    
-    documentoInput.addEventListener('input', function(e) {
-      let value = e.target.value.replace(/\D/g, '')
-      
-      if (value.length <= 11) {
-        if (value.length > 11) value = value.slice(0, 11)
-        
-        if (value.length > 9) {
-          value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')
-        } else if (value.length > 6) {
-          value = value.replace(/^(\d{3})(\d{3})(\d{0,3})/, '$1.$2.$3')
-        } else if (value.length > 3) {
-          value = value.replace(/^(\d{3})(\d{0,3})/, '$1.$2')
-        }
-        
-        documentoHint.textContent = value.length > 0 ? 'CPF' : 'Digite apenas números'
-        documentoInput.placeholder = '000.000.000-00'
-        
-      } else {
-        if (value.length > 14) value = value.slice(0, 14)
-        
-        if (value.length > 12) {
-          value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-        } else if (value.length > 8) {
-          value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4')
-        } else if (value.length > 5) {
-          value = value.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3')
-        } else if (value.length > 2) {
-          value = value.replace(/^(\d{2})(\d{0,3})/, '$1.$2')
-        }
-        
-        documentoHint.textContent = 'CNPJ'
-        documentoInput.placeholder = '00.000.000/0000-00'
-      }
-      
-      e.target.value = value
-    })
-
-    // Validar CPF
-    function validarCPF(cpf) {
-      cpf = cpf.replace(/\D/g, '')
-      if (cpf.length !== 11) return false
-      if (/^(\d)\1{10}$/.test(cpf)) return false
-      
-      let soma = 0
-      for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i)
-      let resto = 11 - (soma % 11)
-      let digito1 = resto === 10 || resto === 11 ? 0 : resto
-      if (digito1 !== parseInt(cpf.charAt(9))) return false
-      
-      soma = 0
-      for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i)
-      resto = 11 - (soma % 11)
-      let digito2 = resto === 10 || resto === 11 ? 0 : resto
-      
-      return digito2 === parseInt(cpf.charAt(10))
-    }
-
-    // Validar CNPJ
-    function validarCNPJ(cnpj) {
-      cnpj = cnpj.replace(/\D/g, '')
-      if (cnpj.length !== 14) return false
-      if (/^(\d)\1{13}$/.test(cnpj)) return false
-      
-      let tamanho = cnpj.length - 2
-      let numeros = cnpj.substring(0, tamanho)
-      let digitos = cnpj.substring(tamanho)
-      let soma = 0
-      let pos = tamanho - 7
-      
-      for (let i = tamanho; i >= 1; i--) {
-        soma += numeros.charAt(tamanho - i) * pos--
-        if (pos < 2) pos = 9
-      }
-      
-      let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
-      if (resultado != digitos.charAt(0)) return false
-      
-      tamanho = tamanho + 1
-      numeros = cnpj.substring(0, tamanho)
-      soma = 0
-      pos = tamanho - 7
-      
-      for (let i = tamanho; i >= 1; i--) {
-        soma += numeros.charAt(tamanho - i) * pos--
-        if (pos < 2) pos = 9
-      }
-      
-      resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
-      return resultado == digitos.charAt(1)
-    }
-
     // Capital
     document.getElementById('capital').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
+      
       if (value === '') {
         e.target.value = ''
         return
@@ -419,7 +342,10 @@
       e.target.value = 'R$ ' + inteiroFormatado + ',' + decimal
     })
 
-    // Formulário
+    // ============================================
+    // FORMULÁRIO
+    // ============================================
+    
     const form = document.getElementById('leadForm')
     const errorDiv = document.getElementById('error')
     const successDiv = document.getElementById('success')
@@ -438,6 +364,7 @@
       const telefone = formData.get('telefone').replace(/\D/g, '')
       const capitalStr = formData.get('capital').replace(/[R$.\s]/g, '').replace(',', '.')
       const capital = parseFloat(capitalStr) || 0
+      const mensagem = formData.get('mensagem') || ''
 
       // Calcular score
       let score = 50
@@ -463,46 +390,12 @@
         telefone: telefone,
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
+        mensagem_original: mensagem,
         capital_disponivel: capital,
         score: score,
         categoria: categoria,
         status: 'novo',
-        observacao: `Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava`
-      }
-
-      // DOCUMENTO É OPCIONAL - só adicionar se preenchido
-      const documentoValue = formData.get('documento')
-      if (documentoValue && documentoValue.trim()) {
-        const documento = documentoValue.replace(/\D/g, '')
-        
-        // Validar se foi preenchido
-        if (documento.length > 0) {
-          const isDocumentoValido = documento.length === 11 ? validarCPF(documento) : validarCNPJ(documento)
-          
-          if (!isDocumentoValido && documento.length >= 11) {
-            errorDiv.innerHTML = `
-              <div class="flex items-center gap-3">
-                <span class="text-2xl">❌</span>
-                <div>
-                  <div class="font-bold mb-1">Documento inválido</div>
-                  <div class="text-sm">${documento.length === 11 ? 'CPF' : 'CNPJ'} inválido. Deixe em branco ou corrija.</div>
-                </div>
-              </div>
-            `
-            errorDiv.classList.remove('hidden')
-            errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            submitBtn.disabled = false
-            submitBtn.textContent = 'Quero ser um franqueado →'
-            return
-          }
-          
-          // Adicionar documento válido ao leadData
-          if (documento.length === 11 || documento.length === 14) {
-            leadData.documento = documento
-            leadData.tipo_documento = documento.length === 11 ? 'CPF' : 'CNPJ'
-            leadData.observacao += ` | ${leadData.tipo_documento}: ${documentoValue}`
-          }
-        }
+        observacao: mensagem ? `${mensagem} | Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava` : `Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava`
       }
 
       try {
@@ -529,8 +422,6 @@
         `
         successDiv.classList.remove('hidden')
         form.reset()
-        documentoHint.textContent = 'Digite apenas números'
-        documentoInput.placeholder = '000.000.000-00'
         successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
       } catch (error) {
