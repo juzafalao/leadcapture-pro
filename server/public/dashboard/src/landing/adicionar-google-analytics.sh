@@ -1,3 +1,14 @@
+#!/bin/bash
+
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📊 ADICIONAR GOOGLE ANALYTICS NA LANDING"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+
+GA_ID="G-HGSQJ4R9JC"
+
+# Criar versão atualizada
+cat > index.html.new << 'HTMLGA'
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -610,3 +621,29 @@
   </script>
 </body>
 </html>
+HTMLGA
+
+echo "✅ Arquivo criado com Google Analytics"
+echo ""
+
+read -p "Substituir index.html? (s/N): " confirm
+
+if [[ $confirm =~ ^[Ss]$ ]]; then
+  mv index.html.new index.html
+  echo "✅ Arquivo atualizado!"
+  echo ""
+  echo "📊 Google Analytics adicionado:"
+  echo "   Measurement ID: G-HGSQJ4R9JC"
+  echo "   Eventos rastreados:"
+  echo "     ✓ Visualizações de página"
+  echo "     ✓ Scroll (25%, 50%, 75%, 100%)"
+  echo "     ✓ Clique em CTA"
+  echo "     ✓ Início de preenchimento"
+  echo "     ✓ Envio de formulário (conversão)"
+  echo "     ✓ Erros"
+else
+  echo "⏭️  Arquivo salvo como: index.html.new"
+fi
+
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

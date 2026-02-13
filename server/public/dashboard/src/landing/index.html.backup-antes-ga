@@ -5,15 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lava Lava Franquias | Invista em uma Lavanderia de Sucesso</title>
   
-  <!-- Google Analytics -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HGSQJ4R9JC"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-HGSQJ4R9JC');
-  </script>
-  
   <link rel="icon" type="image/png" href="assets/logos/favicon.png">
   <link rel="apple-touch-icon" href="assets/logos/app-icon-hd.png">
   
@@ -89,7 +80,7 @@
         </p>
 
         <div class="flex flex-col sm:flex-row gap-4">
-          <a href="#formulario" class="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-bold text-lg hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 text-center" onclick="gtag('event', 'click', {'event_category': 'CTA', 'event_label': 'Hero CTA'});">
+          <a href="#formulario" class="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl font-bold text-lg hover:from-cyan-400 hover:to-blue-500 transition-all shadow-lg shadow-cyan-500/25 text-center">
             Quero ser franqueado →
           </a>
           <a href="#beneficios" class="px-8 py-4 border border-slate-600 rounded-xl font-semibold hover:bg-slate-800 transition-all text-center">
@@ -295,26 +286,6 @@
       } else {
         header.classList.remove('bg-slate-900/95', 'backdrop-blur-lg', 'shadow-lg')
       }
-      
-      // Track scroll depth
-      const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
-      
-      if (scrollPercent > 25 && !window.ga_scroll_25) {
-        gtag('event', 'scroll', {'event_category': 'Engagement', 'event_label': '25%'})
-        window.ga_scroll_25 = true
-      }
-      if (scrollPercent > 50 && !window.ga_scroll_50) {
-        gtag('event', 'scroll', {'event_category': 'Engagement', 'event_label': '50%'})
-        window.ga_scroll_50 = true
-      }
-      if (scrollPercent > 75 && !window.ga_scroll_75) {
-        gtag('event', 'scroll', {'event_category': 'Engagement', 'event_label': '75%'})
-        window.ga_scroll_75 = true
-      }
-      if (scrollPercent > 95 && !window.ga_scroll_100) {
-        gtag('event', 'scroll', {'event_category': 'Engagement', 'event_label': '100%'})
-        window.ga_scroll_100 = true
-      }
     })
 
     // Máscaras
@@ -453,15 +424,6 @@
     const errorDiv = document.getElementById('error')
     const successDiv = document.getElementById('success')
     const submitBtn = document.getElementById('submitBtn')
-    
-    // Track form start
-    let formStarted = false
-    form.addEventListener('focus', function() {
-      if (!formStarted) {
-        gtag('event', 'form_start', {'event_category': 'Form', 'event_label': 'Lead Form'})
-        formStarted = true
-      }
-    }, true)
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault()
@@ -508,11 +470,12 @@
         observacao: `Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava`
       }
 
-      // DOCUMENTO É OPCIONAL
+      // DOCUMENTO É OPCIONAL - só adicionar se preenchido
       const documentoValue = formData.get('documento')
       if (documentoValue && documentoValue.trim()) {
         const documento = documentoValue.replace(/\D/g, '')
         
+        // Validar se foi preenchido
         if (documento.length > 0) {
           const isDocumentoValido = documento.length === 11 ? validarCPF(documento) : validarCNPJ(documento)
           
@@ -530,12 +493,10 @@
             errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
             submitBtn.disabled = false
             submitBtn.textContent = 'Quero ser um franqueado →'
-            
-            // Track error
-            gtag('event', 'form_error', {'event_category': 'Form', 'event_label': 'Invalid Document'})
             return
           }
           
+          // Adicionar documento válido ao leadData
           if (documento.length === 11 || documento.length === 14) {
             leadData.documento = documento
             leadData.tipo_documento = documento.length === 11 ? 'CPF' : 'CNPJ'
@@ -557,21 +518,6 @@
           throw new Error(result.error || 'Erro ao enviar formulário')
         }
 
-        // Track conversion
-        gtag('event', 'conversion', {
-          'send_to': 'G-HGSQJ4R9JC',
-          'value': capital,
-          'currency': 'BRL',
-          'transaction_id': result.leadId
-        })
-        
-        gtag('event', 'generate_lead', {
-          'event_category': 'Form',
-          'event_label': 'Lead Created',
-          'value': capital,
-          'currency': 'BRL'
-        })
-
         successDiv.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-3xl">🎉</span>
@@ -588,9 +534,6 @@
         successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
       } catch (error) {
-        // Track error
-        gtag('event', 'form_error', {'event_category': 'Form', 'event_label': error.message})
-        
         errorDiv.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-2xl">❌</span>
