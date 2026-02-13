@@ -49,6 +49,7 @@
   
   <div id="bubbles" class="fixed inset-0 overflow-hidden pointer-events-none z-0"></div>
 
+  <!-- Header -->
   <header id="header" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
     <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -60,6 +61,7 @@
     </div>
   </header>
 
+  <!-- Hero Section -->
   <section class="relative min-h-screen flex items-center pt-20">
     <div class="max-w-7xl mx-auto px-4 py-20 grid lg:grid-cols-2 gap-12 items-center relative z-10">
       <div class="space-y-8">
@@ -70,9 +72,7 @@
         
         <h1 class="text-4xl md:text-6xl font-bold leading-tight">
           Invista em uma franquia de 
-          <span class="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            lavanderia
-          </span> 
+          <span class="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">lavanderia</span> 
           de sucesso
         </h1>
         
@@ -98,6 +98,7 @@
     </div>
   </section>
 
+  <!-- Stats Section -->
   <section class="py-20 border-y border-slate-800">
     <div class="max-w-7xl mx-auto px-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -121,6 +122,7 @@
     </div>
   </section>
 
+  <!-- Benefícios -->
   <section id="beneficios" class="py-20">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-16">
@@ -149,6 +151,7 @@
     </div>
   </section>
 
+  <!-- Formulário -->
   <section id="formulario" class="py-20 bg-slate-800/30">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-12">
@@ -245,6 +248,7 @@
     </div>
   </section>
 
+  <!-- Footer -->
   <footer class="py-12 border-t border-slate-800">
     <div class="max-w-7xl mx-auto px-4">
       <div class="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -252,37 +256,28 @@
         <p class="text-slate-500 text-sm text-center">
           © 2026 Lava Lava Franquias. Todos os direitos reservados.
         </p>
-        <p class="text-slate-600 text-xs">Powered by ⚡ LeadCapture Pro</p>
+        <p class="text-slate-600 text-xs">Powered by LeadCapture Pro</p>
       </div>
     </div>
   </footer>
 
+  <!-- JavaScript -->
   <script>
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('🧼 Landing Page: Lava Lava')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
     // ============================================
-    // CONFIGURAÇÕES FIXAS DA LANDING PAGE
+    // CONFIGURAÇÃO DA LANDING PAGE
     // ============================================
     const CONFIG = {
-      TENANT_ID: '81cac3a4-caa3-43b2-be4d-d16557d7ef88', // Franqueadora (dono)
-      MARCA_ID: '22222222-2222-2222-2222-222222222222',  // Lava Lava
-      FONTE: 'landing-page',                              // Fixo para landing pages
+      TENANT_ID: '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
+      MARCA_ID: '22222222-2222-2222-2222-222222222222',
+      FONTE: 'landing-page',
       API_URL: 'http://localhost:4000/api/leads'
     }
 
-    console.log('📋 Configuração:')
-    console.log('  Tenant:', CONFIG.TENANT_ID)
-    console.log('  Marca: Lava Lava (' + CONFIG.MARCA_ID + ')')
-    console.log('  Fonte:', CONFIG.FONTE)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
     // ============================================
-    // ANIMAÇÕES E UI
+    // ANIMAÇÕES
     // ============================================
-
-    // Bubbles animados
+    
+    // Bubbles
     const bubblesContainer = document.getElementById('bubbles')
     for (let i = 0; i < 20; i++) {
       const bubble = document.createElement('div')
@@ -296,7 +291,7 @@
       bubblesContainer.appendChild(bubble)
     }
 
-    // Header com scroll
+    // Header scroll
     window.addEventListener('scroll', () => {
       const header = document.getElementById('header')
       if (window.scrollY > 50) {
@@ -307,12 +302,11 @@
     })
 
     // ============================================
-    // MÁSCARAS DE CAMPOS
+    // MÁSCARAS
     // ============================================
-
-    // Máscara telefone
-    const telefoneInput = document.getElementById('telefone')
-    telefoneInput.addEventListener('input', function(e) {
+    
+    // Telefone
+    document.getElementById('telefone').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
       if (value.length > 11) value = value.slice(0, 11)
       
@@ -329,9 +323,8 @@
       e.target.value = value
     })
 
-    // Máscara capital
-    const capitalInput = document.getElementById('capital')
-    capitalInput.addEventListener('input', function(e) {
+    // Capital
+    document.getElementById('capital').addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
       
       if (value === '') {
@@ -350,9 +343,9 @@
     })
 
     // ============================================
-    // FORMULÁRIO - ENVIO DE LEAD
+    // FORMULÁRIO
     // ============================================
-
+    
     const form = document.getElementById('leadForm')
     const errorDiv = document.getElementById('error')
     const successDiv = document.getElementById('success')
@@ -360,36 +353,20 @@
 
     form.addEventListener('submit', async function(e) {
       e.preventDefault()
-      e.stopPropagation()
-      
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-      console.log('📝 Formulário enviado!')
       
       errorDiv.classList.add('hidden')
       successDiv.classList.add('hidden')
-
       submitBtn.disabled = true
       submitBtn.textContent = '⏳ Enviando...'
 
       const formData = new FormData(form)
       
-      // ============================================
-      // PROCESSAR DADOS DO FORMULÁRIO
-      // ============================================
-      
-      // Telefone sem formatação
       const telefone = formData.get('telefone').replace(/\D/g, '')
-      
-      // Capital como número
       const capitalStr = formData.get('capital').replace(/[R$.\s]/g, '').replace(',', '.')
       const capital = parseFloat(capitalStr) || 0
-      
-      // Mensagem (pode ser vazia)
       const mensagem = formData.get('mensagem') || ''
 
-      // ============================================
-      // CALCULAR SCORE BASEADO NO CAPITAL
-      // ============================================
+      // Calcular score
       let score = 50
       if (capital >= 500000) score = 95
       else if (capital >= 300000) score = 90
@@ -398,89 +375,56 @@
       else if (capital >= 100000) score = 60
       else if (capital >= 80000) score = 55
 
-      // ============================================
-      // CALCULAR CATEGORIA BASEADA NO SCORE
-      // ============================================
+      // Calcular categoria
       let categoria = 'cold'
       if (score >= 80) categoria = 'hot'
       else if (score >= 60) categoria = 'warm'
 
-      // ============================================
-      // MONTAR OBJETO DO LEAD
-      // Valores FIXOS da landing + Dados do formulário
-      // ============================================
+      // Dados do lead
       const leadData = {
-        // FIXOS (definidos pela landing page)
         tenant_id: CONFIG.TENANT_ID,
         marca_id: CONFIG.MARCA_ID,
         fonte: CONFIG.FONTE,
-        
-        // DO FORMULÁRIO
         nome: formData.get('nome'),
         email: formData.get('email'),
         telefone: telefone,
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
         mensagem_original: mensagem,
-        
-        // CALCULADOS
         capital_disponivel: capital,
         score: score,
         categoria: categoria,
-        
-        // PADRÕES
         status: 'novo',
         observacao: mensagem ? `${mensagem} | Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava` : `Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava`
       }
 
-      console.log('📤 Dados do lead:', leadData)
-
-      // ============================================
-      // ENVIAR PARA API DO BACKEND
-      // ============================================
       try {
         const response = await fetch(CONFIG.API_URL, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(leadData)
         })
 
         const result = await response.json()
-        
-        console.log('📥 Resposta da API:', result)
 
         if (!response.ok || !result.success) {
           throw new Error(result.error || 'Erro ao enviar formulário')
         }
 
-        console.log('✅ Lead salvo com sucesso! ID:', result.leadId)
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-        // Exibir mensagem de sucesso
         successDiv.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-3xl">🎉</span>
             <div>
               <div class="font-bold text-lg mb-1">Formulário enviado com sucesso!</div>
-              <div class="text-sm opacity-90">Nossa equipe entrará em contato em até 24 horas. Verifique seu email e WhatsApp.</div>
+              <div class="text-sm opacity-90">Nossa equipe entrará em contato em até 24 horas.</div>
             </div>
           </div>
         `
         successDiv.classList.remove('hidden')
-        
-        // Limpar formulário
         form.reset()
-        
-        // Scroll suave até a mensagem
         successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
       } catch (error) {
-        console.error('❌ Erro ao enviar:', error)
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-        
-        // Exibir mensagem de erro
         errorDiv.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-2xl">❌</span>
@@ -492,14 +436,11 @@
         `
         errorDiv.classList.remove('hidden')
         errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        
       } finally {
         submitBtn.disabled = false
         submitBtn.textContent = 'Quero ser um franqueado →'
       }
     })
-
-    console.log('✅ Script carregado com sucesso!')
   </script>
 </body>
 </html>
