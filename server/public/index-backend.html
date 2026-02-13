@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadCapture Pro - Backend</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body class="bg-gray-900 text-white">
+  <div id="app" class="min-h-screen p-6">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-orange-500">🚀 LeadCapture Pro</h1>
+      <p class="text-gray-400">Backend - Gerenciamento de Leads</p>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-gray-800 rounded-lg p-4 mb-6 flex gap-4 flex-wrap">
+      <select id="filterCategoria" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-orange-500 focus:outline-none">
+        <option value="">Todas as Categorias</option>
+        <option value="hot">🔥 Hot</option>
+        <option value="warm">🟡 Warm</option>
+        <option value="cold">❄️ Cold</option>
+      </select>
+
+      <select id="filterStatus" class="bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-orange-500 focus:outline-none">
+        <option value="">Todos os Status</option>
+        <option value="Novo">Novo</option>
+        <option value="Em Contato">Em Contato</option>
+        <option value="Convertido">Convertido</option>
+        <option value="Perdido">Perdido</option>
+      </select>
+
+      <input 
+        id="filterSearch" 
+        type="text" 
+        placeholder="Buscar por nome, email ou telefone..." 
+        class="flex-1 bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-orange-500 focus:outline-none"
+      />
+
+      <button onclick="loadLeads()" class="bg-orange-500 hover:bg-orange-600 px-6 py-2 rounded-lg font-semibold">
+        Buscar
+      </button>
+
+      <button onclick="resetFilters()" class="bg-gray-700 hover:bg-gray-600 px-6 py-2 rounded-lg font-semibold">
+        Limpar
+      </button>
+    </div>
+
+    <!-- Contador -->
+    <div class="mb-4 text-gray-400">
+      Total: <span id="totalLeads" class="text-orange-500 font-bold">0</span> leads
+    </div>
+
+    <!-- Grid de Leads -->
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-gray-700">
+            <tr>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Nome</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Categoria</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Score</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Telefone</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Fonte</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Cidade</th>
+              <th class="px-4 py-3 text-left text-sm font-semibold">Data</th>
+              <th class="px-4 py-3 text-center text-sm font-semibold">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="leadsTable" class="divide-y divide-gray-700">
+            <!-- Carregado via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="text-center py-8 hidden">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+      <p class="text-gray-400 mt-4">Carregando...</p>
+    </div>
+  </div>
+
+  <!-- Modal de Edição -->
+  <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50" onclick="if(event.target.id==='modal') closeModal()">
+    <div class="bg-gray-800 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+      <div class="p-6">
+        <div class="flex justify-between items-start mb-6">
+          <h2 class="text-2xl font-bold text-orange-500">✏️ Editar Lead</h2>
+          <button onclick="closeModal()" class="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
+        
+        <form id="editForm" onsubmit="saveLead(event)" class="space-y-4">
+          <input type="hidden" id="edit_id">
+          
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Nome -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Nome</label>
+              <input type="text" id="edit_nome" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Email -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Email</label>
+              <input type="email" id="edit_email" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Telefone -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Telefone</label>
+              <input type="text" id="edit_telefone" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Score -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Score</label>
+              <input type="number" id="edit_score" min="0" max="100" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Categoria -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Categoria</label>
+              <select id="edit_categoria" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+                <option value="hot">🔥 Hot</option>
+                <option value="warm">🟡 Warm</option>
+                <option value="cold">❄️ Cold</option>
+              </select>
+            </div>
+
+            <!-- Status -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Status</label>
+              <select id="edit_status" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+                <option value="Novo">Novo</option>
+                <option value="Em Contato">Em Contato</option>
+                <option value="Convertido">Convertido</option>
+                <option value="Perdido">Perdido</option>
+              </select>
+            </div>
+
+            <!-- Fonte -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Fonte</label>
+              <input type="text" id="edit_fonte" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Capital Disponível -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Capital Disponível (R$)</label>
+              <input type="number" id="edit_capital_disponivel" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Cidade -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Cidade</label>
+              <input type="text" id="edit_cidade" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Estado -->
+            <div>
+              <label class="block text-sm text-gray-400 mb-1">Estado</label>
+              <input type="text" id="edit_estado" maxlength="2" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none">
+            </div>
+
+            <!-- Mensagem Original -->
+            <div class="col-span-2">
+              <label class="block text-sm text-gray-400 mb-1">Mensagem Original</label>
+              <textarea id="edit_mensagem_original" rows="3" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none"></textarea>
+            </div>
+
+            <!-- Observação -->
+            <div class="col-span-2">
+              <label class="block text-sm text-gray-400 mb-1">Observação</label>
+              <textarea id="edit_observacao" rows="3" class="w-full bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 focus:border-orange-500 focus:outline-none"></textarea>
+            </div>
+          </div>
+
+          <!-- Botões -->
+          <div class="flex gap-3 pt-4">
+            <button type="submit" class="flex-1 bg-orange-500 hover:bg-orange-600 px-6 py-3 rounded-lg font-semibold">
+              💾 Salvar Alterações
+            </button>
+            <button type="button" onclick="closeModal()" class="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-lg font-semibold">
+              Cancelar
+            </button>
+          </div>
+        </form>
+
+        <!-- Feedback -->
+        <div id="saveStatus" class="mt-4 hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const config = {
+      supabaseUrl: 'https://krcybmownrpfjvqhacup.supabase.co',
+      supabaseKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c'
+    }
+
+    const client = window.supabase.createClient(config.supabaseUrl, config.supabaseKey)
+
+    function resetFilters() {
+      document.getElementById('filterCategoria').value = ''
+      document.getElementById('filterStatus').value = ''
+      document.getElementById('filterSearch').value = ''
+      loadLeads()
+    }
+
+    async function loadLeads() {
+      const loading = document.getElementById('loading')
+      const table = document.getElementById('leadsTable')
+      const totalEl = document.getElementById('totalLeads')
+      
+      loading.classList.remove('hidden')
+      table.innerHTML = ''
+
+      try {
+        let query = client.from('leads').select('*').order('created_at', { ascending: false })
+
+        const categoria = document.getElementById('filterCategoria').value
+        const status = document.getElementById('filterStatus').value
+        const search = document.getElementById('filterSearch').value
+
+        if (categoria) query = query.eq('categoria', categoria)
+        if (status) query = query.eq('status', status)
+        if (search) query = query.or(`nome.ilike.%${search}%,email.ilike.%${search}%,telefone.ilike.%${search}%`)
+
+        const { data, error } = await query
+
+        if (error) throw error
+
+        totalEl.textContent = data.length
+
+        if (data.length === 0) {
+          table.innerHTML = '<tr><td colspan="9" class="px-4 py-8 text-center text-gray-400">Nenhum lead encontrado</td></tr>'
+          return
+        }
+
+        data.forEach(lead => {
+          const row = document.createElement('tr')
+          row.className = 'hover:bg-gray-700 transition'
+          
+          const categoriaIcon = {
+            hot: '🔥',
+            warm: '🟡',
+            cold: '❄️'
+          }[lead.categoria?.toLowerCase()] || '⚪'
+
+          const statusColors = {
+            'Novo': 'bg-blue-500',
+            'Em Contato': 'bg-yellow-500',
+            'Convertido': 'bg-green-500',
+            'Perdido': 'bg-red-500'
+          }
+
+          const statusColor = statusColors[lead.status] || 'bg-gray-500'
+          const cidade = lead.cidade && lead.estado ? `${lead.cidade}/${lead.estado}` : (lead.regiao_interesse || '-')
+
+          row.innerHTML = `
+            <td class="px-4 py-3 font-medium">${lead.nome || 'Sem nome'}</td>
+            <td class="px-4 py-3 text-xl">${categoriaIcon}</td>
+            <td class="px-4 py-3"><span class="bg-orange-500 px-2 py-1 rounded text-sm font-bold">${lead.score || 0}</span></td>
+            <td class="px-4 py-3">${lead.telefone || '-'}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-1 rounded text-xs text-white font-semibold ${statusColor}">
+                ${lead.status || 'Novo'}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-sm">${lead.fonte || '-'}</td>
+            <td class="px-4 py-3 text-sm">${cidade}</td>
+            <td class="px-4 py-3 text-sm text-gray-400">${new Date(lead.created_at).toLocaleDateString('pt-BR')}</td>
+            <td class="px-4 py-3 text-center">
+              <button onclick='openEditModal(${JSON.stringify(lead).replace(/'/g, "\\'")})'  class="bg-orange-500 hover:bg-orange-600 px-3 py-1 rounded text-sm font-semibold">
+                ✏️ Editar
+              </button>
+            </td>
+          `
+          
+          table.appendChild(row)
+        })
+
+      } catch (err) {
+        console.error('Erro:', err)
+        table.innerHTML = `<tr><td colspan="9" class="px-4 py-8 text-center text-red-400">❌ ${err.message}</td></tr>`
+      } finally {
+        loading.classList.add('hidden')
+      }
+    }
+
+    function openEditModal(lead) {
+      document.getElementById('edit_id').value = lead.id
+      document.getElementById('edit_nome').value = lead.nome || ''
+      document.getElementById('edit_email').value = lead.email || ''
+      document.getElementById('edit_telefone').value = lead.telefone || ''
+      document.getElementById('edit_score').value = lead.score || 0
+      document.getElementById('edit_categoria').value = lead.categoria?.toLowerCase() || 'warm'
+      document.getElementById('edit_status').value = lead.status || 'Novo'
+      document.getElementById('edit_fonte').value = lead.fonte || ''
+      document.getElementById('edit_capital_disponivel').value = lead.capital_disponivel || ''
+      document.getElementById('edit_cidade').value = lead.cidade || ''
+      document.getElementById('edit_estado').value = lead.estado || ''
+      document.getElementById('edit_mensagem_original').value = lead.mensagem_original || ''
+      document.getElementById('edit_observacao').value = lead.observacao || ''
+      
+      document.getElementById('modal').classList.remove('hidden')
+    }
+
+    async function saveLead(event) {
+      event.preventDefault()
+      
+      const statusEl = document.getElementById('saveStatus')
+      statusEl.className = 'mt-4 p-3 rounded'
+      statusEl.textContent = '⏳ Salvando...'
+      statusEl.classList.remove('hidden', 'bg-green-500', 'bg-red-500')
+      statusEl.classList.add('bg-blue-500')
+
+      try {
+        const id = document.getElementById('edit_id').value
+        const updates = {
+          nome: document.getElementById('edit_nome').value,
+          email: document.getElementById('edit_email').value,
+          telefone: document.getElementById('edit_telefone').value,
+          score: parseInt(document.getElementById('edit_score').value) || 0,
+          categoria: document.getElementById('edit_categoria').value,
+          status: document.getElementById('edit_status').value,
+          fonte: document.getElementById('edit_fonte').value,
+          capital_disponivel: document.getElementById('edit_capital_disponivel').value || null,
+          cidade: document.getElementById('edit_cidade').value,
+          estado: document.getElementById('edit_estado').value,
+          mensagem_original: document.getElementById('edit_mensagem_original').value,
+          observacao: document.getElementById('edit_observacao').value,
+          updated_at: new Date().toISOString()
+        }
+
+        const { error } = await client
+          .from('leads')
+          .update(updates)
+          .eq('id', id)
+
+        if (error) throw error
+
+        statusEl.textContent = '✅ Salvo com sucesso!'
+        statusEl.classList.remove('bg-blue-500')
+        statusEl.classList.add('bg-green-500')
+
+        setTimeout(() => {
+          closeModal()
+          loadLeads()
+        }, 1500)
+
+      } catch (err) {
+        console.error('Erro ao salvar:', err)
+        statusEl.textContent = `❌ Erro: ${err.message}`
+        statusEl.classList.remove('bg-blue-500')
+        statusEl.classList.add('bg-red-500')
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.add('hidden')
+      document.getElementById('saveStatus').classList.add('hidden')
+    }
+
+    document.getElementById('filterSearch').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loadLeads()
+    })
+
+    loadLeads()
+  </script>
+</body>
+</html>

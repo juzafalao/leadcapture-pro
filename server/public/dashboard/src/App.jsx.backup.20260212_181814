@@ -10,13 +10,6 @@ import UsuariosPage from './pages/UsuariosPage';
 import LoginPage from './pages/LoginPage';
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 
-// ============================================
-// 🆕 IMPORTAR LANDING PAGES
-// ============================================
-import { LavaLavaPage } from './landing/captacao/pages/lava-lava';
-import { ABCEscolaPage } from './landing/captacao/pages/abc-escola';
-import { AzulFitnessPage } from './landing/captacao/pages/azul-fitness';
-
 function PrivateRoute({ children, allowedRoles }) {
   const { usuario, loading, isAuthenticated } = useAuth();
   
@@ -71,21 +64,8 @@ export default function App() {
     <AuthProvider>
       <Router>
         <Routes>
-          {/* ============================================ */}
-          {/* 🆕 ROTAS PÚBLICAS - LANDING PAGES           */}
-          {/* ============================================ */}
-          <Route path="/captacao/lava-lava" element={<LavaLavaPage />} />
-          <Route path="/captacao/abc-escola" element={<ABCEscolaPage />} />
-          <Route path="/captacao/azul-fitness" element={<AzulFitnessPage />} />
-          
-          {/* ============================================ */}
-          {/* ROTAS DE AUTENTICAÇÃO                       */}
-          {/* ============================================ */}
           <Route path="/login" element={<LoginPage />} />
           
-          {/* ============================================ */}
-          {/* ROTAS PRIVADAS - DASHBOARD                  */}
-          {/* ============================================ */}
           <Route path="/" element={<PrivateRoute><Navigate to="/dashboard" replace /></PrivateRoute>} />
           
           <Route path="/dashboard" element={<PrivateRoute><AuthenticatedLayout><DashboardPage /></AuthenticatedLayout></PrivateRoute>} />
@@ -96,6 +76,7 @@ export default function App() {
           
           <Route path="/segmentos" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><SegmentosPage /></AuthenticatedLayout></PrivateRoute>} />
           
+          {/* ✅ CORRIGIDO: Adicionado 'Gestor' */}
           <Route path="/usuarios" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><UsuariosPage /></AuthenticatedLayout></PrivateRoute>} />
           
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
