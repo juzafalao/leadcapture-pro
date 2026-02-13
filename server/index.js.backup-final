@@ -15,15 +15,14 @@ dotenv.config()
 // Criar app Express
 const app = express()
 
-// ============================================
-// MIDDLEWARES
-// ============================================
-app.use(cors()) // Permitir requisições do frontend
+// Middlewares
+app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Servir arquivos estáticos
 app.use(express.static(path.join(__dirname, 'public')))
+app.use('/admin', express.static(path.join(__dirname, 'admin')))
 
 // ============================================
 // SUPABASE CONFIG
@@ -54,26 +53,16 @@ app.get('/health', (req, res) => {
 // ============================================
 app.post('/api/leads', async (req, res) => {
   try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('📥 Recebendo lead da landing page...')
-    console.log('Dados recebidos:', JSON.stringify(req.body, null, 2))
+    console.log('Dados recebidos:', req.body)
     
     const leadData = req.body
     
-    // ============================================
-    // VALIDAÇÕES
-    // ============================================
+    // Validação de campos obrigatórios
     if (!leadData.tenant_id) {
       return res.status(400).json({ 
         success: false, 
         error: 'tenant_id é obrigatório' 
-      })
-    }
-    
-    if (!leadData.marca_id) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'marca_id é obrigatório' 
       })
     }
     
@@ -98,27 +87,18 @@ app.post('/api/leads', async (req, res) => {
       })
     }
     
-    // ============================================
-    // INSERIR NO SUPABASE
-    // ============================================
-    console.log('💾 Salvando no Supabase...')
-    
+    // Inserir no Supabase usando SERVICE_ROLE_KEY (seguro no backend)
     const { data, error } = await supabase
       .from('leads')
       .insert([leadData])
       .select()
     
     if (error) {
-      console.error('❌ Erro do Supabase:', error)
+      console.error('❌ Erro ao inserir no Supabase:', error)
       throw error
     }
     
-    console.log('✅ Lead salvo com sucesso!')
-    console.log('   ID:', data[0].id)
-    console.log('   Nome:', data[0].nome)
-    console.log('   Email:', data[0].email)
-    console.log('   Marca:', data[0].marca_id)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('✅ Lead salvo com sucesso:', data[0].id)
     
     res.json({ 
       success: true, 
@@ -127,9 +107,7 @@ app.post('/api/leads', async (req, res) => {
     })
     
   } catch (error) {
-    console.error('❌ Erro ao processar lead:', error.message)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
+    console.error('❌ Erro ao processar lead:', error)
     res.status(500).json({ 
       success: false, 
       error: error.message || 'Erro ao salvar lead' 
@@ -164,16 +142,13 @@ app.get('/api/leads', async (req, res) => {
 const PORT = process.env.PORT || 4000
 
 app.listen(PORT, () => {
-  console.log('')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log('🚀 LeadCapture Pro - Backend')
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
   console.log(`📡 Servidor rodando na porta ${PORT}`)
-  console.log(`🌐 URL: http://localhost:${PORT}`)
+  console.log(`🌐 Admin: http://localhost:${PORT}/admin`)
+  console.log(`🧼 Landing: http://localhost:${PORT}/dashboard/src/landing`)
   console.log(`💚 Health: http://localhost:${PORT}/health`)
-  console.log(`📊 API Leads: POST http://localhost:${PORT}/api/leads`)
+  console.log(`📊 API Leads: http://localhost:${PORT}/api/leads`)
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('')
-  console.log('✅ Pronto para receber leads!')
-  console.log('')
 })

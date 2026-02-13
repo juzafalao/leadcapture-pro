@@ -1,11 +1,4 @@
 
-# Procure por esta linha (aprox. linha 250):
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-
-# Delete essa linha
-
-# E dentro de metadata, adicione:
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
 # Ou usar sed para corrigir automaticamente:<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -377,11 +370,11 @@
         telefone: telefone,
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
+        mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
         metadata: {
           capital: capital,
           capital_formatado: formData.get('capital'),
-          mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-            origem: 'landing-page',
+          origem: 'landing-page',
           url: window.location.href
         },
         score: capital >= 300000 ? 90 : capital >= 150000 ? 80 : capital >= 80000 ? 70 : 60,

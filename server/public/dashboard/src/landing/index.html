@@ -1,12 +1,4 @@
-
-# Procure por esta linha (aprox. linha 250):
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-
-# Delete essa linha
-
-# E dentro de metadata, adicione:
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-# Ou usar sed para corrigir automaticamente:<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -17,7 +9,6 @@
   <link rel="apple-touch-icon" href="assets/logos/app-icon-hd.png">
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
     tailwind.config = {
@@ -267,14 +258,29 @@
   </footer>
 
   <script>
-    console.log('🚀 Script iniciando...')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.log('🧼 Landing Page: Lava Lava')
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
-    // Configuração Supabase
-    const SUPABASE_URL = 'https://krcybmownrpfjvqhacup.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c'
-    
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    console.log('✅ Supabase inicializado')
+    // ============================================
+    // CONFIGURAÇÕES FIXAS DA LANDING PAGE
+    // ============================================
+    const CONFIG = {
+      TENANT_ID: '81cac3a4-caa3-43b2-be4d-d16557d7ef88', // Franqueadora (dono)
+      MARCA_ID: '22222222-2222-2222-2222-222222222222',  // Lava Lava
+      FONTE: 'landing-page',                              // Fixo para landing pages
+      API_URL: 'http://localhost:4000/api/leads'
+    }
+
+    console.log('📋 Configuração:')
+    console.log('  Tenant:', CONFIG.TENANT_ID)
+    console.log('  Marca: Lava Lava (' + CONFIG.MARCA_ID + ')')
+    console.log('  Fonte:', CONFIG.FONTE)
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+    // ============================================
+    // ANIMAÇÕES E UI
+    // ============================================
 
     // Bubbles animados
     const bubblesContainer = document.getElementById('bubbles')
@@ -301,9 +307,10 @@
     })
 
     // ============================================
-    // MÁSCARAS
+    // MÁSCARAS DE CAMPOS
     // ============================================
 
+    // Máscara telefone
     const telefoneInput = document.getElementById('telefone')
     telefoneInput.addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
@@ -320,9 +327,9 @@
       }
       
       e.target.value = value
-      console.log('📞 Telefone formatado:', value)
     })
 
+    // Máscara capital
     const capitalInput = document.getElementById('capital')
     capitalInput.addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
@@ -340,13 +347,12 @@
       const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
       
       e.target.value = 'R$ ' + inteiroFormatado + ',' + decimal
-      console.log('💰 Capital formatado:', e.target.value)
     })
 
     // ============================================
-    // FORMULÁRIO
+    // FORMULÁRIO - ENVIO DE LEAD
     // ============================================
-    
+
     const form = document.getElementById('leadForm')
     const errorDiv = document.getElementById('error')
     const successDiv = document.getElementById('success')
@@ -356,7 +362,8 @@
       e.preventDefault()
       e.stopPropagation()
       
-      console.log('📝 Formulário submetido!')
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      console.log('📝 Formulário enviado!')
       
       errorDiv.classList.add('hidden')
       successDiv.classList.add('hidden')
@@ -366,57 +373,114 @@
 
       const formData = new FormData(form)
       
+      // ============================================
+      // PROCESSAR DADOS DO FORMULÁRIO
+      // ============================================
+      
+      // Telefone sem formatação
       const telefone = formData.get('telefone').replace(/\D/g, '')
+      
+      // Capital como número
       const capitalStr = formData.get('capital').replace(/[R$.\s]/g, '').replace(',', '.')
       const capital = parseFloat(capitalStr) || 0
+      
+      // Mensagem (pode ser vazia)
+      const mensagem = formData.get('mensagem') || ''
 
+      // ============================================
+      // CALCULAR SCORE BASEADO NO CAPITAL
+      // ============================================
+      let score = 50
+      if (capital >= 500000) score = 95
+      else if (capital >= 300000) score = 90
+      else if (capital >= 200000) score = 80
+      else if (capital >= 150000) score = 70
+      else if (capital >= 100000) score = 60
+      else if (capital >= 80000) score = 55
+
+      // ============================================
+      // CALCULAR CATEGORIA BASEADA NO SCORE
+      // ============================================
+      let categoria = 'cold'
+      if (score >= 80) categoria = 'hot'
+      else if (score >= 60) categoria = 'warm'
+
+      // ============================================
+      // MONTAR OBJETO DO LEAD
+      // Valores FIXOS da landing + Dados do formulário
+      // ============================================
       const leadData = {
-        tenant: 'lava-lava',
+        // FIXOS (definidos pela landing page)
+        tenant_id: CONFIG.TENANT_ID,
+        marca_id: CONFIG.MARCA_ID,
+        fonte: CONFIG.FONTE,
+        
+        // DO FORMULÁRIO
         nome: formData.get('nome'),
         email: formData.get('email'),
         telefone: telefone,
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
-        metadata: {
-          capital: capital,
-          capital_formatado: formData.get('capital'),
-          mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-            origem: 'landing-page',
-          url: window.location.href
-        },
-        score: capital >= 300000 ? 90 : capital >= 150000 ? 80 : capital >= 80000 ? 70 : 60,
-        status: 'new'
+        mensagem_original: mensagem,
+        
+        // CALCULADOS
+        capital_disponivel: capital,
+        score: score,
+        categoria: categoria,
+        
+        // PADRÕES
+        status: 'novo',
+        observacao: mensagem ? `${mensagem} | Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava` : `Capital: ${formData.get('capital')} | Origem: Landing Page Lava Lava`
       }
 
-      console.log('📤 Enviando para Supabase:', leadData)
+      console.log('📤 Dados do lead:', leadData)
 
+      // ============================================
+      // ENVIAR PARA API DO BACKEND
+      // ============================================
       try {
-        const { data, error } = await supabaseClient
-          .from('leads')
-          .insert([leadData])
-          .select()
+        const response = await fetch(CONFIG.API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(leadData)
+        })
 
-        if (error) throw error
+        const result = await response.json()
+        
+        console.log('📥 Resposta da API:', result)
 
-        console.log('✅ Lead salvo com sucesso:', data)
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Erro ao enviar formulário')
+        }
 
+        console.log('✅ Lead salvo com sucesso! ID:', result.leadId)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+
+        // Exibir mensagem de sucesso
         successDiv.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-3xl">🎉</span>
             <div>
               <div class="font-bold text-lg mb-1">Formulário enviado com sucesso!</div>
-              <div class="text-sm opacity-90">Nossa equipe entrará em contato em até 24 horas.</div>
+              <div class="text-sm opacity-90">Nossa equipe entrará em contato em até 24 horas. Verifique seu email e WhatsApp.</div>
             </div>
           </div>
         `
         successDiv.classList.remove('hidden')
         
+        // Limpar formulário
         form.reset()
+        
+        // Scroll suave até a mensagem
         successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
       } catch (error) {
-        console.error('❌ Erro ao salvar:', error)
+        console.error('❌ Erro ao enviar:', error)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
         
+        // Exibir mensagem de erro
         errorDiv.innerHTML = `
           <div class="flex items-center gap-3">
             <span class="text-2xl">❌</span>
@@ -428,6 +492,7 @@
         `
         errorDiv.classList.remove('hidden')
         errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        
       } finally {
         submitBtn.disabled = false
         submitBtn.textContent = 'Quero ser um franqueado →'

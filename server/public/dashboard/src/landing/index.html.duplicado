@@ -1,17 +1,9 @@
-
-# Procure por esta linha (aprox. linha 250):
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-
-# Delete essa linha
-
-# E dentro de metadata, adicione:
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-# Ou usar sed para corrigir automaticamente:<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lava Lava Franquias | Invista em uma Lavanderia de Sucesso</title>
+  <title>🧼 Lava Lava Franquias | Invista em uma Lavanderia de Sucesso</title>
   
   <link rel="icon" type="image/png" href="assets/logos/favicon.png">
   <link rel="apple-touch-icon" href="assets/logos/app-icon-hd.png">
@@ -158,6 +150,7 @@
     </div>
   </section>
 
+  <!-- FORMULÁRIO -->
   <section id="formulario" class="py-20 bg-slate-800/30">
     <div class="max-w-7xl mx-auto px-4">
       <div class="text-center mb-12">
@@ -178,14 +171,14 @@
             </div>
             <div>
               <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">E-mail *</label>
-              <input type="email" name="email" required placeholder="seu@email.com" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
+              <input type="email" name="email" required pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" placeholder="seu@email.com" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">WhatsApp *</label>
-              <input type="tel" id="telefone" name="telefone" required placeholder="(11) 99999-9999" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
+              <input type="tel" id="telefone" name="telefone" required placeholder="(11) 99999-9999" maxlength="15" class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-all">
             </div>
             <div>
               <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Capital disponível *</label>
@@ -202,7 +195,7 @@
             <div>
               <label class="block text-xs text-slate-400 uppercase tracking-wider mb-2">Estado *</label>
               <select name="estado" required class="w-full px-4 py-3 bg-slate-800/50 border border-slate-600 rounded-xl text-white focus:outline-none focus:border-cyan-500 transition-all">
-                <option value="">Selecione</option>
+                <option value="">Selecione o estado</option>
                 <option value="AC">Acre</option>
                 <option value="AL">Alagoas</option>
                 <option value="AP">Amapá</option>
@@ -240,7 +233,7 @@
           </div>
 
           <div id="error" class="hidden p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-400 text-sm"></div>
-          <div id="success" class="hidden p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400"></div>
+          <div id="success" class="hidden p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-400 text-sm"></div>
 
           <button type="submit" id="submitBtn" class="w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold rounded-xl hover:from-cyan-400 hover:to-blue-500 transition-all text-lg shadow-lg shadow-cyan-500/25">
             Quero ser um franqueado →
@@ -267,16 +260,13 @@
   </footer>
 
   <script>
-    console.log('🚀 Script iniciando...')
-
     // Configuração Supabase
     const SUPABASE_URL = 'https://krcybmownrpfjvqhacup.supabase.co'
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c'
     
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    console.log('✅ Supabase inicializado')
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    // Bubbles animados
+    // Bubbles
     const bubblesContainer = document.getElementById('bubbles')
     for (let i = 0; i < 20; i++) {
       const bubble = document.createElement('div')
@@ -290,7 +280,7 @@
       bubblesContainer.appendChild(bubble)
     }
 
-    // Header com scroll
+    // Header scroll
     window.addEventListener('scroll', () => {
       const header = document.getElementById('header')
       if (window.scrollY > 50) {
@@ -301,18 +291,19 @@
     })
 
     // ============================================
-    // MÁSCARAS
+    // MÁSCARAS DE INPUT
     // ============================================
 
+    // Máscara de telefone: (11) 99999-9999
     const telefoneInput = document.getElementById('telefone')
-    telefoneInput.addEventListener('input', function(e) {
+    telefoneInput.addEventListener('input', (e) => {
       let value = e.target.value.replace(/\D/g, '')
       if (value.length > 11) value = value.slice(0, 11)
       
       if (value.length > 10) {
-        value = value.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+        value = value.replace(/^(\d{2})(\d{5})(\d{4}).*/, '($1) $2-$3')
       } else if (value.length > 6) {
-        value = value.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+        value = value.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3')
       } else if (value.length > 2) {
         value = value.replace(/^(\d{2})(\d{0,5})/, '($1) $2')
       } else if (value.length > 0) {
@@ -320,31 +311,31 @@
       }
       
       e.target.value = value
-      console.log('📞 Telefone formatado:', value)
     })
 
+    // Máscara de valor: R$ 100.000,00
     const capitalInput = document.getElementById('capital')
-    capitalInput.addEventListener('input', function(e) {
+    capitalInput.addEventListener('input', (e) => {
       let value = e.target.value.replace(/\D/g, '')
+      value = (parseInt(value) || 0).toString()
       
-      if (value === '') {
+      if (value.length === 0) {
         e.target.value = ''
         return
       }
       
-      value = (parseInt(value) || 0).toString()
       while (value.length < 3) value = '0' + value
       
       const inteiro = value.slice(0, -2)
       const decimal = value.slice(-2)
+      
       const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
       
       e.target.value = 'R$ ' + inteiroFormatado + ',' + decimal
-      console.log('💰 Capital formatado:', e.target.value)
     })
 
     // ============================================
-    // FORMULÁRIO
+    // SUBMIT DO FORMULÁRIO
     // ============================================
     
     const form = document.getElementById('leadForm')
@@ -352,89 +343,98 @@
     const successDiv = document.getElementById('success')
     const submitBtn = document.getElementById('submitBtn')
 
-    form.addEventListener('submit', async function(e) {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault()
-      e.stopPropagation()
-      
-      console.log('📝 Formulário submetido!')
-      
       errorDiv.classList.add('hidden')
       successDiv.classList.add('hidden')
 
+      // Desabilitar botão
       submitBtn.disabled = true
       submitBtn.textContent = '⏳ Enviando...'
 
       const formData = new FormData(form)
       
+      // Remover formatação do telefone e capital
       const telefone = formData.get('telefone').replace(/\D/g, '')
-      const capitalStr = formData.get('capital').replace(/[R$.\s]/g, '').replace(',', '.')
+      const capitalStr = formData.get('capital').replace(/[^\d,]/g, '').replace(',', '.')
       const capital = parseFloat(capitalStr) || 0
 
-      const leadData = {
+      const data = {
         tenant: 'lava-lava',
         nome: formData.get('nome'),
         email: formData.get('email'),
         telefone: telefone,
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
+        mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
         metadata: {
           capital: capital,
           capital_formatado: formData.get('capital'),
-          mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-            origem: 'landing-page',
+          origem: 'landing-page',
           url: window.location.href
         },
-        score: capital >= 300000 ? 90 : capital >= 150000 ? 80 : capital >= 80000 ? 70 : 60,
+        score: calcularScore(capital),
         status: 'new'
       }
 
-      console.log('📤 Enviando para Supabase:', leadData)
+      console.log('📤 Enviando lead para Supabase:', data)
 
       try {
-        const { data, error } = await supabaseClient
+        const { data: lead, error } = await supabase
           .from('leads')
-          .insert([leadData])
+          .insert([data])
           .select()
 
         if (error) throw error
 
-        console.log('✅ Lead salvo com sucesso:', data)
+        console.log('✅ Lead salvo com sucesso:', lead)
 
         successDiv.innerHTML = `
-          <div class="flex items-center gap-3">
-            <span class="text-3xl">🎉</span>
+          <div class="flex items-start gap-3">
+            <span class="text-2xl">🎉</span>
             <div>
-              <div class="font-bold text-lg mb-1">Formulário enviado com sucesso!</div>
-              <div class="text-sm opacity-90">Nossa equipe entrará em contato em até 24 horas.</div>
+              <div class="font-bold mb-1">Formulário enviado com sucesso!</div>
+              <div class="text-sm">Nossa equipe entrará em contato em até 24 horas. Verifique seu email e WhatsApp.</div>
             </div>
           </div>
         `
         successDiv.classList.remove('hidden')
         
         form.reset()
+        
+        // Scroll suave para o sucesso
         successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
       } catch (error) {
-        console.error('❌ Erro ao salvar:', error)
+        console.error('❌ Erro ao salvar lead:', error)
         
         errorDiv.innerHTML = `
-          <div class="flex items-center gap-3">
+          <div class="flex items-start gap-3">
             <span class="text-2xl">❌</span>
             <div>
               <div class="font-bold mb-1">Erro ao enviar formulário</div>
               <div class="text-sm">${error.message}</div>
+              <div class="text-xs mt-2 opacity-75">Por favor, tente novamente ou entre em contato conosco.</div>
             </div>
           </div>
         `
         errorDiv.classList.remove('hidden')
         errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
       } finally {
+        // Reabilitar botão
         submitBtn.disabled = false
         submitBtn.textContent = 'Quero ser um franqueado →'
       }
     })
 
-    console.log('✅ Script carregado com sucesso!')
+    // Calcular score baseado no capital
+    function calcularScore(capital) {
+      if (capital >= 500000) return 90
+      if (capital >= 300000) return 80
+      if (capital >= 150000) return 70
+      if (capital >= 80000) return 60
+      return 50
+    }
   </script>
 </body>
 </html>

@@ -1,12 +1,7 @@
 
-# Procure por esta linha (aprox. linha 250):
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-
-# Delete essa linha
-
-# E dentro de metadata, adicione:
-#   mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-# Ou usar sed para corrigir automaticamente:<!DOCTYPE html>
+# Depois teste:
+open index.html
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -17,7 +12,6 @@
   <link rel="apple-touch-icon" href="assets/logos/app-icon-hd.png">
   
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
   <script>
     tailwind.config = {
@@ -267,16 +261,11 @@
   </footer>
 
   <script>
-    console.log('🚀 Script iniciando...')
+    console.log('🚀 Landing Lava Lava - Script iniciando...')
 
-    // Configuração Supabase
-    const SUPABASE_URL = 'https://krcybmownrpfjvqhacup.supabase.co'
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c'
     
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    console.log('✅ Supabase inicializado')
 
-    // Bubbles animados
+    // Bubbles
     const bubblesContainer = document.getElementById('bubbles')
     for (let i = 0; i < 20; i++) {
       const bubble = document.createElement('div')
@@ -290,7 +279,7 @@
       bubblesContainer.appendChild(bubble)
     }
 
-    // Header com scroll
+    // Header
     window.addEventListener('scroll', () => {
       const header = document.getElementById('header')
       if (window.scrollY > 50) {
@@ -300,10 +289,7 @@
       }
     })
 
-    // ============================================
-    // MÁSCARAS
-    // ============================================
-
+    // Máscara telefone
     const telefoneInput = document.getElementById('telefone')
     telefoneInput.addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
@@ -320,9 +306,9 @@
       }
       
       e.target.value = value
-      console.log('📞 Telefone formatado:', value)
     })
 
+    // Máscara capital
     const capitalInput = document.getElementById('capital')
     capitalInput.addEventListener('input', function(e) {
       let value = e.target.value.replace(/\D/g, '')
@@ -340,13 +326,9 @@
       const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
       
       e.target.value = 'R$ ' + inteiroFormatado + ',' + decimal
-      console.log('💰 Capital formatado:', e.target.value)
     })
 
-    // ============================================
-    // FORMULÁRIO
-    // ============================================
-    
+    // Formulário
     const form = document.getElementById('leadForm')
     const errorDiv = document.getElementById('error')
     const successDiv = document.getElementById('success')
@@ -369,21 +351,16 @@
       const telefone = formData.get('telefone').replace(/\D/g, '')
       const capitalStr = formData.get('capital').replace(/[R$.\s]/g, '').replace(',', '.')
       const capital = parseFloat(capitalStr) || 0
+      const observacoes = formData.get('mensagem') || 'Interesse em franquia Lava Lava'
 
+      // APENAS campos que existem na tabela!
       const leadData = {
-        tenant: 'lava-lava',
         nome: formData.get('nome'),
         email: formData.get('email'),
         telefone: telefone,
         cidade: formData.get('cidade'),
         estado: formData.get('estado'),
-        metadata: {
-          capital: capital,
-          capital_formatado: formData.get('capital'),
-          mensagem: formData.get('mensagem') || 'Interesse em franquia Lava Lava',
-            origem: 'landing-page',
-          url: window.location.href
-        },
+        observacao: `${observacoes} | Capital: ${formData.get('capital')}`,
         score: capital >= 300000 ? 90 : capital >= 150000 ? 80 : capital >= 80000 ? 70 : 60,
         status: 'new'
       }
@@ -391,14 +368,25 @@
       console.log('📤 Enviando para Supabase:', leadData)
 
       try {
-        const { data, error } = await supabaseClient
-          .from('leads')
-          .insert([leadData])
-          .select()
+        // Enviar para o backend via API
+        const response = await fetch('http://localhost:4000/api/leads', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(leadData)
+        })
 
-        if (error) throw error
+        const result = await response.json()
 
-        console.log('✅ Lead salvo com sucesso:', data)
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || 'Erro ao enviar formulário')
+        }
+
+        console.log('✅ Lead salvo com sucesso! ID:', result.leadId)
+
+
+        console.log('✅ Lead salvo:', data)
 
         successDiv.innerHTML = `
           <div class="flex items-center gap-3">
@@ -415,7 +403,7 @@
         successDiv.scrollIntoView({ behavior: 'smooth', block: 'center' })
 
       } catch (error) {
-        console.error('❌ Erro ao salvar:', error)
+        console.error('❌ Erro:', error)
         
         errorDiv.innerHTML = `
           <div class="flex items-center gap-3">
@@ -434,7 +422,7 @@
       }
     })
 
-    console.log('✅ Script carregado com sucesso!')
+    console.log('✅ Script carregado!')
   </script>
 </body>
 </html>

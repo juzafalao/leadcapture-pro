@@ -53,3 +53,24 @@ server/.env
 .env
 *.env
 !.env.example
+
+# ============================================
+# PROTEÇÃO TOTAL DE CREDENCIAIS
+# ============================================
+# Arquivos .env (em qualquer pasta)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Arquivo env sem ponto
+**/env
+!**/env.example
+
+# Chaves e certificados
+*.key
+*.pem
+
+# Pastas de segredos
+secrets/
+credentials/
+.backups-seguranca/

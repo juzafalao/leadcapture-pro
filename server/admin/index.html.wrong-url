@@ -84,8 +84,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPABASE_URL = 'https://krcybmownrpfjvqhacup.supabase.co'
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c'
+    const SUPABASE_URL = 'https://qwljawfjrujhojxuejxe.supabase.co'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3bGphd2ZqcnVqaG9qeHVlanhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg5NzA3MDAsImV4cCI6MjA1NDU0NjcwMH0.p8fUqgkXnSWKFMlm0qN-OPNOdFH2NUUxh2E4a_j1dq0'
     
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
