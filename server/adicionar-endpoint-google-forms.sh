@@ -1,161 +1,12 @@
-import express from 'express'
-import cors from 'cors'
-import dotenv from 'dotenv'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { createClient } from '@supabase/supabase-js'
+#!/bin/bash
 
-// ============================================
-// CONFIGURAÇÕES
-// ============================================
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 ADICIONAR ENDPOINT GOOGLE FORMS"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
-dotenv.config()
-
-const app = express()
-
-// ============================================
-// MIDDLEWARES
-// ============================================
-app.use(cors())
-app.use(express.json())
-app.use(express.urlencoded({ extended: true }))
-
-// Servir arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public')))
-
-// ============================================
-// SUPABASE
-// ============================================
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-)
-
-console.log('✅ Supabase inicializado')
-
-// ============================================
-// ROTAS
-// ============================================
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    service: 'LeadCapture Pro'
-  })
-})
-
-// API: Criar lead (landing pages)
-app.post('/api/leads', async (req, res) => {
-  try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📥 Novo lead recebido')
-    
-    const leadData = req.body
-    
-    // Validações de campos obrigatórios
-    const required = ['tenant_id', 'marca_id', 'nome', 'email', 'telefone']
-    for (const field of required) {
-      if (!leadData[field]) {
-        return res.status(400).json({ 
-          success: false, 
-          error: `Campo obrigatório: ${field}` 
-        })
-      }
-    }
-    
-    // Validações específicas
-    if (leadData.nome.trim().length < 3) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Nome deve ter pelo menos 3 caracteres' 
-      })
-    }
-    
-    if (!leadData.email.includes('@')) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Email inválido' 
-      })
-    }
-    
-    if (leadData.telefone.length < 10) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Telefone inválido' 
-      })
-    }
-    
-    // Campos opcionais - validar se fornecidos
-    if (leadData.documento) {
-      const documentoLimpo = leadData.documento.replace(/\D/g, '')
-      
-      // Validar tamanho (CPF: 11, CNPJ: 14)
-      if (documentoLimpo.length !== 11 && documentoLimpo.length !== 14) {
-        return res.status(400).json({ 
-          success: false, 
-          error: 'Documento inválido. Deve ser CPF (11 dígitos) ou CNPJ (14 dígitos)' 
-        })
-      }
-      
-      // Atualizar com documento limpo
-      leadData.documento = documentoLimpo
-      leadData.tipo_documento = documentoLimpo.length === 11 ? 'CPF' : 'CNPJ'
-    }
-    
-    // Salvar no Supabase
-    const { data, error } = await supabase
-      .from('leads')
-      .insert([leadData])
-      .select()
-    
-    if (error) throw error
-    
-    console.log('✅ Lead salvo:', data[0].id)
-    console.log('   Nome:', data[0].nome)
-    console.log('   Email:', data[0].email)
-    console.log('   Marca:', data[0].marca_id)
-    if (data[0].documento) {
-      console.log('   Documento:', data[0].tipo_documento, '-', data[0].documento)
-    }
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    
-    res.json({ 
-      success: true, 
-      message: 'Lead recebido com sucesso!',
-      leadId: data[0].id
-    })
-    
-  } catch (error) {
-    console.error('❌ Erro:', error.message)
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    })
-  }
-})
-
-// ============================================
-// INICIAR SERVIDOR
-// ============================================
-const PORT = process.env.PORT || 4000
-
-app.listen(PORT, () => {
-  console.log('')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('🚀 LeadCapture Pro - Backend')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log(`📡 Servidor: http://localhost:${PORT}`)
-  console.log(`💚 Health: http://localhost:${PORT}/health`)
-  console.log(`📊 API Leads: POST http://localhost:${PORT}/api/leads`)
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-  console.log('')
-  console.log('✅ Pronto para receber leads!')
-  console.log('')
-})
+# Adicionar rota no index.js
+cat >> index.js << 'ROUTE'
 
 // ============================================
 // API: Receber lead do Google Forms
@@ -324,3 +175,12 @@ app.get('/api/leads/google-forms/health', (req, res) => {
     timestamp: new Date().toISOString()
   })
 })
+ROUTE
+
+echo "✅ Endpoint adicionado ao backend"
+echo ""
+echo "📋 Rotas criadas:"
+echo "   POST /api/leads/google-forms"
+echo "   GET  /api/leads/google-forms/health"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
