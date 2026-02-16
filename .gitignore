@@ -1,16 +1,20 @@
-# Projetos antigos (pasta inteira na raiz)
-/landing/
-/landing-page/
-
-# Node modules
+# Dependências
 node_modules/
 **/node_modules/
 
-# Env files
+# Variáveis de ambiente
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.env
+server/env
+server/.env
+server/update-env.sh
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
 
 # Sistema operacional
 .DS_Store
@@ -18,16 +22,10 @@ Thumbs.db
 -H
 -d
 
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-
-# Temporários
-*.tmp
-*.bak
-*.backup
-*.save
+# Build
+dist/
+build/
+*.tsbuildinfo
 
 # IDEs
 .vscode/
@@ -35,50 +33,25 @@ yarn-debug.log*
 *.swp
 *.swo
 
-# Arquivos com senhas/chaves
-server/env
-server/.env
-.env
-*.env
+# Vercel
+.vercel
 
-# Arquivos com senhas/chaves
-server/env
-server/.env
-.env
-*.env
+# Backups
+.backup*/
+*.backup
+*.bak
 
-# Arquivos com credenciais (NUNCA COMMITAR!)
-server/env
-server/.env
-.env
-*.env
-!.env.example
+# Temporários
+*.tmp
+*.temp
+supabase/.temp/
 
-# ============================================
-# PROTEÇÃO TOTAL DE CREDENCIAIS
-# ============================================
-# Arquivos .env (em qualquer pasta)
+# Credenciais (NUNCA COMMITAR!)
+**/vercel-env.txt
 **/.env
 **/.env.*
 !**/.env.example
 
-# Arquivo env sem ponto
-**/env
-!**/env.example
-
-# Chaves e certificados
-*.key
-*.pem
-
-# Pastas de segredos
-secrets/
-credentials/
-.backups-seguranca/
-server/update-env.sh
-server/update-env.sh
-.vercel
-.env*.local
-server/update-env.sh
-server/update-env.sh
-server/vercel-env.txt
-supabase/.temp/
+# Pastas antigas
+/landing/
+/landing-page/

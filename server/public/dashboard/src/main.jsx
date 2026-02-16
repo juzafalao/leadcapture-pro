@@ -1,15 +1,13 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import App from './App'
+import App from './App.jsx'
 import './index.css'
+import { analytics } from './lib/analytics'
 
-const queryClient = new QueryClient()
+// Inicializar analytics
+analytics.init();
 
+// Render sem StrictMode (evita execuções duplas)
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </React.StrictMode>
+  <App />
 )
