@@ -74,3 +74,4 @@ server/.env
 secrets/
 credentials/
 .backups-seguranca/
+server/update-env.sh
