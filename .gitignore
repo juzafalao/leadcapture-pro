@@ -55,3 +55,7 @@ supabase/.temp/
 # Pastas antigas
 /landing/
 /landing-page/
+
+# Permitir build do dashboard
+
+# Permitir build do dashboard
