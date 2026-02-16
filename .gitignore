@@ -1,48 +1,82 @@
-# Dependencies
+# Projetos antigos (pasta inteira na raiz)
+/landing/
+/landing-page/
+
+# Node modules
 node_modules/
-.pnp
-.pnp.js
+**/node_modules/
 
-# Build
-dist/
-build/
-
-# Environment - NUNCA COMMITAR!
+# Env files
 .env
 .env.local
 .env.*.local
-docker/.env
+*.env
 
-# IDE
-.vscode/settings.json
-.idea/
-*.swp
-*.swo
-
-# OS
+# Sistema operacional
 .DS_Store
 Thumbs.db
+-H
+-d
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
 
-# n8n data
-n8n_data/
-
-# Python
-__pycache__/
-*.pyc
-venv/
-
-# Misc
+# Temporários
 *.tmp
-*.temp
-server/.env
-.env.server
+*.bak
+*.backup
+*.save
 
-#new
-node_modules/
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos com senhas/chaves
+server/env
+server/.env
 .env
-dist/
-.DS_Storeserver/env
+*.env
+
+# Arquivos com senhas/chaves
+server/env
+server/.env
+.env
+*.env
+
+# Arquivos com credenciais (NUNCA COMMITAR!)
+server/env
+server/.env
+.env
+*.env
+!.env.example
+
+# ============================================
+# PROTEÇÃO TOTAL DE CREDENCIAIS
+# ============================================
+# Arquivos .env (em qualquer pasta)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Arquivo env sem ponto
+**/env
+!**/env.example
+
+# Chaves e certificados
+*.key
+*.pem
+
+# Pastas de segredos
+secrets/
+credentials/
+.backups-seguranca/
+server/update-env.sh
+server/update-env.sh
+.vercel
+.env*.local
+server/update-env.sh
+server/update-env.sh
