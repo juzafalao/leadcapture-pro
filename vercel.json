@@ -9,11 +9,11 @@
   "routes": [
     {
       "src": "/dashboard/(.*)",
-      "dest": "/server/public/dashboard/dist/$1"
+      "dest": "/dashboard-build/$1"
     },
     {
       "src": "/dashboard",
-      "dest": "/server/public/dashboard/dist/index.html"
+      "dest": "/dashboard-build/index.html"
     },
     {
       "src": "/(.*)",
