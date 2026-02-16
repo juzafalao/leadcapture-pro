@@ -80,3 +80,5 @@ server/update-env.sh
 .env*.local
 server/update-env.sh
 server/update-env.sh
+server/vercel-env.txt
+supabase/.temp/
