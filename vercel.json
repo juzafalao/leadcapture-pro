@@ -8,6 +8,14 @@
   ],
   "routes": [
     {
+      "src": "/dashboard/(.*)",
+      "dest": "/server/public/dashboard/dist/$1"
+    },
+    {
+      "src": "/dashboard",
+      "dest": "/server/public/dashboard/dist/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/api/index.js"
     }
