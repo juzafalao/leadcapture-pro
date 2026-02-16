@@ -273,3 +273,20 @@ app.get('/api/leads/google-forms/health', (req, res) => {
 })
 
 export default app
+
+// ============================================
+// SERVIR DASHBOARD (FRONTEND REACT)
+// ============================================
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+// Servir arquivos estáticos do dashboard
+app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
+
+// Fallback para SPA (Single Page Application)
+app.get('/dashboard/*', (req, res) => {
+  res.sendFile(join(__dirname, '../dashboard-build/index.html'))
+})
