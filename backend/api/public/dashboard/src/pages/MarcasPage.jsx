@@ -1,0 +1,243 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../components/AuthContext';
+import MarcaCard from '../components/dashboard/MarcaCard';
+import FAB from '../components/dashboard/FAB';
+import MarcaModal from '../components/marcas/MarcaModal';
+
+export default function MarcasPage() {
+  const { usuario } = useAuth();
+  const [marcas, setMarcas] = useState([]);
+  const [segmentos, setSegmentos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [selectedMarca, setSelectedMarca] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fetchMarcas = async () => {
+    if (!usuario?.tenant_id) return;
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from('marcas')
+      .select(`
+        *,
+        segmentos (
+          id,
+          nome,
+          emoji
+        ),
+        leads (id)
+      `)
+      .eq('tenant_id', usuario.tenant_id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setMarcas(data);
+    }
+    setLoading(false);
+  };
+
+  const fetchSegmentos = async () => {
+    if (!usuario?.tenant_id) return;
+
+    const { data, error } = await supabase
+      .from('segmentos')
+      .select('id, nome, emoji')
+      .eq('tenant_id', usuario.tenant_id)
+      .order('nome');
+
+    if (!error && data) {
+      setSegmentos(data);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarcas();
+    fetchSegmentos();
+  }, [usuario]);
+
+  const marcasFiltradas = marcas.filter(m =>
+    m.nome?.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const handleOpenModal = (marca = null) => {
+    setSelectedMarca(marca);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMarca(null);
+    setIsSaving(false);
+  };
+
+  const handleSaveMarca = async (marcaData) => {
+    setIsSaving(true);
+    
+    try {
+      const dataToSave = {
+        tenant_id: usuario.tenant_id,
+        nome: marcaData.nome,
+        emoji: marcaData.emoji,
+        id_segmento: marcaData.segmento_id || null,
+        invest_min: marcaData.investimento_minimo || 0,
+        invest_max: marcaData.investimento_maximo || 0,
+        ativo: true
+      };
+
+      if (marcaData.id) {
+        // Editar
+        const { error } = await supabase
+          .from('marcas')
+          .update(dataToSave)
+          .eq('id', marcaData.id);
+
+        if (error) throw error;
+      } else {
+        // Criar
+        const { error } = await supabase
+          .from('marcas')
+          .insert(dataToSave);
+
+        if (error) throw error;
+      }
+
+      await fetchMarcas();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Erro ao salvar marca:', error);
+      alert('Erro ao salvar marca: ' + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="text-6xl"
+        >
+          ⏳
+        </motion.div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+      
+      {/* HEADER */}
+      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
+            Gestão de <span className="text-[#ee7b4d] font-bold">Marcas</span>
+          </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full"></div>
+            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
+              {marcas.length} {marcas.length === 1 ? 'marca cadastrada' : 'marcas cadastradas'}
+            </p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* SEARCH BAR */}
+      <div className="px-4 lg:px-10 mb-8">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="🔍 Buscar marca..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="
+              w-full
+              bg-[#12121a]
+              border border-white/5
+              rounded-2xl
+              px-5 py-4
+              lg:px-6 lg:py-4
+              text-sm lg:text-base
+              text-white
+              placeholder:text-gray-600
+              focus:outline-none
+              focus:border-[#ee7b4d]/50
+              focus:ring-2
+              focus:ring-[#ee7b4d]/20
+              transition-all
+            "
+          />
+          {busca && (
+            <button
+              onClick={() => setBusca('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* MARCAS GRID */}
+      <div className="px-4 lg:px-10">
+        {marcasFiltradas.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div className="text-6xl mb-4 opacity-30">🏢</div>
+            <p className="text-xl text-gray-400 mb-2">
+              {busca ? 'Nenhuma marca encontrada' : 'Nenhuma marca cadastrada'}
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              {busca ? 'Tente ajustar sua busca' : 'Comece criando sua primeira marca!'}
+            </p>
+            {busca && (
+              <button
+                onClick={() => setBusca('')}
+                className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
+              >
+                Limpar Busca
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+            {marcasFiltradas.map((marca, index) => (
+              <MarcaCard
+                key={marca.id}
+                marca={marca}
+                index={index}
+                onClick={() => handleOpenModal(marca)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* FAB */}
+      <FAB onClick={() => handleOpenModal(null)} />
+
+      {/* MODAL */}
+      {isModalOpen && (
+        <MarcaModal
+          marca={selectedMarca}
+          segmentos={segmentos}
+          onClose={handleCloseModal}
+          onSave={handleSaveMarca}
+          isSaving={isSaving}
+        />
+      )}
+    </div>
+  );
+}

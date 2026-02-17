@@ -1,0 +1,31 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔑 VARIÁVEIS DE AMBIENTE PARA VERCEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copie e cole estas variáveis no Vercel:
+
+SUPABASE_URL
+https://krcybmownrpfjvqhacup.supabase.co
+
+SUPABASE_SERVICE_KEY
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c
+
+TWILIO_ACCOUNT_SID
+ACca794974c9b8ec8e8ce15862a4bb0954
+
+TWILIO_AUTH_TOKEN
+ff711170570c41baee7875213b28c169
+
+TWILIO_WHATSAPP_FROM
++17064206831
+
+ENCRYPTION_KEY_HEX
+a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2
+
+SERVER_API_KEY
+leadcapture-api-key-2026-secure-production
+
+NODE_ENV
+production
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -1,61 +1,10 @@
-# Dependências
 node_modules/
-**/node_modules/
-
-# Variáveis de ambiente
 .env
-.env.*
-!.env.example
-*.env
-server/env
-server/.env
-server/update-env.sh
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-
-# Sistema operacional
-.DS_Store
-Thumbs.db
--H
--d
-
-# Build
+.env.local
 dist/
 build/
-*.tsbuildinfo
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Vercel
-.vercel
-
-# Backups
+.vercel/
+.DS_Store
+*.log
 .backup*/
-*.backup
-*.bak
-
-# Temporários
-*.tmp
-*.temp
-supabase/.temp/
-
-# Credenciais (NUNCA COMMITAR!)
-**/vercel-env.txt
-**/.env
-**/.env.*
-!**/.env.example
-
-# Pastas antigas
-/landing/
-/landing-page/
-
-# Permitir build do dashboard
-
-# Permitir build do dashboard
+**/secret*
