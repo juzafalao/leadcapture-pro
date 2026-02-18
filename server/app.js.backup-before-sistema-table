@@ -413,19 +413,18 @@ app.get('/landing/:slug', async (req, res) => {
 
 // API: Receber lead do próprio sistema (landing institucional)
 
-
 // API: Receber lead do próprio sistema (landing institucional)
 app.post('/api/leads/sistema', async (req, res) => {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     console.log('📥 Novo lead do SISTEMA recebido')
     
-    const { nome, email, telefone, companhia, cidade, estado, observacao, regiao } = req.body
+    const leadData = req.body
     
-    // Validar campos obrigatórios
-    const required = { nome, email, telefone }
-    for (const [field, value] of Object.entries(required)) {
-      if (!value) {
+    // Validar apenas campos essenciais
+    const required = ['nome', 'email', 'telefone']
+    for (const field of required) {
+      if (!leadData[field]) {
         return res.status(400).json({ 
           success: false, 
           error: `Campo obrigatório: ${field}` 
@@ -433,20 +432,43 @@ app.post('/api/leads/sistema', async (req, res) => {
       }
     }
     
-    // Salvar na tabela leads_sistema (SEM tenant_id!)
+    // Buscar ou criar tenant 'leadcapture-sistema'
+    let { data: tenants } = await supabase
+      .from('tenants')
+      .select('id')
+      .eq('slug', 'leadcapture-sistema')
+      .limit(1)
+    
+    let tenantId
+    if (tenants && tenants.length > 0) {
+      tenantId = tenants[0].id
+      console.log('✅ Tenant encontrado:', tenantId)
+    } else {
+      // Criar tenant se não existir
+      const { data: newTenant, error: tenantError } = await supabase
+        .from('tenants')
+        .insert([{
+          slug: 'leadcapture-sistema',
+          name: 'LeadCapture Pro',
+          primary_color: '#f97316',
+          secondary_color: '#3b82f6',
+          business_type: 'saas'
+        }])
+        .select()
+      
+      if (tenantError) throw tenantError
+      tenantId = newTenant[0].id
+      console.log('✅ Tenant criado:', tenantId)
+    }
+    
+    // Adicionar metadata
+    leadData.tenant_id = tenantId
+    leadData.fonte = leadData.fonte || 'website-sistema'
+    leadData.status = 'novo'
+    
     const { data, error } = await supabase
-      .from('leads_sistema')
-      .insert([{
-        nome,
-        email,
-        telefone,
-        companhia: companhia || null,
-        cidade: cidade || null,
-        estado: estado || null,
-        observacao: observacao || regiao || null,
-        fonte: 'website-sistema',
-        status: 'novo'
-      }])
+      .from('leads')
+      .insert([leadData])
       .select()
     
     if (error) throw error
@@ -454,9 +476,6 @@ app.post('/api/leads/sistema', async (req, res) => {
     console.log('✅ Lead do sistema salvo:', data[0].id)
     console.log('   Nome:', data[0].nome)
     console.log('   Email:', data[0].email)
-    console.log('   Telefone:', data[0].telefone)
-    if (data[0].companhia) console.log('   Companhia:', data[0].companhia)
-    if (data[0].cidade) console.log('   Cidade:', data[0].cidade)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
 
     // 📧 Enviar notificação
@@ -471,7 +490,7 @@ app.post('/api/leads/sistema', async (req, res) => {
     })
     
   } catch (error) {
-    console.error('❌ Erro ao salvar lead do sistema:', error.message)
+    console.error('❌ Erro:', error.message)
     res.status(500).json({ 
       success: false, 
       error: error.message 

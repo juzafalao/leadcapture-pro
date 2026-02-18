@@ -3,20 +3,14 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { join, dirname } from 'path'
 import { createClient } from '@supabase/supabase-js'
 
-import fs from 'fs'
 const __filename = fileURLToPath(import.meta.url)
-import { initEmailService, enviarNotificacaoNovoLead } from "./services/emailService.js"
 const __dirname = path.dirname(__filename)
 
 dotenv.config()
 
 const app = express()
-
-// Inicializar serviço de email
-initEmailService()
 
 app.use(cors())
 app.use(express.json())
@@ -107,19 +101,6 @@ app.post('/api/leads', async (req, res) => {
       console.log('   Documento:', data[0].tipo_documento, '-', data[0].documento)
     }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-    // 📧 Buscar dados da marca e enviar notificação por email
-    const { data: marcaInfo } = await supabase
-      .from("marcas")
-      .select("nome, emoji")
-      .eq("id", data[0].marca_id)
-      .single()
-    
-    if (marcaInfo) {
-      enviarNotificacaoNovoLead(data[0], marcaInfo).catch(err => {
-        console.log("⚠️ Erro ao enviar email (não bloqueante):", err.message)
-      })
-    }
     
     res.json({ 
       success: true, 
@@ -292,189 +273,3 @@ app.get('/api/leads/google-forms/health', (req, res) => {
 })
 
 export default app
-
-// ============================================
-// SERVIR DASHBOARD (FRONTEND REACT)
-// ============================================
-
-// Servir arquivos estáticos do dashboard
-app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
-
-// Fallback para SPA (Single Page Application)
-app.get('/dashboard/*', (req, res) => {
-  res.sendFile(join(__dirname, '../dashboard-build/index.html'))
-})
-
-// API: Buscar marca por slug
-// API: Buscar marca por slug (para landing pages)
-app.get("/api/marcas/slug/:slug", async (req, res) => {
-  try {
-    const { slug } = req.params
-    
-    const { data, error } = await supabase
-      .from("marcas")
-      .select("id, nome, slug, emoji, invest_min, invest_max, id_segmento, tenant_id")
-      .eq("slug", slug)
-      .eq("ativo", true)
-      .single()
-    
-    if (error || !data) {
-      return res.status(404).json({ success: false, error: "Marca não encontrada" })
-    }
-    
-    res.json({ success: true, marca: data })
-  } catch (err) {
-    console.error("Erro ao buscar marca:", err)
-    res.status(500).json({ success: false, error: "Erro no servidor" })
-  }
-})
-
-app.get('/api/marcas/:slug', async (req, res) => {
-  try {
-    const slug = req.params.slug.toLowerCase().replace(/-/g, ' ')
-    
-    const { data, error } = await supabase
-      .from('marcas')
-      .select('id, nome, emoji, invest_min, invest_max, id_segmento, tenant_id')
-      .ilike('nome', slug)
-      .eq('ativo', true)
-      .single()
-    
-    if (error || !data) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Marca não encontrada' 
-      })
-    }
-    
-    res.json({ 
-      success: true, 
-      marca: data 
-    })
-    
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    })
-  }
-})
-
-// Admin Panel
-app.get('/admin', (req, res) => {
-  res.sendFile(join(__dirname, 'admin/index.html'))
-})
-
-// Landing Page Dinâmica
-app.get('/landing/:slug', async (req, res) => {
-  try {
-    const { slug } = req.params
-    
-    // Buscar marca pelo slug
-    const { data: marca, error } = await supabase
-      .from('marcas')
-      .select('*')
-      .eq('slug', slug)
-      .single()
-    
-    if (error || !marca) {
-      return res.status(404).send(`
-        <!DOCTYPE html>
-        <html><head><meta charset="UTF-8"><title>404</title></head>
-        <body style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;background:#f3f4f6;">
-          <div style="text-align:center;">
-            <h1 style="font-size:4rem;margin:0;">❌</h1>
-            <h2>Marca não encontrada</h2>
-            <p style="color:#666;">O slug "${slug}" não existe no sistema.</p>
-          </div>
-        </body></html>
-      `)
-    }
-    
-    // Ler template
-    const templatePath = path.join(__dirname, 'templates', 'landing.html')
-    let html = fs.readFileSync(templatePath, 'utf-8')
-    
-    // Substituir placeholders
-    html = html.replace(/{{MARCA_EMOJI}}/g, marca.emoji || '🏢')
-    html = html.replace(/{{MARCA_NOME}}/g, marca.nome)
-    html = html.replace(/{{MARCA_ID}}/g, marca.id)
-    html = html.replace(/{{TENANT_ID}}/g, marca.tenant_id)
-    html = html.replace(/{{INVEST_MIN}}/g, (marca.invest_min || 0).toLocaleString('pt-BR'))
-    html = html.replace(/{{INVEST_MAX}}/g, (marca.invest_max || 0).toLocaleString('pt-BR'))
-    
-    res.send(html)
-    
-  } catch (error) {
-    console.error('Erro na landing:', error)
-    res.status(500).send('Erro ao carregar landing page')
-  }
-})
-
-// API: Receber lead do próprio sistema (landing institucional)
-
-
-// API: Receber lead do próprio sistema (landing institucional)
-app.post('/api/leads/sistema', async (req, res) => {
-  try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📥 Novo lead do SISTEMA recebido')
-    
-    const { nome, email, telefone, companhia, cidade, estado, observacao, regiao } = req.body
-    
-    // Validar campos obrigatórios
-    const required = { nome, email, telefone }
-    for (const [field, value] of Object.entries(required)) {
-      if (!value) {
-        return res.status(400).json({ 
-          success: false, 
-          error: `Campo obrigatório: ${field}` 
-        })
-      }
-    }
-    
-    // Salvar na tabela leads_sistema (SEM tenant_id!)
-    const { data, error } = await supabase
-      .from('leads_sistema')
-      .insert([{
-        nome,
-        email,
-        telefone,
-        companhia: companhia || null,
-        cidade: cidade || null,
-        estado: estado || null,
-        observacao: observacao || regiao || null,
-        fonte: 'website-sistema',
-        status: 'novo'
-      }])
-      .select()
-    
-    if (error) throw error
-    
-    console.log('✅ Lead do sistema salvo:', data[0].id)
-    console.log('   Nome:', data[0].nome)
-    console.log('   Email:', data[0].email)
-    console.log('   Telefone:', data[0].telefone)
-    if (data[0].companhia) console.log('   Companhia:', data[0].companhia)
-    if (data[0].cidade) console.log('   Cidade:', data[0].cidade)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-    // 📧 Enviar notificação
-    enviarNotificacaoNovoLead(data[0], { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err => {
-      console.log("⚠️ Erro ao enviar email (não bloqueante):", err.message)
-    })
-    
-    res.json({ 
-      success: true, 
-      message: 'Lead recebido com sucesso!',
-      leadId: data[0].id
-    })
-    
-  } catch (error) {
-    console.error('❌ Erro ao salvar lead do sistema:', error.message)
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    })
-  }
-})

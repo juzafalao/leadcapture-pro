@@ -145,59 +145,26 @@
           </div>
 
           <div>
+            <label class="block text-sm font-medium text-gray-300 mb-2">Faixa de investimento (opcional)</label>
+            <select name="capital"
+              class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-1 transition"
+              style="border-color: rgba(148,163,184,.35); outline: none;"
+              >
+              <option value="">Selecione uma opção</option>
+              <option value="ate-50k">Até R$ 50.000</option>
+              <option value="50k-100k">R$ 50.000 a R$ 100.000</option>
+              <option value="100k-150k">R$ 100.000 a R$ 150.000</option>
+              <option value="150k-200k">R$ 150.000 a R$ 200.000</option>
+              <option value="acima-200k">Acima de R$ 200.000</option>
+            </select>
+          </div>
 
           <div>
-            <label class="block text-sm font-medium text-gray-300 mb-2">Companhia (opcional)</label>
-            <input type="text" name="companhia" placeholder="Nome da sua empresa"
+            <label class="block text-sm font-medium text-gray-300 mb-2">Região de interesse (opcional)</label>
+            <input type="text" name="regiao" placeholder="Ex: São Paulo - Capital"
               class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-1 transition"
               style="border-color: rgba(148,163,184,.35); outline: none;"
               />
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Cidade (opcional)</label>
-              <input type="text" name="cidade" placeholder="Ex: São Paulo"
-                class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-1 transition"
-                style="border-color: rgba(148,163,184,.35); outline: none;"
-                />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">Estado (opcional)</label>
-              <select name="estado"
-                class="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-1 transition"
-                style="border-color: rgba(148,163,184,.35); outline: none;"
-                >
-                <option value="">Selecione</option>
-                <option value="AC">AC</option>
-                <option value="AL">AL</option>
-                <option value="AP">AP</option>
-                <option value="AM">AM</option>
-                <option value="BA">BA</option>
-                <option value="CE">CE</option>
-                <option value="DF">DF</option>
-                <option value="ES">ES</option>
-                <option value="GO">GO</option>
-                <option value="MA">MA</option>
-                <option value="MT">MT</option>
-                <option value="MS">MS</option>
-                <option value="MG">MG</option>
-                <option value="PA">PA</option>
-                <option value="PB">PB</option>
-                <option value="PR">PR</option>
-                <option value="PE">PE</option>
-                <option value="PI">PI</option>
-                <option value="RJ">RJ</option>
-                <option value="RN">RN</option>
-                <option value="RS">RS</option>
-                <option value="RO">RO</option>
-                <option value="RR">RR</option>
-                <option value="SC">SC</option>
-                <option value="SP">SP</option>
-                <option value="SE">SE</option>
-                <option value="TO">TO</option>
-              </select>
-            </div>
           </div>
 
           <div>
@@ -263,7 +230,7 @@
     // ============================================================
 
     // ✅ Mantive igual ao seu original (ajuste se mudar):
-    const WEBHOOK_URL = 'http://localhost:4000/api/leads/sistema';
+    const WEBHOOK_URL = 'http://localhost:5678/webhook/lead-capture';
 
     // ⚠️ Para ficar dinâmico por tenant no Supabase, preencha:
     // - SUPABASE_URL: https://xxxx.supabase.co
@@ -386,28 +353,10 @@
       const tenantSlug = getQueryParam('tenant') || DEFAULT_TENANT.slug;
 
       const data = {
-        nome: formData.get("nome"),
-        email: formData.get("email"),
-        telefone: (formData.get("telefone") || "").replace(/\D/g, ""),
-        companhia: formData.get("companhia") || "",
-        cidade: formData.get("cidade") || "",
-        estado: formData.get("estado") || "",
-        
-        observacao: formData.get("mensagem") || "",
-        nome: formData.get("nome"),
-        email: formData.get("email"),
-        telefone: (formData.get("telefone") || "").replace(/\D/g, ""),
-        companhia: formData.get("companhia") || "",
-        cidade: formData.get("cidade") || "",
-        nome: formData.get("nome"),
-        email: formData.get("email"),
-        telefone: (formData.get("telefone") || "").replace(/\D/g, ""),
-        companhia: formData.get("companhia") || "",
-        cidade: formData.get("cidade") || "",
-        estado: formData.get("estado") || "",
-        
-        observacao: formData.get("mensagem") || "",
-        
+        nome: formData.get('nome'),
+        email: formData.get('email'),
+        telefone: (formData.get('telefone') || '').replace(/\D/g, ''),
+        capital: formData.get('capital') || 'Não informado',
         regiao_interesse: formData.get('regiao') || 'Não informada',
         mensagem: formData.get('mensagem') || '',
         fonte: 'website',

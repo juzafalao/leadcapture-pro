@@ -43,6 +43,19 @@ app.get('/health', (req, res) => {
 app.post('/api/leads', async (req, res) => {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
+    // 📧 Buscar dados da marca e enviar notificação
+    const { data: marcaData } = await supabase
+      .from('marcas')
+      .select('nome, emoji')
+      .eq('id', data[0].marca_id)
+      .single()
+    
+    if (marcaData) {
+      enviarNotificacaoNovoLead(data[0], marcaData).catch(err => {
+        console.log('⚠️ Erro ao enviar email (não bloqueante):', err.message)
+      })
+    }
     console.log('📥 Novo lead recebido')
     
     const leadData = req.body
@@ -107,17 +120,17 @@ app.post('/api/leads', async (req, res) => {
       console.log('   Documento:', data[0].tipo_documento, '-', data[0].documento)
     }
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-    // 📧 Buscar dados da marca e enviar notificação por email
-    const { data: marcaInfo } = await supabase
-      .from("marcas")
-      .select("nome, emoji")
-      .eq("id", data[0].marca_id)
+    
+    // 📧 Buscar dados da marca e enviar notificação
+    const { data: marcaData } = await supabase
+      .from('marcas')
+      .select('nome, emoji')
+      .eq('id', data[0].marca_id)
       .single()
     
-    if (marcaInfo) {
-      enviarNotificacaoNovoLead(data[0], marcaInfo).catch(err => {
-        console.log("⚠️ Erro ao enviar email (não bloqueante):", err.message)
+    if (marcaData) {
+      enviarNotificacaoNovoLead(data[0], marcaData).catch(err => {
+        console.log('⚠️ Erro ao enviar email (não bloqueante):', err.message)
       })
     }
     
@@ -140,6 +153,19 @@ app.post('/api/leads', async (req, res) => {
 app.post('/api/leads/google-forms', async (req, res) => {
   try {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
+    // 📧 Buscar dados da marca e enviar notificação
+    const { data: marcaData } = await supabase
+      .from('marcas')
+      .select('nome, emoji')
+      .eq('id', data[0].marca_id)
+      .single()
+    
+    if (marcaData) {
+      enviarNotificacaoNovoLead(data[0], marcaData).catch(err => {
+        console.log('⚠️ Erro ao enviar email (não bloqueante):', err.message)
+      })
+    }
     console.log('📝 Lead do Google Forms recebido')
     
     const formData = req.body
@@ -264,6 +290,19 @@ app.post('/api/leads/google-forms', async (req, res) => {
     console.log('   Categoria:', data[0].categoria)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
     
+    // 📧 Buscar dados da marca e enviar notificação
+    const { data: marcaData } = await supabase
+      .from('marcas')
+      .select('nome, emoji')
+      .eq('id', data[0].marca_id)
+      .single()
+    
+    if (marcaData) {
+      enviarNotificacaoNovoLead(data[0], marcaData).catch(err => {
+        console.log('⚠️ Erro ao enviar email (não bloqueante):', err.message)
+      })
+    }
+    
     res.json({ 
       success: true, 
       message: 'Lead do Google Forms recebido com sucesso!',
@@ -275,6 +314,19 @@ app.post('/api/leads/google-forms', async (req, res) => {
   } catch (error) {
     console.error('❌ Erro ao processar lead do Google Forms:', error.message)
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    
+    // 📧 Buscar dados da marca e enviar notificação
+    const { data: marcaData } = await supabase
+      .from('marcas')
+      .select('nome, emoji')
+      .eq('id', data[0].marca_id)
+      .single()
+    
+    if (marcaData) {
+      enviarNotificacaoNovoLead(data[0], marcaData).catch(err => {
+        console.log('⚠️ Erro ao enviar email (não bloqueante):', err.message)
+      })
+    }
     
     res.status(500).json({ 
       success: false, 
@@ -408,73 +460,5 @@ app.get('/landing/:slug', async (req, res) => {
   } catch (error) {
     console.error('Erro na landing:', error)
     res.status(500).send('Erro ao carregar landing page')
-  }
-})
-
-// API: Receber lead do próprio sistema (landing institucional)
-
-
-// API: Receber lead do próprio sistema (landing institucional)
-app.post('/api/leads/sistema', async (req, res) => {
-  try {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📥 Novo lead do SISTEMA recebido')
-    
-    const { nome, email, telefone, companhia, cidade, estado, observacao, regiao } = req.body
-    
-    // Validar campos obrigatórios
-    const required = { nome, email, telefone }
-    for (const [field, value] of Object.entries(required)) {
-      if (!value) {
-        return res.status(400).json({ 
-          success: false, 
-          error: `Campo obrigatório: ${field}` 
-        })
-      }
-    }
-    
-    // Salvar na tabela leads_sistema (SEM tenant_id!)
-    const { data, error } = await supabase
-      .from('leads_sistema')
-      .insert([{
-        nome,
-        email,
-        telefone,
-        companhia: companhia || null,
-        cidade: cidade || null,
-        estado: estado || null,
-        observacao: observacao || regiao || null,
-        fonte: 'website-sistema',
-        status: 'novo'
-      }])
-      .select()
-    
-    if (error) throw error
-    
-    console.log('✅ Lead do sistema salvo:', data[0].id)
-    console.log('   Nome:', data[0].nome)
-    console.log('   Email:', data[0].email)
-    console.log('   Telefone:', data[0].telefone)
-    if (data[0].companhia) console.log('   Companhia:', data[0].companhia)
-    if (data[0].cidade) console.log('   Cidade:', data[0].cidade)
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-
-    // 📧 Enviar notificação
-    enviarNotificacaoNovoLead(data[0], { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err => {
-      console.log("⚠️ Erro ao enviar email (não bloqueante):", err.message)
-    })
-    
-    res.json({ 
-      success: true, 
-      message: 'Lead recebido com sucesso!',
-      leadId: data[0].id
-    })
-    
-  } catch (error) {
-    console.error('❌ Erro ao salvar lead do sistema:', error.message)
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    })
   }
 })
