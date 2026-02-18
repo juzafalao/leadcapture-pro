@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeadCapture Pro - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+  <header class="bg-white shadow">
+    <div class="max-w-7xl mx-auto px-4 py-6">
+      <h1 class="text-3xl font-bold text-gray-900">🚀 LeadCapture Pro - Dashboard</h1>
+      <p class="text-sm text-gray-500 mt-1">Total: <span id="totalLeads" class="font-bold">0</span> leads</p>
+    </div>
+  </header>
+
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+      <div class="grid grid-cols-3 gap-4">
+        <input type="text" id="searchInput" placeholder="Buscar..." class="px-4 py-2 border rounded-lg">
+        <select id="statusFilter" class="px-4 py-2 border rounded-lg">
+          <option value="">Todos</option>
+          <option value="novo">Novo</option>
+        </select>
+        <button onclick="exportarCSV()" class="bg-green-600 text-white px-4 py-2 rounded-lg">📥 Exportar</button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="min-w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Telefone</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Companhia</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cidade</th>
+          </tr>
+        </thead>
+        <tbody id="tbody" class="bg-white divide-y">
+          <tr><td colspan="6" class="px-6 py-4 text-center">Carregando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const URL = 'https://krcybmownrpfjvqhacup.supabase.co';
+    const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzY0MzcyMjcsImV4cCI6MjA1MjAxMzIyN30.JNaJwB00hmnxrIbBvDWaYQTFzlQPp4M2vfbqBgswi_4';
+    let leads = [];
+
+    async function carregar() {
+      try {
+        const res = await fetch(`${URL}/rest/v1/leads_sistema?select=*&order=created_at.desc`, {
+          headers: { 'apikey': KEY, 'Authorization': `Bearer ${KEY}` }
+        });
+        leads = await res.json();
+        document.getElementById('totalLeads').textContent = leads.length;
+        renderizar(leads);
+      } catch (e) {
+        document.getElementById('tbody').innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-red-500">Erro</td></tr>';
+      }
+    }
+
+    function renderizar(data) {
+      const tbody = document.getElementById('tbody');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center">Nenhum lead</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(l => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 text-sm">${new Date(l.created_at).toLocaleDateString('pt-BR')}</td>
+          <td class="px-6 py-4 text-sm font-medium">${l.nome}</td>
+          <td class="px-6 py-4 text-sm"><a href="mailto:${l.email}" class="text-blue-600">${l.email}</a></td>
+          <td class="px-6 py-4 text-sm"><a href="https://wa.me/55${l.telefone}" class="text-green-600">${l.telefone}</a></td>
+          <td class="px-6 py-4 text-sm">${l.companhia || '-'}</td>
+          <td class="px-6 py-4 text-sm">${l.cidade ? `${l.cidade}/${l.estado}` : '-'}</td>
+        </tr>
+      `).join('');
+    }
+
+    function filtrar() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const filtered = leads.filter(l => {
+        const match = !search || l.nome.toLowerCase().includes(search) || l.email.toLowerCase().includes(search);
+        const matchStatus = !status || l.status === status;
+        return match && matchStatus;
+      });
+      renderizar(filtered);
+    }
+
+    function exportarCSV() {
+      const csv = [
+        ['Data','Nome','Email','Telefone','Companhia','Cidade','Estado'],
+        ...leads.map(l => [
+          new Date(l.created_at).toLocaleDateString('pt-BR'),
+          l.nome, l.email, l.telefone, l.companhia || '', l.cidade || '', l.estado || ''
+        ])
+      ].map(r => r.join(',')).join('\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `leads-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', filtrar);
+    document.getElementById('statusFilter').addEventListener('change', filtrar);
+    carregar();
+    setInterval(carregar, 30000);
+  </script>
+</body>
+</html>

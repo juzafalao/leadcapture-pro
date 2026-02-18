@@ -37,7 +37,7 @@
         <input type="number" id="scoreMin" placeholder="Score mínimo" min="0" max="100"
                class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white">
 
-        <button onclick="exportarCSV()" class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+        <button id="exportBtn" onclick="exportarCSV()" class="px-6 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
           📥 Export CSV
         </button>
       </div>
@@ -86,22 +86,16 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // ============================================
-    // CONFIGURAÇÃO
-    // ============================================
-    const SUPABASE_URL = 'https://krcybmownrpfjvqhacup.supabase.co'
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtyY3libW93bnJwZmp2cWhhY3VwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxNTM0MDgsImV4cCI6MjA4NDcyOTQwOH0.Y5D_dWds6XmJuhy0oxPwkgSmbq4BGS3sKB0OlHahP_c'
+    const SUPABASE_URL = ''
+    const SUPABASE_KEY = ''
     
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-    // ============================================
-    // VARIÁVEIS GLOBAIS (DECLARAR ANTES DAS FUNÇÕES!)
-    // ============================================
+    let currentTab = 'franquias'
+    let currentPage = 1
+    const leadsPerPage = 20
     let allLeads = []
     let filteredLeads = []
-    let currentPage = 1
-    let currentTab = 'franquias'
-    const leadsPerPage = 20
 
     // ============================================
     // MUDAR ABA

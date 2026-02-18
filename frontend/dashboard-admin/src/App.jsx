@@ -8,7 +8,7 @@ import MarcasPage from './pages/MarcasPage';
 import SegmentosPage from './pages/SegmentosPage';
 import UsuariosPage from './pages/UsuariosPage';
 import LoginPage from './pages/LoginPage';
-import LandingPage from './pages/LandingPage';
+import LeadsSistemaPage from './pages/LeadsSistemaPage';import LandingPage from './pages/LandingPage';
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 
 function PrivateRoute({ children, allowedRoles }) {
@@ -81,6 +81,8 @@ export default function App() {
           <Route path="/segmentos" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><SegmentosPage /></AuthenticatedLayout></PrivateRoute>} />
           
           <Route path="/usuarios" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><UsuariosPage /></AuthenticatedLayout></PrivateRoute>} />
+
+          <Route path="/leads-sistema" element={<PrivateRoute allowedRoles={['Administrador', 'Diretor', 'Gestor']}><AuthenticatedLayout><LeadsSistemaPage /></AuthenticatedLayout></PrivateRoute>} />
           
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
