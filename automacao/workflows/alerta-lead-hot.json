@@ -1,0 +1,90 @@
+{
+  "name": "LeadCapture Pro — Alerta Lead HOT",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-hot",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-hot",
+      "name": "Webhook — Lead HOT",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "lead-hot-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"categoria\"]}}",
+              "value2": "hot",
+              "operation": "equals"
+            }
+          ]
+        }
+      },
+      "id": "check-hot",
+      "name": "É lead HOT?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconst capital = lead.capital_disponivel\n  ? `R$ ${Number(lead.capital_disponivel).toLocaleString('pt-BR')}`\n  : 'Não informado';\n\nconst emoji = lead.categoria === 'hot' ? '🔥' : lead.categoria === 'warm' ? '🌤' : '❄️';\n\nreturn [{\n  json: {\n    ...lead,\n    mensagem_alerta: [\n      `${emoji} *LEAD HOT CAPTURADO!*`,\n      ``,\n      `👤 *Nome:* ${lead.nome}`,\n      `📧 *E-mail:* ${lead.email}`,\n      `📱 *WhatsApp:* ${lead.telefone}`,\n      `💰 *Capital:* ${capital}`,\n      `📍 *Local:* ${lead.cidade || '—'} ${lead.estado ? '— ' + lead.estado : ''}`,\n      `🏢 *Marca:* ${lead.marca_nome || '—'}`,\n      `📊 *Score:* ${lead.score}/100`,\n      ``,\n      `_${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}_`\n    ].join('\\n')\n  }\n}];"
+      },
+      "id": "montar-alerta",
+      "name": "Montar alerta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "={{$json[\"mensagem_alerta\"]}}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "telegram-alerta",
+      "name": "Telegram — Gestor",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 220],
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-creds",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook — Lead HOT": {
+      "main": [[ { "node": "É lead HOT?", "type": "main", "index": 0 } ]]
+    },
+    "É lead HOT?": {
+      "main": [
+        [ { "node": "Montar alerta", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Montar alerta": {
+      "main": [[ { "node": "Telegram — Gestor", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Alerta imediato no Telegram quando um lead com categoria HOT é capturado.",
+    "version": "1.0.0",
+    "author": "Zafalão Tech",
+    "tags": ["leadcapture", "telegram", "hot", "alerta"]
+  }
+}

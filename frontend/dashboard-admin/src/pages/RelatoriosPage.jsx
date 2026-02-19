@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { useMetrics, useLeads } from '../hooks/useLeads'
 import { useMarcas } from '../hooks/useMarcas'
-import { useAuth } from '../App'
+import { useAuth } from '../components/AuthContext'
 
 export default function RelatoriosPage() {
   const { usuario } = useAuth()

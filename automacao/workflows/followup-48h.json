@@ -1,0 +1,111 @@
+{
+  "name": "LeadCapture Pro — Follow-up 48h (Warm)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "A cada 6 horas",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.LEADCAPTURE_API_URL}}/api/leads?status=novo&categoria=warm&sem_contato=true&horas_min=48",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.LEADCAPTURE_API_TOKEN}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "buscar-leads-warm",
+      "name": "Buscar leads Warm sem contato",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "leads",
+        "options": {}
+      },
+      "id": "split-leads",
+      "name": "Processar cada lead",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconst nome = lead.nome?.split(' ')[0] || 'você';\nconst marca = lead.marca_nome || 'nossa empresa';\n\nreturn [{\n  json: {\n    ...lead,\n    mensagem_followup: `Olá, ${nome}! 😊\\n\\nNotamos que você demonstrou interesse em *${marca}* há alguns dias.\\n\\nQueremos entender melhor o que você busca e como podemos ajudar.\\n\\nPoderia me contar um pouco mais sobre seus objetivos?\\n\\n_Equipe ${marca}_`\n  }\n}];"
+      },
+      "id": "montar-followup",
+      "name": "Montar follow-up",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EVOLUTION_API_URL}}/message/sendText/={{$env.EVOLUTION_INSTANCE}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{$env.EVOLUTION_API_KEY}}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number",      "value": "=55{{$json[\"telefone\"]}}" },
+            { "name": "textMessage", "value": "={ \"text\": \"{{$json[\"mensagem_followup\"]}}\" }" }
+          ]
+        },
+        "options": { "batching": { "batch": { "batchSize": 1, "batchInterval": 3000 } } }
+      },
+      "id": "enviar-followup",
+      "name": "Enviar follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1120, 300]
+    }
+  ],
+  "connections": {
+    "A cada 6 horas": {
+      "main": [[ { "node": "Buscar leads Warm sem contato", "type": "main", "index": 0 } ]]
+    },
+    "Buscar leads Warm sem contato": {
+      "main": [[ { "node": "Processar cada lead", "type": "main", "index": 0 } ]]
+    },
+    "Processar cada lead": {
+      "main": [[ { "node": "Montar follow-up", "type": "main", "index": 0 } ]]
+    },
+    "Montar follow-up": {
+      "main": [[ { "node": "Enviar follow-up WhatsApp", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Verifica a cada 6h leads Warm sem contato há 48h e envia follow-up automático no WhatsApp.",
+    "version": "1.0.0",
+    "author": "Zafalão Tech",
+    "tags": ["leadcapture", "whatsapp", "followup", "warm", "agendado"]
+  }
+}
