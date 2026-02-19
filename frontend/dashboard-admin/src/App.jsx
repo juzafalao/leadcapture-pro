@@ -13,6 +13,7 @@ import AnalyticsPage    from './pages/AnalyticsPage';
 import RelatoriosPage   from './pages/RelatoriosPage';
 import AutomacaoPage    from './pages/AutomacaoPage';
 import SettingsPage     from './pages/SettingsPage';
+import LeadsSistemaPage from './pages/LeadsSistemaPage';
 import LoginPage        from './pages/LoginPage';
 import LandingPage      from './pages/LandingPage';
 
@@ -121,6 +122,11 @@ export default function App() {
           {/* ── Usuários / Time (Gestor+) ────────────────── */}
           <Route path="/usuarios"
             element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><UsuariosPage /></AuthenticatedLayout></PrivateRoute>}
+          />
+
+          {/* ── Prospects do Sistema / LeadCapture Pro (Gestor+) ── */}
+          <Route path="/leads-sistema"
+            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><LeadsSistemaPage /></AuthenticatedLayout></PrivateRoute>}
           />
 
           {/* ── Configurações (todos os autenticados) ────── */}

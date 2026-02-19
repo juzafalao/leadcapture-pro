@@ -28,6 +28,12 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'LC Pro',
+    items: [
+      { path: '/leads-sistema', icon: '🚀', label: 'Prospects', show: (a) => a.isGestor() },
+    ],
+  },
+  {
     label: 'Sistema',
     items: [
       { path: '/configuracoes', icon: '⚙️', label: 'Config', show: () => true },

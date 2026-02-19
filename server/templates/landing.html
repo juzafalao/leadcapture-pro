@@ -3,165 +3,254 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{MARCA_EMOJI}} {{MARCA_NOME}} - Seja um Franqueado</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <title>{{MARCA_EMOJI}} {{MARCA_NOME}} — Seja um Franqueado</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand:   {{COR_PRIMARIA}};
+      --brand-2: {{COR_SECUNDARIA}};
+      --bg:      #0a0a0b;
+      --card:    #111113;
+      --border:  rgba(255,255,255,0.07);
+      --text:    #f4f4f5;
+      --muted:   #71717a;
+    }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ─── */
+    .lp-header {
+      background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+      padding: 48px 24px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .lp-header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,.08) 0%, transparent 60%);
+    }
+    .lp-emoji  { font-size: 64px; display: block; margin-bottom: 12px; }
+    .lp-title  { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 900; letter-spacing: -1px; color: #000; margin-bottom: 6px; }
+    .lp-sub    { font-size: 1rem; color: rgba(0,0,0,.65); font-weight: 500; }
+    .lp-badge  {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(0,0,0,.12); border-radius: 20px;
+      padding: 4px 14px; font-size: 11px; font-weight: 700;
+      color: rgba(0,0,0,.7); text-transform: uppercase; letter-spacing: .1em;
+      margin-top: 14px;
+    }
+
+    /* ── BODY ─── */
+    .lp-body { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    .lp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    @media(max-width: 640px) { .lp-grid { grid-template-columns: 1fr; } }
+
+    /* ── INFO SIDE ─── */
+    .invest-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 20px;
+      display: flex; flex-direction: column; gap: 4px;
+      margin-bottom: 12px;
+    }
+    .invest-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+    .invest-value { font-size: 2rem; font-weight: 900; letter-spacing: -1px; color: var(--brand); }
+
+    .features { list-style: none; margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .features li { display: flex; align-items: center; gap: 12px; font-size: .9rem; color: var(--muted); }
+    .features li::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--brand); flex-shrink: 0;
+    }
+
+    /* ── FORM SIDE ─── */
+    .form-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px;
+    }
+    .form-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block; font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 14px; color: var(--text);
+      font-size: 14px; font-family: inherit; transition: border-color .2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none; border-color: var(--brand);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 15%, transparent);
+    }
+    .form-group select option { background: #18181b; }
+    .form-btn {
+      width: 100%; padding: 14px; font-size: 15px; font-weight: 800;
+      background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%);
+      color: #000; border: none; border-radius: 12px; cursor: pointer;
+      transition: opacity .2s, transform .15s; margin-top: 8px;
+    }
+    .form-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .form-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    .msg {
+      display: none; margin-top: 14px; padding: 14px 16px;
+      border-radius: 12px; font-size: .9rem; font-weight: 500;
+    }
+    .msg.success { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: #4ade80; }
+    .msg.error   { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.3);  color: #f87171; }
+    .msg.show    { display: block; }
+
+    /* ── FOOTER ─── */
+    .lp-footer {
+      text-align: center; padding: 28px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .lp-footer p   { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+    .lp-footer span { color: var(--brand); font-weight: 700; }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-orange-500 to-red-600 min-h-screen">
-  
-  <!-- Hero Section -->
-  <div class="container mx-auto px-4 py-12">
-    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
-      
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-orange-600 to-red-600 text-white p-8 text-center">
-        <div class="text-6xl mb-4">{{MARCA_EMOJI}}</div>
-        <h1 class="text-4xl font-bold mb-2">{{MARCA_NOME}}</h1>
-        <p class="text-xl text-orange-100">Seja um franqueado de sucesso!</p>
+<body>
+
+  <div class="lp-header">
+    <span class="lp-emoji">{{MARCA_EMOJI}}</span>
+    <h1 class="lp-title">{{MARCA_NOME}}</h1>
+    <p class="lp-sub">Seja um franqueado de sucesso</p>
+    <div class="lp-badge">Oportunidade de negócio</div>
+  </div>
+
+  <div class="lp-body">
+    <div class="lp-grid">
+
+      <!-- INFO -->
+      <div>
+        <div class="invest-card">
+          <span class="invest-label">Investimento a partir de</span>
+          <span class="invest-value">R$ {{INVEST_MIN}}</span>
+        </div>
+        <div class="invest-card">
+          <span class="invest-label">Até</span>
+          <span class="invest-value">R$ {{INVEST_MAX}}</span>
+        </div>
+
+        <ul class="features">
+          <li>Marca consolidada no mercado</li>
+          <li>Alto potencial de retorno</li>
+          <li>Suporte completo ao franqueado</li>
+          <li>Treinamento e capacitação inclusos</li>
+          <li>Sistema de gestão fornecido</li>
+        </ul>
       </div>
 
-      <!-- Content -->
-      <div class="p-8">
-        <div class="grid md:grid-cols-2 gap-8 mb-8">
-          
-          <!-- Info -->
-          <div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">💰 Investimento</h2>
-            <div class="bg-orange-50 p-4 rounded-lg mb-4">
-              <p class="text-gray-600">A partir de:</p>
-              <p class="text-3xl font-bold text-orange-600">R$ {{INVEST_MIN}}</p>
-            </div>
-            <div class="bg-red-50 p-4 rounded-lg">
-              <p class="text-gray-600">Até:</p>
-              <p class="text-3xl font-bold text-red-600">R$ {{INVEST_MAX}}</p>
-            </div>
+      <!-- FORM -->
+      <div class="form-card">
+        <p class="form-title">Quero ser franqueado</p>
+        <form id="leadForm">
+          <input type="hidden" name="marca_id"   value="{{MARCA_ID}}">
+          <input type="hidden" name="tenant_id"  value="{{TENANT_ID}}">
+          <input type="hidden" name="typeOrch"   value="produto">
+          <input type="hidden" name="fonte"      value="landing-page">
 
-            <div class="mt-6 space-y-3">
-              <div class="flex items-start">
-                <span class="text-2xl mr-3">✅</span>
-                <p class="text-gray-700">Marca consolidada no mercado</p>
-              </div>
-              <div class="flex items-start">
-                <span class="text-2xl mr-3">📈</span>
-                <p class="text-gray-700">Alto potencial de retorno</p>
-              </div>
-              <div class="flex items-start">
-                <span class="text-2xl mr-3">🎯</span>
-                <p class="text-gray-700">Suporte completo ao franqueado</p>
-              </div>
-            </div>
+          <div class="form-group">
+            <label>Nome completo *</label>
+            <input type="text" name="nome" required minlength="3" placeholder="Seu nome completo">
+          </div>
+          <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" name="email" required placeholder="email@empresa.com">
+          </div>
+          <div class="form-group">
+            <label>WhatsApp *</label>
+            <input type="tel" name="telefone" required placeholder="(11) 99999-9999">
+          </div>
+          <div class="form-group">
+            <label>Capital disponível *</label>
+            <select name="capital_disponivel" required>
+              <option value="">Selecione...</option>
+              <option value="80000">Até R$ 80 mil</option>
+              <option value="100000">R$ 80 mil – R$ 100 mil</option>
+              <option value="150000">R$ 100 mil – R$ 150 mil</option>
+              <option value="200000">R$ 150 mil – R$ 200 mil</option>
+              <option value="300000">R$ 200 mil – R$ 300 mil</option>
+              <option value="500000">R$ 300 mil – R$ 500 mil</option>
+              <option value="600000">Acima de R$ 500 mil</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estado *</label>
+            <select name="regiao" required>
+              <option value="">Selecione...</option>
+              <option>AC</option><option>AL</option><option>AM</option><option>AP</option>
+              <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+              <option>GO</option><option>MA</option><option>MG</option><option>MS</option>
+              <option>MT</option><option>PA</option><option>PB</option><option>PE</option>
+              <option>PI</option><option>PR</option><option>RJ</option><option>RN</option>
+              <option>RO</option><option>RR</option><option>RS</option><option>SC</option>
+              <option>SE</option><option>SP</option><option>TO</option>
+            </select>
           </div>
 
-          <!-- Form -->
-          <div>
-            <h2 class="text-2xl font-bold text-gray-800 mb-4">📝 Quero ser franqueado!</h2>
-            <form id="leadForm" class="space-y-4">
-              
-              <input type="hidden" name="marca_id" value="{{MARCA_ID}}">
-              <input type="hidden" name="tenant_id" value="{{TENANT_ID}}">
-              
-              <div>
-                <label class="block text-gray-700 font-semibold mb-2">Nome completo *</label>
-                <input type="text" name="nome" required 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-              </div>
+          <button type="submit" class="form-btn" id="submitBtn">
+            Solicitar contato →
+          </button>
+        </form>
 
-              <div>
-                <label class="block text-gray-700 font-semibold mb-2">Email *</label>
-                <input type="email" name="email" required
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-              </div>
-
-              <div>
-                <label class="block text-gray-700 font-semibold mb-2">Telefone/WhatsApp *</label>
-                <input type="tel" name="telefone" required
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                       placeholder="(11) 99999-9999">
-              </div>
-
-              <div>
-                <label class="block text-gray-700 font-semibold mb-2">Capital disponível *</label>
-                <select name="capital_disponivel" required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                  <option value="">Selecione...</option>
-                  <option value="ate-100k">Até R$ 100 mil</option>
-                  <option value="100k-300k">R$ 100 mil - R$ 300 mil</option>
-                  <option value="300k-500k">R$ 300 mil - R$ 500 mil</option>
-                  <option value="acima-500k">Acima de R$ 500 mil</option>
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-gray-700 font-semibold mb-2">Estado *</label>
-                <select name="regiao" required
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent">
-                  <option value="">Selecione...</option>
-                  <option value="SP">São Paulo</option>
-                  <option value="RJ">Rio de Janeiro</option>
-                  <option value="MG">Minas Gerais</option>
-                  <option value="RS">Rio Grande do Sul</option>
-                  <option value="PR">Paraná</option>
-                  <option value="SC">Santa Catarina</option>
-                  <option value="BA">Bahia</option>
-                  <option value="outro">Outro estado</option>
-                </select>
-              </div>
-
-              <button type="submit" id="submitBtn"
-                      class="w-full bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold py-4 rounded-lg hover:from-orange-700 hover:to-red-700 transition-all transform hover:scale-105">
-                🚀 QUERO SER FRANQUEADO!
-              </button>
-            </form>
-
-            <div id="successMessage" class="hidden mt-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-              ✅ Cadastro enviado com sucesso! Em breve entraremos em contato.
-            </div>
-
-            <div id="errorMessage" class="hidden mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-              ❌ Erro ao enviar. Tente novamente.
-            </div>
-          </div>
-
+        <div class="msg success" id="msgSuccess">
+          Cadastro recebido! Em breve nossa equipe entrará em contato.
+        </div>
+        <div class="msg error" id="msgError">
+          Erro ao enviar. Tente novamente em instantes.
         </div>
       </div>
 
     </div>
   </div>
 
+  <footer class="lp-footer">
+    <p>LeadCapture Pro — <span>Desenvolvido por Zafalão Tech</span></p>
+    <p>Zafalão Tecnologia LTDA · Todos os direitos reservados</p>
+  </footer>
+
   <script>
     document.getElementById('leadForm').addEventListener('submit', async (e) => {
       e.preventDefault()
-      
-      const btn = document.getElementById('submitBtn')
-      const successMsg = document.getElementById('successMessage')
-      const errorMsg = document.getElementById('errorMessage')
-      
+      const btn   = document.getElementById('submitBtn')
+      const ok    = document.getElementById('msgSuccess')
+      const err   = document.getElementById('msgError')
+      ok.classList.remove('show')
+      err.classList.remove('show')
       btn.disabled = true
-      btn.textContent = '⏳ Enviando...'
-      successMsg.classList.add('hidden')
-      errorMsg.classList.add('hidden')
-      
-      const formData = new FormData(e.target)
-      const data = Object.fromEntries(formData)
-      
+      btn.textContent = 'Enviando...'
+
+      const data = Object.fromEntries(new FormData(e.target))
+
       try {
-        const response = await fetch('/api/leads', {
-          method: 'POST',
+        const res = await fetch('/api/leads', {
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data)
+          body:    JSON.stringify(data)
         })
-        
-        if (response.ok) {
-          successMsg.classList.remove('hidden')
+        if (res.ok) {
+          ok.classList.add('show')
           e.target.reset()
-          setTimeout(() => successMsg.classList.add('hidden'), 5000)
         } else {
-          throw new Error('Erro na resposta')
+          err.classList.add('show')
         }
-      } catch (error) {
-        errorMsg.classList.remove('hidden')
+      } catch {
+        err.classList.add('show')
       } finally {
         btn.disabled = false
-        btn.textContent = '🚀 QUERO SER FRANQUEADO!'
+        btn.textContent = 'Solicitar contato →'
       }
     })
   </script>
