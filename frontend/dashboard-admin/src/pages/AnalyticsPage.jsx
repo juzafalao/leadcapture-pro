@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../App'
+import { useAuth } from '../components/AuthContext'
 
 export default function AnalyticsPage() {
   const { usuario } = useAuth()

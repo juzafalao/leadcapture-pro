@@ -2,7 +2,8 @@ import React from 'react';
 import { useAuth } from '../AuthContext';
 
 export default function Header({ onMenuClick }) {
-  const { usuario, tenant, logout } = useAuth();
+  const { usuario, logout } = useAuth();
+  const tenant = usuario?.tenant;
 
   const handleLogout = async () => {
     if (window.confirm('Tem certeza que deseja sair?')) {

@@ -1,0 +1,115 @@
+{
+  "name": "LeadCapture Pro — Boas-vindas WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-criado",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook — Novo Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "lead-criado-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json[\"categoria\"]}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-lead-valid",
+      "name": "Lead válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconst nome = lead.nome?.split(' ')[0] || 'você';\nconst marca = lead.marca_nome || 'nossa empresa';\nconst emoji = lead.marca_emoji || '🎯';\n\nreturn [{\n  json: {\n    ...lead,\n    mensagem_whatsapp: `Olá, ${nome}! 👋\\n\\nRecebemos seu interesse em *${marca}* ${emoji}\\n\\nEm breve um de nossos consultores irá entrar em contato com mais informações personalizadas para você.\\n\\n_Equipe ${marca}_`\n  }\n}];"
+      },
+      "id": "montar-mensagem",
+      "name": "Montar mensagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.EVOLUTION_API_URL}}/message/sendText/={{$env.EVOLUTION_INSTANCE}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.EVOLUTION_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "=55{{$json[\"telefone\"]}}"
+            },
+            {
+              "name": "textMessage",
+              "value": "={ \"text\": \"{{$json[\"mensagem_whatsapp\"]}}\" }"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "enviar-whatsapp",
+      "name": "Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [900, 220]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconsole.log('[Automação] Lead inválido ignorado:', lead.id);\nreturn [];"
+      },
+      "id": "ignorar-lead",
+      "name": "Ignorar lead inválido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    }
+  ],
+  "connections": {
+    "Webhook — Novo Lead": {
+      "main": [[ { "node": "Lead válido?", "type": "main", "index": 0 } ]]
+    },
+    "Lead válido?": {
+      "main": [
+        [ { "node": "Montar mensagem", "type": "main", "index": 0 } ],
+        [ { "node": "Ignorar lead inválido", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Montar mensagem": {
+      "main": [[ { "node": "Enviar WhatsApp", "type": "main", "index": 0 } ]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Envia mensagem de boas-vindas no WhatsApp assim que um novo lead é capturado.",
+    "version": "1.0.0",
+    "author": "Zafalão Tech",
+    "tags": ["leadcapture", "whatsapp", "comunicacao"]
+  }
+}

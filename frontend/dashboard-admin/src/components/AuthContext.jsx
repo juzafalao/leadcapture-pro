@@ -123,7 +123,7 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       setLoading(false);
-      throw error;
+      return { success: false, error: error.message || 'Erro ao fazer login' };
     }
   };
 

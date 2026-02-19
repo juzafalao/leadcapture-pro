@@ -2,113 +2,139 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
+// ─── Definição da navegação por grupos ────────────────────────
+const NAV_GROUPS = [
+  {
+    label: 'Principal',
+    items: [
+      { path: '/dashboard',  icon: '⚡', label: 'Leads',   show: () => true },
+    ],
+  },
+  {
+    label: 'Inteligência',
+    items: [
+      { path: '/inteligencia', icon: '🧠', label: 'BI',        show: (a) => a.isGestor() },
+      { path: '/analytics',    icon: '📊', label: 'Analytics', show: (a) => a.isGestor() },
+      { path: '/relatorios',   icon: '📋', label: 'Relatórios',show: (a) => a.isGestor() },
+    ],
+  },
+  {
+    label: 'Operação',
+    items: [
+      { path: '/automacao',    icon: '🤖', label: 'Automação', show: (a) => a.isGestor() },
+      { path: '/marcas',       icon: '🏢', label: 'Marcas',    show: (a) => a.isGestor() },
+      { path: '/segmentos',    icon: '🟠', label: 'Segmentos', show: (a) => a.isGestor() },
+      { path: '/usuarios',     icon: '👥', label: 'Time',      show: (a) => a.isGestor() },
+    ],
+  },
+  {
+    label: 'LC Pro',
+    items: [
+      { path: '/leads-sistema', icon: '🚀', label: 'Prospects', show: (a) => a.isGestor() },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      { path: '/configuracoes', icon: '⚙️', label: 'Config', show: () => true },
+    ],
+  },
+];
+
 export default function Sidebar({ mobileOpen, setMobileOpen }) {
-  const { usuario, isAdministrador, isDiretor, isGestor } = useAuth();
+  const auth     = useAuth();
   const location = useLocation();
 
-  const navItems = [
-    { 
-      path: '/dashboard', 
-      icon: '⚡', 
-      label: 'Leads', 
-      show: true 
-    },
-    { 
-      path: '/inteligencia', 
-      icon: '🧠', 
-      label: 'BI', 
-      show: isGestor() 
-    },
-    { 
-      path: '/marcas', 
-      icon: '🏢', 
-      label: 'Marcas', 
-      show: isGestor() 
-    },
-    { 
-      path: '/segmentos', 
-      icon: '🟠', 
-      label: 'Segmentos', 
-      show: isGestor() 
-    },
-    { 
-      path: '/usuarios', 
-      icon: '🧑🏻‍💻', 
-      label: 'Time', 
-      show: isGestor() // ✅ MUDOU: de isDiretor() para isGestor()
-    }
-  ];
-
-  // Fechar menu ao clicar em um item (mobile)
   const handleNavClick = () => {
-    if (mobileOpen) {
-      setMobileOpen(false);
-    }
+    if (mobileOpen) setMobileOpen(false);
   };
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
-      {/* ============================================ */}
-      {/* OVERLAY - Fundo escuro quando menu aberto   */}
-      {/* ============================================ */}
+      {/* ── Overlay mobile ────────────────────────────────── */}
       {mobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
-      {/* ============================================ */}
-      {/* SIDEBAR - Desktop fixo, Mobile drawer        */}
-      {/* ============================================ */}
-      <aside 
+      {/* ── Sidebar ───────────────────────────────────────── */}
+      <aside
         className={`
-          fixed left-0 top-0 h-full 
-          bg-[#0a0a0b] border-r border-white/5 
-          flex flex-col items-center py-8 
+          fixed left-0 top-0 h-full
+          bg-[#0a0a0b] border-r border-white/5
+          flex flex-col items-center py-8
           z-50 w-32
           transition-transform duration-300 ease-in-out
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="mb-12 w-12 h-12 bg-[#ee7b4d] flex items-center justify-center font-black text-black rounded-2xl shadow-lg">
+        <Link
+          to="/dashboard"
+          onClick={handleNavClick}
+          className="mb-10 w-12 h-12 bg-[#ee7b4d] flex items-center justify-center font-black text-black rounded-2xl shadow-lg hover:opacity-85 transition-opacity"
+          title="LeadCapture Pro"
+        >
           LC
-        </div>
+        </Link>
 
-        {/* Menu Items */}
-        <nav className="flex flex-col gap-6 w-full px-4 flex-1">
-          {navItems.map((item) => item.show && (
-            <Link 
-              key={item.path} 
-              to={item.path}
-              onClick={handleNavClick}
-              className={`
-                p-4 rounded-2xl flex flex-col items-center gap-2 transition-all
-                ${location.pathname === item.path 
-                  ? 'bg-[#ee7b4d] text-black shadow-lg shadow-[#ee7b4d]/20' 
-                  : 'text-gray-600 hover:bg-[#ee7b4d]/10'
-                }
-              `}
-              title={item.label}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span className="text-[7px] font-black uppercase tracking-widest">
-                {item.label}
-              </span>
-            </Link>
-          ))}
+        {/* Nav por grupos */}
+        <nav className="flex flex-col gap-1 w-full px-3 flex-1 overflow-y-auto scrollbar-none">
+          {NAV_GROUPS.map((group) => {
+            const visibleItems = group.items.filter(item => item.show(auth));
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={group.label} className="mb-4">
+                <p className="text-[7px] font-black uppercase tracking-[0.18em] text-gray-700 text-center mb-2 px-1">
+                  {group.label}
+                </p>
+                {visibleItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={handleNavClick}
+                    title={item.label}
+                    className={`
+                      flex flex-col items-center gap-1.5
+                      p-3 rounded-2xl mb-1
+                      transition-all duration-150
+                      ${isActive(item.path)
+                        ? 'bg-[#ee7b4d] text-black shadow-md shadow-[#ee7b4d]/20'
+                        : 'text-gray-600 hover:bg-white/5 hover:text-gray-400'
+                      }
+                    `}
+                  >
+                    <span className="text-lg leading-none">{item.icon}</span>
+                    <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
+                      {item.label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
         </nav>
 
-        {/* User Info - Mobile */}
+        {/* Usuário (Mobile) */}
         <div className="lg:hidden mt-auto pt-4 border-t border-white/5 w-full px-4">
           <div className="text-center">
-            <p className="text-xs text-white font-medium truncate">
-              {usuario?.nome}
-            </p>
-            <p className="text-[8px] text-[#ee7b4d] font-bold uppercase mt-1">
-              {usuario?.role}
-            </p>
+            <p className="text-xs text-white font-medium truncate">{auth.usuario?.nome}</p>
+            <p className="text-[8px] text-[#ee7b4d] font-bold uppercase mt-1">{auth.usuario?.role}</p>
+          </div>
+        </div>
+
+        {/* Avatar usuário (Desktop) */}
+        <div className="hidden lg:flex mt-auto pt-4 border-t border-white/5 w-full items-center justify-center">
+          <div
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-bold text-sm"
+            title={`${auth.usuario?.nome} · ${auth.usuario?.role}`}
+          >
+            {auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}
           </div>
         </div>
       </aside>
