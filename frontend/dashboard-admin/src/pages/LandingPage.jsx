@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '')
+
 export default function LandingPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -21,7 +23,7 @@ export default function LandingPage() {
   useEffect(() => {
     async function fetchMarca() {
       try {
-        const res = await fetch(`http://localhost:4000/api/marcas/slug/${slug}`)
+        const res = await fetch(`${API_URL}/api/marcas/slug/${slug}`)
         const data = await res.json()
         
         if (data.success) {
@@ -44,7 +46,7 @@ export default function LandingPage() {
     setSubmitting(true)
     
     try {
-      const res = await fetch('http://localhost:4000/api/leads', {
+      const res = await fetch(`${API_URL}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

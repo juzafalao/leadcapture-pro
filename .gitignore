@@ -40,6 +40,9 @@ build/
 .backup*/
 *.backup
 *.bak
+*.backup.*
+*.backup-*
+*.save
 
 # Temporários
 *.tmp
