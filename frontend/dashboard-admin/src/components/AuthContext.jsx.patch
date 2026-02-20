@@ -1,0 +1,36 @@
+// No início do AuthContext, adicionar:
+import { supabase } from '../lib/supabase'; // usar singleton
+
+// Dentro do AuthProvider, adicionar flag:
+const isCheckingRef = useRef(false);
+
+// Na função checkSession, adicionar guard:
+const checkSession = async () => {
+  if (isCheckingRef.current) {
+    console.log('⏭️ Verificação já em andamento, pulando...');
+    return;
+  }
+
+  isCheckingRef.current = true;
+  setLoading(true);
+  
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) throw error;
+    
+    if (session?.user) {
+      console.log('✅ Sessão encontrada:', session.user.email);
+      await loadUserData(session.user.id);
+    } else {
+      console.log('❌ Nenhuma sessão');
+      setUsuario(null);
+    }
+  } catch (error) {
+    console.error('Erro na verificação de sessão:', error);
+    setUsuario(null);
+  } finally {
+    setLoading(false);
+    isCheckingRef.current = false;
+  }
+};
