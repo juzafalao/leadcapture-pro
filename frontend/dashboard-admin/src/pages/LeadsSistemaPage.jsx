@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
+import * as XLSX from 'xlsx';
 
 const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
 const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
@@ -34,16 +35,23 @@ function formatDate(dt) {
 // ── Modal de detalhes ────────────────────────────────────────
 function ProspectModal({ prospect, onClose, onUpdate }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
-  const [obs, setObs] = useState(prospect?.observacao || '');
+  const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
 
   if (!prospect) return null;
 
   const handleSave = async () => {
     setSaving(true);
+    console.log('🔍 DEBUG ProspectModal Save:', {
+      prospect_id: prospect.id,
+      status: status,
+      observacao_original: prospect.observacao,
+      observacao_interna: observacaoInterna,
+      vai_salvar_em: 'observacao_interna'
+    });
     const { error } = await supabase
       .from('leads_sistema')
-      .update({ status, observacao: obs })
+      .update({ status, observacao_interna: observacaoInterna })
       .eq('id', prospect.id)
       .select();
     setSaving(false);
@@ -116,7 +124,13 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
           </div>
 
           {/* Observação original */}
-          {prospect.observacao_original && (
+          {prospect.observacao && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4">
+              <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">📩 Mensagem do Prospect (Original)</p>
+              <p className="text-sm text-white leading-relaxed">{prospect.observacao}</p>
+            </div>
+          )}
+          {prospect.observacao_original && !prospect.observacao && (
             <div className="bg-white/5 rounded-xl p-3 mb-4">
               <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem</p>
               <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao_original}</p>
@@ -150,15 +164,18 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
           {/* Observação interna */}
           <div className="mb-5">
             <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
-              Observação Interna
+              📝 Observações Internas (CRM)
             </label>
             <textarea
-              value={obs}
-              onChange={e => setObs(e.target.value)}
+              value={observacaoInterna}
+              onChange={e => setObservacaoInterna(e.target.value)}
               rows={3}
               placeholder="Notas internas sobre este prospect..."
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 resize-none transition-all"
             />
+            <p className="text-xs text-white/30 mt-1">
+              Nota: Essas observações são internas e não sobrescrevem a mensagem original do prospect
+            </p>
           </div>
 
           {/* Actions */}
@@ -194,6 +211,7 @@ export default function LeadsSistemaPage() {
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [selected, setSelected]   = useState(null);
   const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
+  const [exportando, setExportando] = useState(false);
   const debounceRef = useRef(null);
 
   const handleBuscaChange = useCallback((value) => {
@@ -243,6 +261,51 @@ export default function LeadsSistemaPage() {
   const handleUpdate = () => {
     setSelected(null);
     fetchProspects();
+  };
+
+  const exportarParaExcel = async () => {
+    if (filtrados.length === 0) {
+      alert('⚠️ Nenhum lead para exportar');
+      return;
+    }
+    setExportando(true);
+    try {
+      const dadosExport = filtrados.map(lead => ({
+        'Nome': lead.nome || '',
+        'Email': lead.email || '',
+        'Telefone': lead.telefone || '',
+        'Status': lead.status || 'novo',
+        'Origem': lead.fonte || 'Sistema',
+        'Data Criação': lead.created_at ? new Date(lead.created_at).toLocaleDateString('pt-BR') : '',
+        'Mensagem Prospect': lead.observacao || '',
+        'Observações Internas': lead.observacao_interna || ''
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(dadosExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Leads Sistema');
+
+      worksheet['!cols'] = [
+        { wch: 25 }, { wch: 30 }, { wch: 15 }, { wch: 15 },
+        { wch: 20 }, { wch: 12 }, { wch: 40 }, { wch: 40 }
+      ];
+
+      const dataAtual = new Date().toISOString().split('T')[0];
+      const nomeArquivo = `leads-sistema-${dataAtual}.xlsx`;
+      XLSX.writeFile(workbook, nomeArquivo);
+
+      console.log('📊 DEBUG Export:', {
+        total_leads: filtrados.length,
+        campos: Object.keys(dadosExport[0] || {})
+      });
+
+      alert(`✅ ${filtrados.length} leads exportados para ${nomeArquivo}`);
+    } catch (error) {
+      console.error('❌ Erro ao exportar:', error);
+      alert('❌ Erro ao exportar planilha');
+    } finally {
+      setExportando(false);
+    }
   };
 
   // 🆕 PAGINAÇÃO
@@ -362,8 +425,8 @@ export default function LeadsSistemaPage() {
             )}
           </div>
 
-          {/* Status filter pills */}
-          <div className="flex gap-2 flex-wrap">
+          {/* Status filter pills + Export */}
+          <div className="flex gap-2 flex-wrap items-center">
             {['todos', ...STATUS_OPTS].map(s => (
               <button
                 key={s}
@@ -381,6 +444,19 @@ export default function LeadsSistemaPage() {
                 {s === 'todos' ? '📋 Todos' : `${STATUS_EMOJI[s]} ${s.charAt(0).toUpperCase() + s.slice(1)}`}
               </button>
             ))}
+
+            {/* Botão Export Excel */}
+            <button
+              onClick={exportarParaExcel}
+              disabled={filtrados.length === 0 || exportando}
+              className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-white text-xs font-bold border border-green-600/50 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              {exportando ? (
+                <>⏳ Exportando...</>
+              ) : (
+                <>📊 Excel ({filtrados.length})</>
+              )}
+            </button>
           </div>
         </div>
       </div>
