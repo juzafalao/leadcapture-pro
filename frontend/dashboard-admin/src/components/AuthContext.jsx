@@ -1,183 +1,105 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
-const AuthContext = createContext({});
+const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth deve ser usado dentro de AuthProvider');
-  }
+  if (!context) throw new Error('useAuth deve ser usado dentro de AuthProvider');
   return context;
 };
 
-export function AuthProvider({ children }) {
+export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isCheckingRef = useRef(false);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkSessionAndSubscribe = async () => {
-      await checkSession();
-    };
-
-    checkSessionAndSubscribe();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!isMounted) return;
-
-        if (event === 'SIGNED_IN' && session) {
-          await loadUserData(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUsuario(null);
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const checkSession = async () => {
+  const loadUserData = async (authId) => {
     try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Erro ao verificar sessão:', error);
-        setUsuario(null);
-        setLoading(false);
-        return;
-      }
+      console.log('🔍 Carregando usuário:', authId);
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('auth_id', authId)
+        .single();
 
-      if (session?.user) {
-        await loadUserData(session.user.id);
-      } else {
-        setUsuario(null);
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error('Erro na verificação de sessão:', error);
+      if (error) throw error;
+      console.log('✅ Usuário:', data?.nome);
+      setUsuario(data);
+    } catch (err) {
+      console.error('❌ Erro:', err);
       setUsuario(null);
-      setLoading(false);
     }
   };
 
-  const loadUserData = async (authUserId) => {
+  const checkSession = async () => {
+    if (isCheckingRef.current) return;
+    isCheckingRef.current = true;
+    setLoading(true);
+
     try {
-      const { data: usuarioData, error } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('auth_id', authUserId)
-        .maybeSingle();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) throw error;
 
-      if (error) {
-        console.error('Erro ao carregar usuário:', error);
-        setLoading(false);
-        return;
+      if (session?.user) {
+        console.log('✅ Sessão:', session.user.email);
+        await loadUserData(session.user.id);
+      } else {
+        setUsuario(null);
       }
-
-      if (usuarioData) {
-        // Buscar tenant
-        if (usuarioData.tenant_id) {
-          const { data: tenantData } = await supabase
-            .from('tenants')
-            .select('*')
-            .eq('id', usuarioData.tenant_id)
-            .maybeSingle();
-          
-          if (tenantData) {
-            usuarioData.tenant = tenantData;
-          }
-        }
-        
-        setUsuario(usuarioData);
-        console.log('✅ Usuário carregado:', usuarioData.nome);
-      }
-      
-      setLoading(false);
     } catch (error) {
-      console.error('Erro ao carregar usuário:', error);
+      console.error('❌ Erro sessão:', error);
+      setUsuario(null);
+    } finally {
       setLoading(false);
+      isCheckingRef.current = false;
     }
   };
 
   const login = async (email, password) => {
     try {
-      setLoading(true);
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-
-      if (data.user) {
-        await loadUserData(data.user.id);
-        return { success: true };
-      }
+      await loadUserData(data.user.id);
+      return { success: true };
     } catch (error) {
-      setLoading(false);
-      return { success: false, error: error.message || 'Erro ao fazer login' };
+      return { success: false, error: error.message };
     }
   };
 
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUsuario(null);
-      setLoading(false);
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Erro no logout:', error);
-    }
+    await supabase.auth.signOut();
+    setUsuario(null);
   };
 
-  // ========================================
-  // HELPER FUNCTIONS (para compatibilidade)
-  // ========================================
-  
-  const isAdmin = () => {
-    return usuario?.role === 'Administrador' || usuario?.is_super_admin === true;
-  };
+  useEffect(() => {
+    checkSession();
 
-  const isGestor = () => {
-    return usuario?.role === 'Gestor' || isAdmin();
-  };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔔 Auth:', event);
+        if (event === 'SIGNED_IN' && session?.user) {
+          await loadUserData(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          setUsuario(null);
+        }
+      }
+    );
 
-  const isDiretor = () => {
-    return usuario?.role === 'Diretor' || isAdmin();
-  };
+    return () => subscription.unsubscribe();
+  }, []);
 
-  const hasRole = (roles) => {
+  const isAuthenticated = !!usuario;
+  const isAdmin    = () => usuario?.role === 'admin' || usuario?.role === 'Administrador' || usuario?.is_super_admin;
+  const isGestor   = () => usuario?.role === 'Gestor' || isAdmin();
+  const isDiretor  = () => usuario?.role === 'Diretor' || isAdmin();
+  const hasRole    = (roles) => {
     if (!usuario) return false;
-    if (Array.isArray(roles)) {
-      return roles.includes(usuario.role) || usuario.is_super_admin === true;
-    }
-    return usuario.role === roles || usuario.is_super_admin === true;
+    if (Array.isArray(roles)) return roles.includes(usuario.role) || usuario.is_super_admin;
+    return usuario.role === roles || usuario.is_super_admin;
   };
 
-  const value = {
-    usuario,
-    loading,
-    login,
-    logout,
-    isAuthenticated: !!usuario,
-    // Helper functions
-    isAdmin,
-    isGestor,
-    isDiretor,
-    hasRole,
-  };
+  const value = { usuario, loading, isAuthenticated, login, logout, isAdmin, isGestor, isDiretor, hasRole };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};

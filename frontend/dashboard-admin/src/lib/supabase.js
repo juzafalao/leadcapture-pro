@@ -1,6 +1,29 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js';
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('❌ Supabase URL ou ANON_KEY não configurados no .env');
+}
+
+let supabaseInstance = null;
+
+export const getSupabase = () => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
+      },
+      db: {
+        schema: 'public'
+      }
+    });
+    console.log('✅ Supabase Client criado (singleton)');
+  }
+  return supabaseInstance;
+};
+
+export const supabase = getSupabase();
