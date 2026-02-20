@@ -24,10 +24,10 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) throw error;
-      console.log('✅ Usuário:', data?.nome);
+      console.log('✅ Usuário:', data?.nome, '| Role:', data?.role);
       setUsuario(data);
     } catch (err) {
-      console.error('❌ Erro:', err);
+      console.error('❌ Erro ao carregar usuário:', err);
       setUsuario(null);
     }
   };
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error;
 
       if (session?.user) {
-        console.log('✅ Sessão:', session.user.email);
+        console.log('✅ Sessão ativa:', session.user.email);
         await loadUserData(session.user.id);
       } else {
         setUsuario(null);
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔔 Auth:', event);
+        console.log('🔔 Auth event:', event);
         if (event === 'SIGNED_IN' && session?.user) {
           await loadUserData(session.user.id);
         } else if (event === 'SIGNED_OUT') {
@@ -89,17 +89,27 @@ export const AuthProvider = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Roles válidos
+  const ROLES_ADMIN    = ['Administrador', 'admin'];
+  const ROLES_GESTOR   = ['Administrador', 'admin', 'Diretor', 'Gestor'];
+  const ROLES_DIRETOR  = ['Administrador', 'admin', 'Diretor'];
+
   const isAuthenticated = !!usuario;
-  const isAdmin    = () => usuario?.role === 'admin' || usuario?.role === 'Administrador' || usuario?.is_super_admin;
-  const isGestor   = () => usuario?.role === 'Gestor' || isAdmin();
-  const isDiretor  = () => usuario?.role === 'Diretor' || isAdmin();
-  const hasRole    = (roles) => {
+  const isAdmin   = () => ROLES_ADMIN.includes(usuario?.role);
+  const isGestor  = () => ROLES_GESTOR.includes(usuario?.role);
+  const isDiretor = () => ROLES_DIRETOR.includes(usuario?.role);
+  const hasRole   = (roles) => {
     if (!usuario) return false;
-    if (Array.isArray(roles)) return roles.includes(usuario.role) || usuario.is_super_admin;
-    return usuario.role === roles || usuario.is_super_admin;
+    if (isAdmin()) return true;
+    if (Array.isArray(roles)) return roles.includes(usuario.role);
+    return usuario.role === roles;
   };
 
-  const value = { usuario, loading, isAuthenticated, login, logout, isAdmin, isGestor, isDiretor, hasRole };
+  const value = { 
+    usuario, loading, isAuthenticated, 
+    login, logout, 
+    isAdmin, isGestor, isDiretor, hasRole 
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

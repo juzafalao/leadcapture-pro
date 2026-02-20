@@ -22,7 +22,7 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
         .from('usuarios')
         .select('id, nome, email, role, telefone')
         .eq('tenant_id', usuario.tenant_id)
-        .eq('ativo', true)
+        .eq('active', true)
         .in('role', ['Administrador', 'Gestor', 'Consultor'])
         .order('nome', { ascending: true });
 

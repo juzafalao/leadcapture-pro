@@ -85,8 +85,8 @@ function AuthenticatedLayout({ children }) {
   );
 }
 
-const ROLES_GESTOR    = ['Administrador', 'Diretor', 'Gestor'];
-const ROLES_ADMIN     = ['Administrador'];
+const ROLES_GESTOR    = ['Administrador', 'admin', 'Diretor', 'Gestor'];
+const ROLES_ADMIN     = ['Administrador', 'admin'];
 
 export default function App() {
   return (

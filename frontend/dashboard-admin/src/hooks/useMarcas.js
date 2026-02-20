@@ -9,7 +9,7 @@ export function useMarcas(tenantId) {
         .from('marcas')
         .select('*')
         .eq('tenant_id', tenantId)
-        .eq('ativo', true)
+        .eq('active', true)
         .order('ordem', { ascending: true })
       if (error) throw error
       return data ?? []

@@ -32,7 +32,7 @@ export default function LeadModal({ lead, onClose }) {
       .from('marcas')
       .select('*')
       .eq('tenant_id', usuario.tenant_id)
-      .eq('ativo', true)
+      .eq('active', true)
       .order('nome');
     
     if (data) setMarcas(data);
