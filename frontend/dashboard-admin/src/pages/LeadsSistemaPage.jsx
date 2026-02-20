@@ -52,6 +52,7 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
       alert('❌ Erro ao salvar: ' + error.message);
       return;
     }
+    alert("✅ Lead atualizado com sucesso!");
     onUpdate();
   };
 

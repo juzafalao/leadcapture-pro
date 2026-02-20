@@ -39,7 +39,7 @@ export default function UsuariosPage() {
       .order('created_at', { ascending: false })
       .limit(500);
 
-    if (!error && data) {
+    if (data) {
       setUsuarios(data);
     }
     setLoading(false);
