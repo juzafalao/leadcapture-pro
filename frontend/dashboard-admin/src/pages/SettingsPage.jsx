@@ -1,15 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 
 export default function SettingsPage() {
   const { usuario } = useAuth()
   const [saved, setSaved] = useState(false)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [])
 
   const handleSave = (e) => {
     e.preventDefault()
     setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => setSaved(false), 2500)
   }
 
   const Section = ({ title, children }) => (

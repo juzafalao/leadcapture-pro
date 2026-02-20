@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -19,6 +19,11 @@ export default function LandingPage() {
   })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const timerRef = useRef(null)
+
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [])
 
   useEffect(() => {
     async function fetchMarca() {
@@ -66,7 +71,8 @@ export default function LandingPage() {
           capital_disponivel: '',
           regiao: ''
         })
-        setTimeout(() => setSuccess(false), 5000)
+        if (timerRef.current) clearTimeout(timerRef.current)
+        timerRef.current = setTimeout(() => setSuccess(false), 5000)
       } else {
         alert('Erro ao enviar. Tente novamente.')
       }

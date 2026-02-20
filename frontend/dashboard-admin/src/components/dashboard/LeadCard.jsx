@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function LeadCard({ lead, index, onClick }) {
+export default React.memo(function LeadCard({ lead, index, onClick }) {
   const getScoreColor = (score) => {
     if (score >= 70) return {
       bg: 'bg-red-500/10',
@@ -164,4 +164,4 @@ export default function LeadCard({ lead, index, onClick }) {
       </div>
     </motion.div>
   );
-}
+})

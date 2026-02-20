@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function MarcaCard({ marca, index, onClick }) {
+export default React.memo(function MarcaCard({ marca, index, onClick }) {
   const totalLeads = marca.leads?.length || 0;
 
   const formatCurrency = (value) => {
@@ -147,4 +147,4 @@ export default function MarcaCard({ marca, index, onClick }) {
       </div>
     </motion.div>
   );
-}
+})

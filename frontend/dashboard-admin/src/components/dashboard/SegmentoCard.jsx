@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function SegmentoCard({ segmento, index, onClick }) {
+export default React.memo(function SegmentoCard({ segmento, index, onClick }) {
   // Contar marcas vinculadas a este segmento
   const totalMarcas = segmento.marcas_relacionadas?.length || 0;
   const totalLeads = segmento.leadsCount ?? segmento.leads?.length ?? 0;
@@ -135,4 +135,4 @@ export default function SegmentoCard({ segmento, index, onClick }) {
       </div>
     </motion.div>
   );
-}
+})

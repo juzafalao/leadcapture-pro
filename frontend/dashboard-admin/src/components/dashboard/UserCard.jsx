@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function UserCard({ user, index, onClick }) {
+export default React.memo(function UserCard({ user, index, onClick }) {
   const normalizedRole = user.role?.toLowerCase() || 'default';
   
   const roleColors = {
@@ -123,4 +123,4 @@ export default function UserCard({ user, index, onClick }) {
       </div>
     </motion.div>
   );
-}
+})
