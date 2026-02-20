@@ -21,6 +21,16 @@ const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
 
 // Auth
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const PageFallback = () => (
   <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
@@ -80,9 +90,10 @@ const ROLES_ADMIN     = ['Administrador'];
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Routes>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <Routes>
           {/* ── Públicas ─────────────────────────────────── */}
           <Route path="/login"           element={<LoginPage />} />
           <Route path="/landing/:slug"   element={<LandingPage />} />
@@ -144,8 +155,9 @@ export default function App() {
 
           {/* ── Fallback ─────────────────────────────────── */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Router>
-    </AuthProvider>
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

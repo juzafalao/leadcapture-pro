@@ -2,6 +2,27 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 
+const Section = ({ title, children }) => (
+  <div className="bg-[#12121a] border border-white/5 rounded-3xl p-8 mb-6">
+    <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">{title}</h2>
+    {children}
+  </div>
+)
+
+const Field = ({ label, children }) => (
+  <div className="mb-5">
+    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
+    {children}
+  </div>
+)
+
+const inputClass = `
+  w-full bg-[#0a0a0b] border border-white/5 rounded-2xl
+  px-5 py-3.5 text-sm text-white placeholder:text-gray-700
+  focus:outline-none focus:border-[#ee7b4d]/50
+  focus:ring-2 focus:ring-[#ee7b4d]/15 transition-all
+`
+
 export default function SettingsPage() {
   const { usuario } = useAuth()
   const [saved, setSaved] = useState(false)
@@ -11,27 +32,6 @@ export default function SettingsPage() {
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
   }
-
-  const Section = ({ title, children }) => (
-    <div className="bg-[#12121a] border border-white/5 rounded-3xl p-8 mb-6">
-      <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">{title}</h2>
-      {children}
-    </div>
-  )
-
-  const Field = ({ label, children }) => (
-    <div className="mb-5">
-      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{label}</label>
-      {children}
-    </div>
-  )
-
-  const inputClass = `
-    w-full bg-[#0a0a0b] border border-white/5 rounded-2xl
-    px-5 py-3.5 text-sm text-white placeholder:text-gray-700
-    focus:outline-none focus:border-[#ee7b4d]/50
-    focus:ring-2 focus:ring-[#ee7b4d]/15 transition-all
-  `
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
