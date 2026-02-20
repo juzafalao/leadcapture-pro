@@ -28,26 +28,47 @@ export default function UsuariosPage() {
     debounceRef.current = setTimeout(() => setBusca(value), 300);
   }, []);
 
-  const fetchUsuarios = async () => {
-    if (!usuario?.tenant_id) return;
+  const fetchUsuarios = useCallback(async () => {
+    if (!usuario?.tenant_id) {
+      console.log('❌ Sem tenant_id');
+      return;
+    }
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('id, nome, email, role, status, ativo, tenant_id, created_at')
-      .eq('tenant_id', usuario.tenant_id)
-      .order('created_at', { ascending: false })
-      .limit(500);
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('id, nome, email, role, status, ativo, tenant_id, created_at')
+        .eq('tenant_id', usuario.tenant_id)
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-    if (data) {
-      setUsuarios(data);
+      if (error) {
+        console.error('❌ Erro ao carregar usuários:', error);
+        setUsuarios([]);
+      } else {
+        console.log('✅ Usuários carregados:', data?.length);
+        setUsuarios(data || []);
+      }
+    } catch (err) {
+      console.error('❌ Erro inesperado:', err);
+      setUsuarios([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [usuario?.tenant_id]);
 
   useEffect(() => {
-    fetchUsuarios();
-  }, [usuario]);
+    if (usuario?.tenant_id) {
+      fetchUsuarios();
+    }
+  }, [usuario?.tenant_id, fetchUsuarios]);
+
+  useEffect(() => {
+    console.log('🔍 UsuariosPage - usuario:', usuario);
+    console.log('🔍 UsuariosPage - tenant_id:', usuario?.tenant_id);
+    console.log('🔍 UsuariosPage - usuarios:', usuarios.length);
+  }, [usuario, usuarios]);
 
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -290,6 +311,9 @@ export default function UsuariosPage() {
             <p className="text-sm text-gray-600 mb-6">
               {busca || filtroRole !== 'todos' ? 'Tente ajustar os filtros' : 'Comece criando seu primeiro usuário!'}
             </p>
+            {!busca && filtroRole === 'todos' && (
+              <p className="text-xs text-white/30 mt-2">tenant_id: {usuario?.tenant_id}</p>
+            )}
             {(busca || filtroRole !== 'todos') && (
               <button
                 onClick={() => {
