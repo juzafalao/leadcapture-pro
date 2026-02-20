@@ -17,30 +17,30 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     let isMounted = true;
-    
-    const initialize = async () => {
-      await checkSession();
-      
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
-          if (!isMounted) return;
-          
-          if (event === 'SIGNED_IN' && session) {
-            await loadUserData(session.user.id);
-          } else if (event === 'SIGNED_OUT') {
-            setUsuario(null);
-            setLoading(false);
-          }
-        }
-      );
 
-      return () => {
-        isMounted = false;
-        authListener?.subscription?.unsubscribe();
-      };
+    const checkSessionAndSubscribe = async () => {
+      await checkSession();
     };
 
-    initialize();
+    checkSessionAndSubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!isMounted) return;
+
+        if (event === 'SIGNED_IN' && session) {
+          await loadUserData(session.user.id);
+        } else if (event === 'SIGNED_OUT') {
+          setUsuario(null);
+          setLoading(false);
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkSession = async () => {

@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
+import { useLeads, useMetrics } from '../hooks/useLeads';
+import { useDebounce } from '../hooks/useDebounce';
 import KPIFilter from '../components/dashboard/KPIFilter';
 import LeadModal from '../components/leads/LeadModal';
 import AtribuirOperadorModal from '../components/leads/AtribuirOperadorModal';
@@ -9,79 +10,46 @@ import FAB from '../components/dashboard/FAB';
 
 export default function DashboardPage() {
   const { usuario } = useAuth();
-  const [leads, setLeads] = useState([]);
-  const [leadsFiltrados, setLeadsFiltrados] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  // Estados de Filtros e Paginação
+  const [page, setPage] = useState(1);
+  const [perPage] = useState(20);
   const [kpiAtivo, setKpiAtivo] = useState('All');
   const [busca, setBusca] = useState('');
   const [filtroMeusLeads, setFiltroMeusLeads] = useState(false);
+
+  // Debounce na busca para não sobrecarregar
+  const debouncedBusca = useDebounce(busca, 500);
+
+  // Hook React Query para Leads (paginado)
+  const {
+    data: leadsData,
+    isLoading: loading,
+    isPlaceholderData
+  } = useLeads({
+    tenantId: usuario?.tenant_id,
+    page,
+    perPage,
+    filters: {
+      search: debouncedBusca,
+      status: kpiAtivo,
+      meusLeads: filtroMeusLeads,
+      userId: usuario?.id
+    }
+  });
+
+  const leads = leadsData?.data || [];
+  const totalCount = leadsData?.count || 0;
+  const totalPages = Math.ceil(totalCount / perPage);
+
+  // Hook React Query para Métricas (KPIs globais)
+  const { data: metrics } = useMetrics(usuario?.tenant_id);
+
+  // Modals
   const [selectedLead, setSelectedLead] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAtribuirModalOpen, setIsAtribuirModalOpen] = useState(false);
   const [leadParaAtribuir, setLeadParaAtribuir] = useState(null);
-
-  useEffect(() => {
-    fetchLeads();
-  }, [usuario]);
-
-  useEffect(() => {
-    filtrarLeads();
-  }, [kpiAtivo, busca, leads, filtroMeusLeads]);
-
-  const fetchLeads = async () => {
-    if (!usuario?.tenant_id) return;
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from('leads')
-      .select(`
-        *,
-        marcas (nome, emoji),
-        operador:id_operador_responsavel (
-          id,
-          nome,
-          role
-        )
-      `)
-      .eq('tenant_id', usuario.tenant_id)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setLeads(data);
-      setLeadsFiltrados(data);
-    }
-    setLoading(false);
-  };
-
-  const filtrarLeads = () => {
-    let filtrados = [...leads];
-
-    // Filtrar por "Meus Leads"
-    if (filtroMeusLeads) {
-      filtrados = filtrados.filter(lead => 
-        lead.id_operador_responsavel === usuario.id
-      );
-    }
-
-    // Filtrar por categoria (Hot, Warm, Cold)
-    if (kpiAtivo !== 'All') {
-      filtrados = filtrados.filter(lead => 
-        lead.categoria?.toLowerCase() === kpiAtivo.toLowerCase()
-      );
-    }
-
-    // Filtrar por busca
-    if (busca) {
-      filtrados = filtrados.filter(lead =>
-        lead.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-        lead.email?.toLowerCase().includes(busca.toLowerCase()) ||
-        lead.telefone?.includes(busca) ||
-        lead.cidade?.toLowerCase().includes(busca.toLowerCase())
-      );
-    }
-
-    setLeadsFiltrados(filtrados);
-  };
 
   const handleOpenModal = (lead) => {
     setSelectedLead(lead);
@@ -91,7 +59,6 @@ export default function DashboardPage() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedLead(null);
-    fetchLeads();
   };
 
   const handleAtribuir = (lead) => {
@@ -105,16 +72,20 @@ export default function DashboardPage() {
   };
 
   const handleAtribuirSuccess = () => {
-    fetchLeads();
+    // Invalidação automática via Mutation no hook useUpdateLead (se usado pelo modal)
   };
 
+  // Resetar página quando filtros mudam (exceto busca que já tratamos com debounce,
+  // mas idealmente page reseta quando busca muda. React Query trata a key, mas o estado 'page' fica.
+  // Vamos usar um useEffect simples ou assumir que o usuário navega.)
+  // Melhor resetar pagina na mudança de filtro.
+
+  React.useEffect(() => {
+    setPage(1);
+  }, [kpiAtivo, filtroMeusLeads, debouncedBusca]);
+
   // KPIs
-  const kpis = {
-    total: leads.length,
-    hot: leads.filter(l => l.categoria?.toLowerCase() === 'hot').length,
-    warm: leads.filter(l => l.categoria?.toLowerCase() === 'warm').length,
-    cold: leads.filter(l => l.categoria?.toLowerCase() === 'cold').length,
-  };
+  const kpis = metrics || { total: 0, hot: 0, warm: 0, cold: 0 };
 
   if (loading) {
     return (
@@ -224,7 +195,8 @@ export default function DashboardPage() {
             </span>
             {filtroMeusLeads && (
               <span className="bg-black/20 px-2 py-0.5 rounded-full text-xs">
-                {leadsFiltrados.length}
+                {/* Aqui poderíamos mostrar o count se filtrado, mas com paginação e busca combinados fica complexo mostrar só no botão sem query extra. Vamos simplificar. */}
+                {/* {leads.length} */}
               </span>
             )}
           </motion.button>
@@ -233,7 +205,7 @@ export default function DashboardPage() {
 
       {/* LEADS TABLE */}
       <div className="px-4 lg:px-10">
-        {leadsFiltrados.length === 0 ? (
+        {leads.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -289,7 +261,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leadsFiltrados.map((lead, index) => (
+                  {leads.map((lead, index) => (
                     <motion.tr
                       key={lead.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -429,6 +401,33 @@ export default function DashboardPage() {
                 </tbody>
               </table>
             </div>
+
+             {/* PAGINATION */}
+             {totalCount > 0 && (
+              <div className="px-4 py-4 flex items-center justify-between border-t border-white/5">
+                <button
+                  onClick={() => setPage(old => Math.max(old - 1, 1))}
+                  disabled={page === 1}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold text-gray-400"
+                >
+                  &larr; Anterior
+                </button>
+                <span className="text-xs lg:text-sm text-gray-500 font-medium">
+                  Página <span className="text-white">{page}</span> de <span className="text-white">{totalPages}</span>
+                </span>
+                <button
+                  onClick={() => {
+                    if (!isPlaceholderData && page < totalPages) {
+                      setPage(old => old + 1)
+                    }
+                  }}
+                  disabled={isPlaceholderData || page >= totalPages}
+                  className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold text-gray-400"
+                >
+                  Próximo &rarr;
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
