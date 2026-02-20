@@ -32,9 +32,9 @@ export default function Header({ onMenuClick }) {
             <h1 className="text-base lg:text-xl font-light text-[#f5f5f4]">
               Lead<span className="text-[#ee7b4d] font-semibold">Capture</span> Pro
             </h1>
-            {tenant?.nome && (
+            {tenant?.name && (
               <p className="text-[8px] lg:text-[9px] text-[#4a4a4f] uppercase tracking-wider">
-                {tenant.nome}
+                {tenant.name}
               </p>
             )}
           </div>

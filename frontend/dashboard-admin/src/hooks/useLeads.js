@@ -58,20 +58,22 @@ export function useMetrics(tenantId) {
   return useQuery({
     queryKey: ['metrics', tenantId],
     queryFn: async () => {
-      // Traz apenas a categoria para contagem, evitando payload desnecessário
+      // Usa view otimizada para evitar carregar todos os leads
       const { data, error } = await supabase
-        .from('leads')
-        .select('categoria')
+        .from('metricas_por_tenant')
+        .select('total_leads, leads_hot, leads_warm, leads_cold')
         .eq('tenant_id', tenantId)
+        .maybeSingle()
 
       if (error) throw error
-      const rows = data ?? []
+
+      const metrics = data || { total_leads: 0, leads_hot: 0, leads_warm: 0, leads_cold: 0 }
 
       return {
-        total: rows.length,
-        hot: rows.filter(l => (l.categoria || '').toLowerCase() === 'hot').length,
-        warm: rows.filter(l => (l.categoria || '').toLowerCase() === 'warm').length,
-        cold: rows.filter(l => (l.categoria || '').toLowerCase() === 'cold' || !l.categoria).length
+        total: metrics.total_leads || 0,
+        hot: metrics.leads_hot || 0,
+        warm: metrics.leads_warm || 0,
+        cold: metrics.leads_cold || 0
       }
     },
     enabled: !!tenantId,
