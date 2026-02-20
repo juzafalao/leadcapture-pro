@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
 
 const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
+const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
 
 const STATUS_STYLE = {
   novo:        'bg-blue-500/10 text-blue-400 border-blue-500/30',
@@ -184,6 +185,7 @@ export default function LeadsSistemaPage() {
   const [busca, setBusca]         = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [selected, setSelected]   = useState(null);
+  const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
 
   useEffect(() => { fetchProspects(); }, []);
 
@@ -202,6 +204,7 @@ export default function LeadsSistemaPage() {
       );
     }
     setFiltrados(lista);
+    setPage(1); // 🆕 RESETAR PÁGINA QUANDO FILTROS MUDAM
   }, [prospects, busca, filtroStatus]);
 
   const fetchProspects = async () => {
@@ -222,6 +225,15 @@ export default function LeadsSistemaPage() {
     setSelected(null);
     fetchProspects();
   };
+
+  // 🆕 PAGINAÇÃO
+  const totalPages = Math.ceil(filtrados.length / PAGE_SIZE);
+  const paginatedLeads = filtrados.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+  const startIndex = (page - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(page * PAGE_SIZE, filtrados.length);
 
   // KPIs
   const kpis = {
@@ -396,7 +408,7 @@ export default function LeadsSistemaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtrados.map((p, i) => (
+                  {paginatedLeads.map((p, i) => ( /* 🆕 USANDO paginatedLeads */
                     <motion.tr
                       key={p.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -463,15 +475,76 @@ export default function LeadsSistemaPage() {
               </table>
             </div>
 
-            {/* Table footer */}
-            <div className="px-4 py-3 border-t border-white/5 flex items-center justify-between">
-              <p className="text-xs text-gray-600">
-                Exibindo <span className="text-white font-bold">{filtrados.length}</span> de{' '}
-                <span className="text-white font-bold">{prospects.length}</span> prospects
-              </p>
-              <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
-                LeadCapture Pro · Zafalão Tech
-              </p>
+            {/* 🆕 FOOTER COM PAGINAÇÃO */}
+            <div className="px-4 py-4 border-t border-white/5">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                {/* Info */}
+                <p className="text-xs text-gray-600">
+                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
+                  <span className="text-white font-bold">{endIndex}</span> de{' '}
+                  <span className="text-white font-bold">{filtrados.length}</span> prospects
+                  {filtrados.length !== prospects.length && (
+                    <span className="text-gray-700"> (de {prospects.length} total)</span>
+                  )}
+                </p>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ← Anterior
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {[...Array(totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        // Show first, last, current, and neighbors
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= page - 1 && pageNum <= page + 1)
+                        ) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setPage(pageNum)}
+                              className={`
+                                w-8 h-8 rounded-lg text-xs font-bold transition-all
+                                ${page === pageNum
+                                  ? 'bg-[#ee7b4d] text-black'
+                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                }
+                              `}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        } else if (pageNum === page - 2 || pageNum === page + 2) {
+                          return <span key={pageNum} className="text-gray-600">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+
+                {/* Branding */}
+                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
+                  LeadCapture Pro · Zafalão Tech
+                </p>
+              </div>
             </div>
           </div>
         )}
