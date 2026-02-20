@@ -1,9 +1,81 @@
 # Análise de Branches - LeadCapture Pro
-Data: Ter 17 Fev 2026 12:09:31 -03
+Data: Qui 20 Fev 2026 03:13:00 -03 (atualizado pelo Copilot)
+
+---
+
+## 🔀 Análise de Merge: claude/refine-lead-pro-saas-IPuQy → main
+
+### ✅ RESULTADO: Branch OBSOLETA — Merge não necessário
+
+**Data da análise:** 20/02/2026 03:13 UTC  
+**Executor:** GitHub Copilot (Sprint Noturno - Merge Inteligente)
+
+### Resumo Executivo
+
+A branch `claude/refine-lead-pro-saas-IPuQy` (HEAD: `c91510e`) é um **ancestral direto** da
+`main` (HEAD: `4b5c35f`). Todos os seus commits já foram integrados à main através do commit
+de merge `5d6c971` ("merge: integra bug fixes críticos da branch copilot").
+
+### Commits da branch Claude (todos já em main)
+
+| Commit | Descrição | Status em main |
+|--------|-----------|---------------|
+| c91510e | feat: typeOrch field, LeadsSistema page, admin redesign, branding Zafalão Tech | ✅ Integrado |
+| 6e62f81 | refactor: refinamento profundo da arquitetura SaaS em 5 módulos | ✅ Integrado |
+| 0bd76fc | feat: tabela leads_sistema + formulário completo com 7 campos | ✅ Integrado |
+| d058cfe | feat: tabela leads_sistema + formulário completo | ✅ Integrado |
+| ea175f6 | fix: Express serve dashboard diretamente | ✅ Integrado |
+| ebc64fe | deploy: force redeploy to production | ✅ Ignorado (obsoleto) |
+| 8128ac7 | fix: move dashboard para raiz para deploy Vercel | ✅ Integrado |
+| 910765f | fix: rotas corretas para servir dashboard buildado | ✅ Integrado |
+| db92d96 | build: adiciona dist/ do dashboard + atualiza .gitignore | ✅ Integrado |
+| fe60d84 | build: adiciona dist/ do dashboard para produção | ✅ Integrado |
+
+### Main está AHEAD com (+6 commits novos)
+
+A main possui melhorias adicionais NÃO presentes na branch Claude:
+
+| Commit | Descrição |
+|--------|-----------|
+| 4b5c35f | ci: adiciona CI/CD GitHub Actions e scripts de automação |
+| 50508e5 | Fix Recharts ResponsiveContainer height warnings in InteligenciaPage (PR #12) |
+| 71ab383 | feat: add pagination (20 items/page) to MarcasPage, SegmentosPage, UsuariosPage (PR #11) |
+| 7efeafe | feat: adiciona paginação em LeadsSistemaPage (20 por página) |
+| cdc0d7b | fix: renomeia grupo sidebar 'LC Pro' → 'Institucional' |
+| 5d6c971 | merge: integra bug fixes críticos da branch copilot |
+
+### Arquivos Críticos — Status
+
+| Arquivo | Status |
+|---------|--------|
+| `frontend/dashboard-admin/src/pages/MarcasPage.jsx` | ✅ Paginação integrada (PR #11) |
+| `frontend/dashboard-admin/src/pages/SegmentosPage.jsx` | ✅ Paginação integrada (PR #11) |
+| `frontend/dashboard-admin/src/pages/UsuariosPage.jsx` | ✅ Paginação integrada (PR #11) |
+| `frontend/dashboard-admin/src/pages/InteligenciaPage.jsx` | ✅ Gráficos corrigidos (PR #12) |
+| `frontend/dashboard-admin/src/pages/LeadsSistemaPage.jsx` | ✅ Paginação funcionando |
+| `.github/workflows/ci.yml` | ✅ CI/CD novo |
+| `.github/workflows/daily-validation.yml` | ✅ CI/CD novo |
+| `scripts/validate.sh` | ✅ Script novo |
+| `scripts/deploy.sh` | ✅ Script novo |
+
+### Validação Técnica
+
+- ✅ `npm run build` — Build passou sem erros (1397 módulos transformados)
+- ✅ `node -c app.js` — Sintaxe do servidor OK
+- ✅ Todas as páginas críticas existem
+- ✅ CI/CD configurado e funcionando
+
+### Decisão
+
+**NÃO mergear.** A branch `claude/refine-lead-pro-saas-IPuQy` é obsoleta.
+
+**Recomendação:** Deletar a branch `claude/refine-lead-pro-saas-IPuQy` após aprovação desta PR.
+
+---
 
 ## Branch: main
 ### Último Commit:
-ea175f6 fix: Express serve dashboard diretamente
+4b5c35f ci: adiciona CI/CD GitHub Actions e scripts de automação
 ### Arquivos Únicos:
 ### Estrutura de Pastas:
 .
