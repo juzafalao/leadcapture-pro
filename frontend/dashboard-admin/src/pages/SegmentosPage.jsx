@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
@@ -13,48 +13,69 @@ export default function SegmentosPage() {
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
+  const [buscaInput, setBuscaInput] = useState('');
   const [page, setPage] = useState(1);
   const [selectedSegmento, setSelectedSegmento] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleBuscaChange = useCallback((value) => {
+    setBuscaInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setBusca(value), 300);
+  }, []);
 
   const fetchSegmentos = async () => {
     if (!usuario?.tenant_id) return;
     setLoading(true);
 
     try {
-      // Query simplificada
       const { data, error } = await supabase
         .from('segmentos')
-        .select('*')
+        .select('id, nome, emoji, created_at, tenant_id')
         .eq('tenant_id', usuario.tenant_id)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
       if (error) throw error;
 
-      // Buscar marcas e leads relacionados
       if (data && data.length > 0) {
-        const segmentosCompletos = await Promise.all(
-          data.map(async (segmento) => {
-            // Buscar marcas vinculadas
-            const { data: marcas } = await supabase
-              .from('marcas')
-              .select('id, nome, emoji')
-              .eq('id_segmento', segmento.id);
+        // Fetch all related marcas in a single query
+        const segmentoIds = data.map(s => s.id);
+        const { data: todasMarcas } = await supabase
+          .from('marcas')
+          .select('id, nome, emoji, id_segmento')
+          .in('id_segmento', segmentoIds);
 
-            // Buscar leads das marcas deste segmento
-            const marcasIds = (marcas || []).map(m => m.id);
-            const { data: leads } = await supabase
-              .from('leads')
-              .select('id')
-              .in('marca_id', marcasIds.length > 0 ? marcasIds : ['00000000-0000-0000-0000-000000000000']);
-            return {
-              ...segmento,
-              marcas_relacionadas: marcas || [],
-              leads: leads || []
-            };
-          })
-        );
+        const marcasMap = {};
+        (todasMarcas || []).forEach(m => {
+          if (!marcasMap[m.id_segmento]) marcasMap[m.id_segmento] = [];
+          marcasMap[m.id_segmento].push(m);
+        });
+
+        // Fetch lead counts per marca in a single query
+        const todasMarcasIds = (todasMarcas || []).map(m => m.id);
+        let leadsCountMap = {};
+        if (todasMarcasIds.length > 0) {
+          const { data: leadsData } = await supabase
+            .from('leads')
+            .select('marca_id')
+            .in('marca_id', todasMarcasIds);
+          (leadsData || []).forEach(l => {
+            leadsCountMap[l.marca_id] = (leadsCountMap[l.marca_id] || 0) + 1;
+          });
+        }
+
+        const segmentosCompletos = data.map(segmento => {
+          const marcas = marcasMap[segmento.id] || [];
+          const leadsCount = marcas.reduce((acc, m) => acc + (leadsCountMap[m.id] || 0), 0);
+          return {
+            ...segmento,
+            marcas_relacionadas: marcas,
+            leadsCount
+          };
+        });
 
         setSegmentos(segmentosCompletos);
       } else {
@@ -75,6 +96,10 @@ export default function SegmentosPage() {
   useEffect(() => {
     setPage(1);
   }, [busca]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
 
   const segmentosFiltrados = segmentos.filter(s =>
     s.nome?.toLowerCase().includes(busca.toLowerCase())
@@ -178,8 +203,8 @@ export default function SegmentosPage() {
           <input
             type="text"
             placeholder="🔍 Buscar segmento..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
+            value={buscaInput}
+            onChange={(e) => handleBuscaChange(e.target.value)}
             className="
               w-full
               bg-[#12121a]
@@ -197,9 +222,9 @@ export default function SegmentosPage() {
               transition-all
             "
           />
-          {busca && (
+          {buscaInput && (
             <button
-              onClick={() => setBusca('')}
+              onClick={() => { setBuscaInput(''); setBusca(''); }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
             >
               ✕
@@ -225,7 +250,7 @@ export default function SegmentosPage() {
             </p>
             {busca ? (
               <button
-                onClick={() => setBusca('')}
+                onClick={() => { setBuscaInput(''); setBusca(''); }}
                 className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
               >
                 Limpar Busca

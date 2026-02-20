@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
@@ -14,11 +14,19 @@ export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
+  const [buscaInput, setBuscaInput] = useState('');
   const [filtroRole, setFiltroRole] = useState('todos');
   const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleBuscaChange = useCallback((value) => {
+    setBuscaInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setBusca(value), 300);
+  }, []);
 
   const fetchUsuarios = async () => {
     if (!usuario?.tenant_id) return;
@@ -26,9 +34,10 @@ export default function UsuariosPage() {
 
     const { data, error } = await supabase
       .from('usuarios')
-      .select('*')
+      .select('id, nome, email, role, status, ativo, tenant_id, created_at')
       .eq('tenant_id', usuario.tenant_id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (!error && data) {
       setUsuarios(data);
@@ -39,6 +48,10 @@ export default function UsuariosPage() {
   useEffect(() => {
     fetchUsuarios();
   }, [usuario]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -123,8 +136,8 @@ export default function UsuariosPage() {
           <input
             type="text"
             placeholder="🔍 Buscar usuário..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
+            value={buscaInput}
+            onChange={(e) => handleBuscaChange(e.target.value)}
             className="
               w-full
               bg-[#12121a]
@@ -142,9 +155,9 @@ export default function UsuariosPage() {
               transition-all
             "
           />
-          {busca && (
+          {buscaInput && (
             <button
-              onClick={() => setBusca('')}
+              onClick={() => { setBuscaInput(''); setBusca(''); }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
             >
               ✕
@@ -280,6 +293,7 @@ export default function UsuariosPage() {
             {(busca || filtroRole !== 'todos') && (
               <button
                 onClick={() => {
+                  setBuscaInput('');
                   setBusca('');
                   setFiltroRole('todos');
                 }}

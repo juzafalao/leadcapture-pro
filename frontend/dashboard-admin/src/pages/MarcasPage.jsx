@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
@@ -14,10 +14,18 @@ export default function MarcasPage() {
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
+  const [buscaInput, setBuscaInput] = useState('');
   const [page, setPage] = useState(1);
   const [selectedMarca, setSelectedMarca] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleBuscaChange = useCallback((value) => {
+    setBuscaInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setBusca(value), 300);
+  }, []);
 
   const fetchMarcas = async () => {
     if (!usuario?.tenant_id) return;
@@ -61,6 +69,10 @@ export default function MarcasPage() {
     fetchMarcas();
     fetchSegmentos();
   }, [usuario]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -172,8 +184,8 @@ export default function MarcasPage() {
           <input
             type="text"
             placeholder="🔍 Buscar marca..."
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
+            value={buscaInput}
+            onChange={(e) => handleBuscaChange(e.target.value)}
             className="
               w-full
               bg-[#12121a]
@@ -191,9 +203,9 @@ export default function MarcasPage() {
               transition-all
             "
           />
-          {busca && (
+          {buscaInput && (
             <button
-              onClick={() => setBusca('')}
+              onClick={() => { setBuscaInput(''); setBusca(''); }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
             >
               ✕
@@ -217,9 +229,9 @@ export default function MarcasPage() {
             <p className="text-sm text-gray-600 mb-6">
               {busca ? 'Tente ajustar sua busca' : 'Comece criando sua primeira marca!'}
             </p>
-            {busca && (
+            {buscaInput && (
               <button
-                onClick={() => setBusca('')}
+                onClick={() => { setBuscaInput(''); setBusca(''); }}
                 className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
               >
                 Limpar Busca

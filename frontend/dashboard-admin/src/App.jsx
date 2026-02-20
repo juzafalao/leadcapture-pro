@@ -1,24 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/layout/Header';
 
-// Páginas
+// Páginas carregadas imediatamente (usadas com frequência)
 import DashboardPage    from './pages/DashboardPage';
-import InteligenciaPage from './pages/InteligenciaPage';
 import MarcasPage       from './pages/MarcasPage';
 import SegmentosPage    from './pages/SegmentosPage';
 import UsuariosPage     from './pages/UsuariosPage';
-import AnalyticsPage    from './pages/AnalyticsPage';
-import RelatoriosPage   from './pages/RelatoriosPage';
-import AutomacaoPage    from './pages/AutomacaoPage';
 import SettingsPage     from './pages/SettingsPage';
 import LeadsSistemaPage from './pages/LeadsSistemaPage';
 import LoginPage        from './pages/LoginPage';
 import LandingPage      from './pages/LandingPage';
 
+// Lazy load páginas pesadas
+const InteligenciaPage = lazy(() => import('./pages/InteligenciaPage'));
+const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
+const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
+const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
+
 // Auth
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
+
+const PageFallback = () => (
+  <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+    <span className="text-[#ee7b4d] font-black tracking-widest animate-pulse">CARREGANDO...</span>
+  </div>
+);
 
 function PrivateRoute({ children, allowedRoles }) {
   const { usuario, loading, isAuthenticated } = useAuth();
@@ -91,22 +99,22 @@ export default function App() {
 
           {/* ── Inteligência / BI (Gestor+) ──────────────── */}
           <Route path="/inteligencia"
-            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><InteligenciaPage /></AuthenticatedLayout></PrivateRoute>}
+            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><Suspense fallback={<PageFallback />}><InteligenciaPage /></Suspense></AuthenticatedLayout></PrivateRoute>}
           />
 
           {/* ── Analytics (Gestor+) ──────────────────────── */}
           <Route path="/analytics"
-            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnalyticsPage /></AuthenticatedLayout></PrivateRoute>}
+            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AuthenticatedLayout></PrivateRoute>}
           />
 
           {/* ── Relatórios (Gestor+) ─────────────────────── */}
           <Route path="/relatorios"
-            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><RelatoriosPage /></AuthenticatedLayout></PrivateRoute>}
+            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AuthenticatedLayout></PrivateRoute>}
           />
 
           {/* ── Automação (Gestor+) ──────────────────────── */}
           <Route path="/automacao"
-            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AutomacaoPage /></AuthenticatedLayout></PrivateRoute>}
+            element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AuthenticatedLayout></PrivateRoute>}
           />
 
           {/* ── Marcas (Gestor+) ─────────────────────────── */}

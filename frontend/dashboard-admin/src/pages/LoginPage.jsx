@@ -42,7 +42,7 @@ export default function LoginPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <div className="text-6xl animate-pulse">��</div>
+        <span className="text-[#ee7b4d] font-black tracking-widest animate-pulse">CARREGANDO...</span>
       </div>
     );
   }
