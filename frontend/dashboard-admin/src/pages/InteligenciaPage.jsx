@@ -500,7 +500,7 @@ export default function InteligenciaPage() {
               📈 Evolução no Período
             </h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={320}>
                 <AreaChart data={dataEvolucao}>
                   <defs>
                     <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
@@ -552,7 +552,7 @@ export default function InteligenciaPage() {
               📉 Motivos de Perda
             </h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={dataDesistencia}>
                   <XAxis 
                     dataKey="motivo" 
@@ -596,7 +596,7 @@ export default function InteligenciaPage() {
               🏢 Leads por Marca
             </h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie
                     data={dataMarcas}
@@ -639,7 +639,7 @@ export default function InteligenciaPage() {
               ⏱️ Tempo Médio por Etapa
             </h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={dataSLA} layout="vertical">
                   <XAxis type="number" stroke="#4a5568" fontSize={10} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="etapa" stroke="#4a5568" fontSize={10} axisLine={false} tickLine={false} width={80} />

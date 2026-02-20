@@ -87,7 +87,7 @@ export default function KPIFilter({ kpis, kpiAtivo, setKpiAtivo }) {
             {kpi.showChart && isActive ? (
               <div className="relative mb-2">
                 <div className="h-28 lg:h-32">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={200}>
                     <RadialBarChart
                       innerRadius="60%"
                       outerRadius="90%"
