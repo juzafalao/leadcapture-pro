@@ -7,12 +7,15 @@ import FAB from '../components/dashboard/FAB';
 import UserModal from '../components/usuarios/UserModal';
 import { exportUsuariosToExcel, exportUsuariosToPDF } from '../utils/exportUtils.js';
 
+const PAGE_SIZE = 20;
+
 export default function UsuariosPage() {
   const { usuario } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [filtroRole, setFiltroRole] = useState('todos');
+  const [page, setPage] = useState(1);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -37,12 +40,24 @@ export default function UsuariosPage() {
     fetchUsuarios();
   }, [usuario]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [busca, filtroRole]);
+
   const usuariosFiltrados = usuarios.filter(u => {
     const matchBusca = u.nome?.toLowerCase().includes(busca.toLowerCase()) ||
                        u.email?.toLowerCase().includes(busca.toLowerCase());
     const matchRole = filtroRole === 'todos' || u.role === filtroRole;
     return matchBusca && matchRole;
   });
+
+  const totalPages = Math.ceil(usuariosFiltrados.length / PAGE_SIZE);
+  const paginatedUsuarios = usuariosFiltrados.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+  const startIndex = (page - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(page * PAGE_SIZE, usuariosFiltrados.length);
 
   const handleOpenModal = (user = null) => {
     setSelectedUser(user);
@@ -275,15 +290,87 @@ export default function UsuariosPage() {
             )}
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-            {usuariosFiltrados.map((user, index) => (
-              <UserCard
-                key={user.id}
-                user={user}
-                index={index}
-                onClick={() => handleOpenModal(user)}
-              />
-            ))}
+          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+            <div className="p-4 lg:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                {paginatedUsuarios.map((user, index) => (
+                  <UserCard
+                    key={user.id}
+                    user={user}
+                    index={index}
+                    onClick={() => handleOpenModal(user)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* FOOTER COM PAGINAÇÃO */}
+            <div className="px-4 py-4 border-t border-white/5 bg-[#12121a] rounded-b-3xl">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                {/* Info */}
+                <p className="text-xs text-gray-600">
+                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
+                  <span className="text-white font-bold">{endIndex}</span> de{' '}
+                  <span className="text-white font-bold">{usuariosFiltrados.length}</span> itens
+                </p>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ← Anterior
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {[...Array(totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= page - 1 && pageNum <= page + 1)
+                        ) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setPage(pageNum)}
+                              className={`
+                                w-8 h-8 rounded-lg text-xs font-bold transition-all
+                                ${page === pageNum
+                                  ? 'bg-[#ee7b4d] text-black'
+                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                }
+                              `}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        } else if (pageNum === page - 2 || pageNum === page + 2) {
+                          return <span key={pageNum} className="text-gray-600">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+
+                {/* Branding */}
+                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
+                  LeadCapture Pro · Zafalão Tech
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

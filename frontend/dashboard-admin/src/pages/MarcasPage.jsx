@@ -6,12 +6,15 @@ import MarcaCard from '../components/dashboard/MarcaCard';
 import FAB from '../components/dashboard/FAB';
 import MarcaModal from '../components/marcas/MarcaModal';
 
+const PAGE_SIZE = 20;
+
 export default function MarcasPage() {
   const { usuario } = useAuth();
   const [marcas, setMarcas] = useState([]);
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
+  const [page, setPage] = useState(1);
   const [selectedMarca, setSelectedMarca] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,9 +62,21 @@ export default function MarcasPage() {
     fetchSegmentos();
   }, [usuario]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [busca]);
+
   const marcasFiltradas = marcas.filter(m =>
     m.nome?.toLowerCase().includes(busca.toLowerCase())
   );
+
+  const totalPages = Math.ceil(marcasFiltradas.length / PAGE_SIZE);
+  const paginatedMarcas = marcasFiltradas.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+  const startIndex = (page - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(page * PAGE_SIZE, marcasFiltradas.length);
 
   const handleOpenModal = (marca = null) => {
     setSelectedMarca(marca);
@@ -212,15 +227,87 @@ export default function MarcasPage() {
             )}
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-            {marcasFiltradas.map((marca, index) => (
-              <MarcaCard
-                key={marca.id}
-                marca={marca}
-                index={index}
-                onClick={() => handleOpenModal(marca)}
-              />
-            ))}
+          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+            <div className="p-4 lg:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                {paginatedMarcas.map((marca, index) => (
+                  <MarcaCard
+                    key={marca.id}
+                    marca={marca}
+                    index={index}
+                    onClick={() => handleOpenModal(marca)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* FOOTER COM PAGINAÇÃO */}
+            <div className="px-4 py-4 border-t border-white/5 bg-[#12121a] rounded-b-3xl">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                {/* Info */}
+                <p className="text-xs text-gray-600">
+                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
+                  <span className="text-white font-bold">{endIndex}</span> de{' '}
+                  <span className="text-white font-bold">{marcasFiltradas.length}</span> itens
+                </p>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ← Anterior
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {[...Array(totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= page - 1 && pageNum <= page + 1)
+                        ) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setPage(pageNum)}
+                              className={`
+                                w-8 h-8 rounded-lg text-xs font-bold transition-all
+                                ${page === pageNum
+                                  ? 'bg-[#ee7b4d] text-black'
+                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                }
+                              `}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        } else if (pageNum === page - 2 || pageNum === page + 2) {
+                          return <span key={pageNum} className="text-gray-600">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+
+                {/* Branding */}
+                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
+                  LeadCapture Pro · Zafalão Tech
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
