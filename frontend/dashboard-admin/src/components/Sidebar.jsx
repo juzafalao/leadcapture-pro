@@ -28,9 +28,9 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'LC Pro',
+    label: 'Institucional',
     items: [
-      { path: '/leads-sistema', icon: '🚀', label: 'Prospects', show: (a) => a.isGestor() },
+      { path: '/leads-sistema', icon: '🚀', label: 'Leads Sistema', show: (a) => a.isGestor() },
     ],
   },
   {
