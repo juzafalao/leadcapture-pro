@@ -499,8 +499,8 @@ export default function InteligenciaPage() {
             <h3 className="text-sm lg:text-base font-bold text-white mb-6">
               📈 Evolução no Período
             </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={dataEvolucao}>
                   <defs>
                     <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
@@ -551,8 +551,8 @@ export default function InteligenciaPage() {
             <h3 className="text-sm lg:text-base font-bold text-white mb-6">
               📉 Motivos de Perda
             </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={dataDesistencia}>
                   <XAxis 
                     dataKey="motivo" 
@@ -595,8 +595,8 @@ export default function InteligenciaPage() {
             <h3 className="text-sm lg:text-base font-bold text-white mb-6">
               🏢 Leads por Marca
             </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={dataMarcas}
@@ -638,8 +638,8 @@ export default function InteligenciaPage() {
             <h3 className="text-sm lg:text-base font-bold text-white mb-6">
               ⏱️ Tempo Médio por Etapa
             </h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={dataSLA} layout="vertical">
                   <XAxis type="number" stroke="#4a5568" fontSize={10} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="etapa" stroke="#4a5568" fontSize={10} axisLine={false} tickLine={false} width={80} />
