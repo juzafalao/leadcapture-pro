@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function InsightCard({ icon, title, description, action, priority = 'normal' }) {
+export default React.memo(function InsightCard({ icon, title, description, action, priority = 'normal' }) {
   
   const priorityStyles = {
     high: {
@@ -75,4 +75,4 @@ export default function InsightCard({ icon, title, description, action, priority
       </div>
     </motion.div>
   );
-}
+})

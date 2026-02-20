@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function HeroMetric({ 
+export default React.memo(function HeroMetric({ 
   label, 
   value, 
   subtitle,
@@ -94,4 +94,4 @@ export default function HeroMetric({
       )}
     </motion.div>
   );
-}
+})

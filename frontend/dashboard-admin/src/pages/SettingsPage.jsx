@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 
@@ -27,10 +27,16 @@ export default function SettingsPage() {
   const { usuario } = useAuth()
   const [saved, setSaved] = useState(false)
 
+  useEffect(() => {
+    if (saved) {
+      const timer = setTimeout(() => setSaved(false), 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [saved])
+
   const handleSave = (e) => {
     e.preventDefault()
     setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
   }
 
   return (

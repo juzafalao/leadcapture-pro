@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import * as XLSX from 'xlsx';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
 
@@ -34,7 +35,7 @@ function formatDate(dt) {
 // ── Modal de detalhes ────────────────────────────────────────
 function ProspectModal({ prospect, onClose, onUpdate }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
-  const [obs, setObs] = useState(prospect?.observacao || '');
+  const [obs, setObs] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
 
   if (!prospect) return null;
@@ -43,7 +44,7 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
     setSaving(true);
     const { error } = await supabase
       .from('leads_sistema')
-      .update({ status, observacao: obs })
+      .update({ status, observacao_interna: obs })
       .eq('id', prospect.id)
       .select();
     setSaving(false);
@@ -72,13 +73,13 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
 
         {/* Modal */}
         <motion.div
-          className="relative z-10 w-full max-w-lg bg-[#111118] border border-white/10 rounded-3xl p-6 shadow-2xl"
+          className="relative z-10 w-full max-w-2xl max-h-[90vh] bg-[#111118] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
           initial={{ scale: 0.95, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 20 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="sticky top-0 bg-[#111118] border-b border-white/5 px-6 pt-6 pb-4 z-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-black text-xl">
                 {prospect.nome?.charAt(0).toUpperCase()}
@@ -98,71 +99,74 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
             </button>
           </div>
 
-          {/* Info grid */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            {[
-              { label: 'E-mail', value: prospect.email, icon: '📧' },
-              { label: 'WhatsApp', value: prospect.telefone, icon: '📱' },
-              { label: 'Empresa', value: prospect.companhia || '—', icon: '🏢' },
-              { label: 'Cidade', value: prospect.cidade ? `${prospect.cidade}${prospect.estado ? ' — ' + prospect.estado : ''}` : '—', icon: '📍' },
-              { label: 'Fonte', value: prospect.fonte || '—', icon: '🔗' },
-              { label: 'Captado em', value: formatDate(prospect.created_at), icon: '📅' },
-            ].map(({ label, value, icon }) => (
-              <div key={label} className="bg-white/5 rounded-xl p-3">
-                <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">{icon} {label}</p>
-                <p className="text-sm text-white font-medium truncate" title={value}>{value}</p>
-              </div>
-            ))}
-          </div>
-
-          {/* Observação original */}
-          {prospect.observacao_original && (
-            <div className="bg-white/5 rounded-xl p-3 mb-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem</p>
-              <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao_original}</p>
-            </div>
-          )}
-
-          {/* Status */}
-          <div className="mb-4">
-            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
-              Status
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {STATUS_OPTS.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setStatus(s)}
-                  className={`
-                    px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
-                    ${status === s
-                      ? STATUS_STYLE[s] + ' shadow-md'
-                      : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
-                    }
-                  `}
-                >
-                  {STATUS_EMOJI[s]} {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
+          {/* Scrollable Content */}
+          <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+            {/* Info grid */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { label: 'E-mail', value: prospect.email, icon: '📧' },
+                { label: 'WhatsApp', value: prospect.telefone, icon: '📱' },
+                { label: 'Empresa', value: prospect.companhia || '—', icon: '🏢' },
+                { label: 'Cidade', value: prospect.cidade ? `${prospect.cidade}${prospect.estado ? ' — ' + prospect.estado : ''}` : '—', icon: '📍' },
+                { label: 'Fonte', value: prospect.fonte || '—', icon: '🔗' },
+                { label: 'Captado em', value: formatDate(prospect.created_at), icon: '📅' },
+              ].map(({ label, value, icon }) => (
+                <div key={label} className="bg-white/5 rounded-xl p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">{icon} {label}</p>
+                  <p className="text-sm text-white font-medium truncate" title={value}>{value}</p>
+                </div>
               ))}
             </div>
+
+            {/* Mensagem original do prospect */}
+            {prospect.observacao && (
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-2">📩 Mensagem do Prospect</p>
+                <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao}</p>
+              </div>
+            )}
+
+            {/* Status */}
+            <div>
+              <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                Status
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {STATUS_OPTS.map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setStatus(s)}
+                    className={`
+                      px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
+                      ${status === s
+                        ? STATUS_STYLE[s] + ' shadow-md'
+                        : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
+                      }
+                    `}
+                  >
+                    {STATUS_EMOJI[s]} {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Observação interna (CRM) */}
+            <div>
+              <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
+                📝 Observações Internas (CRM)
+              </label>
+              <textarea
+                value={obs}
+                onChange={e => setObs(e.target.value)}
+                rows={3}
+                placeholder="Notas internas sobre este prospect... (não sobrescreve a mensagem do prospect)"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 resize-none transition-all"
+              />
+            </div>
           </div>
 
-          {/* Observação interna */}
-          <div className="mb-5">
-            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
-              Observação Interna
-            </label>
-            <textarea
-              value={obs}
-              onChange={e => setObs(e.target.value)}
-              rows={3}
-              placeholder="Notas internas sobre este prospect..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 resize-none transition-all"
-            />
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-3">
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-[#111118] border-t border-white/5 px-6 py-4 flex gap-3">
             <button
               onClick={onClose}
               className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 text-sm font-bold hover:bg-white/5 transition-all"
@@ -243,6 +247,32 @@ export default function LeadsSistemaPage() {
   const handleUpdate = () => {
     setSelected(null);
     fetchProspects();
+  };
+
+  const exportarLeads = () => {
+    const dadosExport = filtrados.map(lead => ({
+      'Nome': lead.nome,
+      'Email': lead.email,
+      'Telefone': lead.telefone,
+      'Status': lead.status,
+      'Origem': lead.fonte || 'N/A',
+      'Data Criação': new Date(lead.created_at).toLocaleDateString('pt-BR'),
+      'Observação': lead.observacao || '',
+      'Observação Interna': lead.observacao_interna || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dadosExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+
+    ws['!cols'] = [
+      { wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 15 },
+      { wch: 20 }, { wch: 12 }, { wch: 40 }, { wch: 40 }
+    ];
+
+    const fileName = `leads-sistema-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    alert(`✅ ${filtrados.length} leads exportados para ${fileName}`);
   };
 
   // 🆕 PAGINAÇÃO
@@ -363,7 +393,7 @@ export default function LeadsSistemaPage() {
           </div>
 
           {/* Status filter pills */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             {['todos', ...STATUS_OPTS].map(s => (
               <button
                 key={s}
@@ -381,6 +411,16 @@ export default function LeadsSistemaPage() {
                 {s === 'todos' ? '📋 Todos' : `${STATUS_EMOJI[s]} ${s.charAt(0).toUpperCase() + s.slice(1)}`}
               </button>
             ))}
+
+            {/* Botão Exportar Excel */}
+            <button
+              onClick={exportarLeads}
+              disabled={filtrados.length === 0}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-xl transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              📊 Exportar Excel
+              <span className="opacity-70">({filtrados.length})</span>
+            </button>
           </div>
         </div>
       </div>

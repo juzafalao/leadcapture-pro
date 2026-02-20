@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-export default function MetricCard({ 
+export default React.memo(function MetricCard({ 
   label, 
   value, 
   icon, 
@@ -107,4 +107,4 @@ export default function MetricCard({
       )}
     </motion.div>
   );
-}
+})
