@@ -33,7 +33,7 @@ function formatDate(dt) {
 // ── Modal de detalhes ────────────────────────────────────────
 function ProspectModal({ prospect, onClose, onUpdate }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
-  const [obs, setObs] = useState(prospect?.observacao || '');
+  const [obs, setObs] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
 
   if (!prospect) return null;
@@ -42,7 +42,7 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
     setSaving(true);
     const { error } = await supabase
       .from('leads_sistema')
-      .update({ status, observacao: obs })
+      .update({ status, observacao_interna: obs })
       .eq('id', prospect.id);
     setSaving(false);
     if (!error) onUpdate();
@@ -107,11 +107,11 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
             ))}
           </div>
 
-          {/* Observação original */}
-          {prospect.observacao_original && (
+          {/* Mensagem original do prospect (campo observacao da tabela) */}
+          {prospect.observacao && (
             <div className="bg-white/5 rounded-xl p-3 mb-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem</p>
-              <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao_original}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem do Prospect</p>
+              <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao}</p>
             </div>
           )}
 
