@@ -39,24 +39,35 @@ export default function LeadModal({ lead, onClose }) {
   const [statusList, setStatusList]   = useState([]);
   const [motivosList, setMotivosList] = useState([]);
   const [isSaving, setIsSaving]       = useState(false);
+  const [alertModal, setAlertModal]   = useState({ open: false, tipo: 'warning', mensagem: '' });
+
+  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   const statusAtual = statusList.find(s => s.id === formData.id_status);
   const isPerdido   = statusAtual?.slug === 'perdido';
 
   useEffect(() => {
     async function fetchData() {
+      if (!usuario?.tenant_id) return;
       const tenantId = usuario.tenant_id;
-      const [{ data: m }, { data: s }, { data: mo }] = await Promise.all([
+      const [
+        { data: m, error: em },
+        { data: s, error: es },
+        { data: mo, error: emo },
+      ] = await Promise.all([
         supabase.from('marcas').select('id, nome, emoji').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
         supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId),
         supabase.from('motivos_desistencia').select('id, nome').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
       ]);
+      if (em) console.error('Erro ao buscar marcas:', em);
+      if (es) console.error('Erro ao buscar status_comercial:', es);
+      if (emo) console.error('Erro ao buscar motivos_desistencia:', emo);
       if (m) setMarcas(m);
       if (s) setStatusList(s);
       if (mo) setMotivosList(mo);
     }
     fetchData();
-  }, [usuario.tenant_id]);
+  }, [usuario]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -70,8 +81,8 @@ export default function LeadModal({ lead, onClose }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    if (!formData.id_marca) { alert('⚠️ Selecione uma Marca de Interesse!'); return; }
-    if (isPerdido && !formData.id_motivo_desistencia) { alert('⚠️ Informe o motivo da desistência!'); return; }
+    if (!formData.id_marca) { showAlert('warning', 'Selecione uma Marca de Interesse!'); return; }
+    if (isPerdido && !formData.id_motivo_desistencia) { showAlert('warning', 'Informe o motivo da desistência!'); return; }
     setIsSaving(true);
 
     try {
@@ -120,7 +131,7 @@ export default function LeadModal({ lead, onClose }) {
       onClose();
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
-      alert('❌ Erro ao salvar lead: ' + error.message);
+      showAlert('error', 'Erro ao salvar lead: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -336,6 +347,35 @@ export default function LeadModal({ lead, onClose }) {
 
         </motion.div>
       </div>
+
+      {/* ALERT MODAL */}
+      <AnimatePresence>
+        {alertModal.open && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-[#1a1a1f] border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center"
+            >
+              <div className="text-5xl mb-4">
+                {alertModal.tipo === 'error' ? '❌' : alertModal.tipo === 'success' ? '✅' : '⚠️'}
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">
+                {alertModal.tipo === 'error' ? 'Erro' : alertModal.tipo === 'success' ? 'Sucesso' : 'Atenção'}
+              </h3>
+              <p className="text-gray-400 mb-6">{alertModal.mensagem}</p>
+              <button
+                onClick={() => setAlertModal(prev => ({ ...prev, open: false }))}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold"
+              >
+                OK
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }
