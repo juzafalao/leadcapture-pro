@@ -38,9 +38,6 @@ export default function LeadModal({ lead, onClose }) {
   const [statusList, setStatusList]   = useState([]);
   const [motivosList, setMotivosList] = useState([]);
   const [isSaving, setIsSaving]       = useState(false);
-  const [alertModal, setAlertModal]   = useState({ open: false, tipo: 'warning', mensagem: '' });
-
-  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   const statusAtual = statusList.find(s => s.id === formData.id_status);
   const isPerdido   = statusAtual?.slug === 'perdido';
@@ -68,11 +65,7 @@ export default function LeadModal({ lead, onClose }) {
       if (mo) setMotivosList(mo);
     }
     fetchData();
-<<<<<<< HEAD
   }, [usuario?.tenant_id]);
-=======
-  }, [usuario]);
->>>>>>> origin/fix/pos-demo
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -86,13 +79,8 @@ export default function LeadModal({ lead, onClose }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-<<<<<<< HEAD
     if (!formData.id_marca) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Selecione uma Marca de Interesse!' }); return; }
     if (isPerdido && !formData.id_motivo_desistencia) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Informe o motivo da desistência!' }); return; }
-=======
-    if (!formData.id_marca) { showAlert('warning', 'Selecione uma Marca de Interesse!'); return; }
-    if (isPerdido && !formData.id_motivo_desistencia) { showAlert('warning', 'Informe o motivo da desistência!'); return; }
->>>>>>> origin/fix/pos-demo
     setIsSaving(true);
 
     try {
@@ -141,11 +129,7 @@ export default function LeadModal({ lead, onClose }) {
       onClose();
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
-<<<<<<< HEAD
       showAlert({ type: 'error', title: 'Erro ao Salvar', message: error.message });
-=======
-      showAlert('error', 'Erro ao salvar lead: ' + error.message);
->>>>>>> origin/fix/pos-demo
     } finally {
       setIsSaving(false);
     }
@@ -205,195 +189,3 @@ export default function LeadModal({ lead, onClose }) {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-              {/* NOME */}
-              <div className="lg:col-span-2">
-                <label className={labelClass}>Nome Completo *</label>
-                {isGestor || isNovo
-                  ? <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className={inputClass} placeholder="Nome completo" />
-                  : <div className={readOnlyClass}>{formData.nome}</div>}
-              </div>
-
-              {/* EMAIL */}
-              <div>
-                <label className={labelClass}>Email</label>
-                {isGestor || isNovo
-                  ? <input type="email" name="email" value={formData.email} onChange={handleChange} className={inputClass} placeholder="email@exemplo.com" />
-                  : <div className={readOnlyClass}>{formData.email || '—'}</div>}
-              </div>
-
-              {/* TELEFONE */}
-              <div>
-                <label className={labelClass}>Telefone</label>
-                {isGestor || isNovo
-                  ? <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className={inputClass} placeholder="(00) 00000-0000" />
-                  : <div className={readOnlyClass}>{formData.telefone || '—'}</div>}
-              </div>
-
-              {/* CIDADE */}
-              <div>
-                <label className={labelClass}>Cidade</label>
-                {isGestor || isNovo
-                  ? <input type="text" name="cidade" value={formData.cidade} onChange={handleChange} className={inputClass} placeholder="São Paulo" />
-                  : <div className={readOnlyClass}>{formData.cidade || '—'}</div>}
-              </div>
-
-              {/* ESTADO */}
-              <div>
-                <label className={labelClass}>Estado</label>
-                {isGestor || isNovo
-                  ? <input type="text" name="estado" value={formData.estado} onChange={handleChange} maxLength={2} className={inputClass + " uppercase"} placeholder="SP" />
-                  : <div className={readOnlyClass}>{formData.estado || '—'}</div>}
-              </div>
-
-              {/* MARCA - obrigatória, bloqueada após criação */}
-              <div>
-                <label className={labelClass}>🏷️ Marca de Interesse *</label>
-                {isNovo ? (
-                  <select name="id_marca" value={formData.id_marca} onChange={handleChange} required className={inputClass}>
-                    <option value="">Selecione a marca</option>
-                    {marcas.map(m => <option key={m.id} value={m.id}>{m.emoji} {m.nome}</option>)}
-                  </select>
-                ) : (
-                  <div className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-xl px-4 py-3">
-                    <span className="text-xl">{lead?.marca?.emoji}</span>
-                    <span className="text-white font-bold">{lead?.marca?.nome || '—'}</span>
-                    <span className="ml-auto text-[10px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-wider">Fixo</span>
-                  </div>
-                )}
-              </div>
-
-              {/* CAPITAL */}
-              <div>
-                <label className={labelClass}>Capital Disponível (R$)</label>
-                {isGestor || isNovo
-                  ? <input type="number" name="capital_disponivel" value={formData.capital_disponivel} onChange={handleChange} min="0" step="1000" className={inputClass} placeholder="0" />
-                  : <div className={readOnlyClass}>{formData.capital_disponivel ? `R$ ${Number(formData.capital_disponivel).toLocaleString('pt-BR')}` : '—'}</div>}
-              </div>
-
-              {/* STATUS COMERCIAL */}
-              <div>
-                <label className={labelClass}>📋 Status Comercial</label>
-                <select name="id_status" value={formData.id_status} onChange={handleChange} className={inputClass}>
-                  <option value="">Selecione o status</option>
-                  {statusList.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-                </select>
-              </div>
-
-              {/* MOTIVO DESISTÊNCIA */}
-              {isPerdido && (
-                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-                  <label className={labelClass + " !text-red-400"}>⚠️ Motivo da Desistência *</label>
-                  <select name="id_motivo_desistencia" value={formData.id_motivo_desistencia} onChange={handleChange} required
-                    className={inputClass + " border-red-500/30 focus:border-red-500/50"}>
-                    <option value="">Selecione o motivo</option>
-                    {motivosList.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
-                  </select>
-                </motion.div>
-              )}
-
-              {/* CATEGORIA */}
-              {(isGestor || isNovo) && (
-                <div>
-                  <label className={labelClass}>Categoria</label>
-                  <select name="categoria" value={formData.categoria} onChange={handleChange} className={inputClass}>
-                    <option value="Hot">🔥 Hot</option>
-                    <option value="Warm">🌤️ Warm</option>
-                    <option value="Cold">❄️ Cold</option>
-                  </select>
-                </div>
-              )}
-
-              {/* SCORE */}
-              {(isGestor || isNovo) && (
-                <div>
-                  <label className={labelClass}>Score (0-100)</label>
-                  <input type="number" name="score" value={formData.score} onChange={handleChange} min="0" max="100" className={inputClass} />
-                </div>
-              )}
-
-              {/* FONTE */}
-              {(isGestor || isNovo) && (
-                <div className="lg:col-span-2">
-                  <label className={labelClass}>Fonte</label>
-                  <input type="text" name="fonte" value={formData.fonte} onChange={handleChange} className={inputClass} placeholder="Instagram, Facebook, Site..." />
-                </div>
-              )}
-
-              {/* EXPERIÊNCIA ANTERIOR */}
-              {(isGestor || isNovo) && (
-                <div className="lg:col-span-2 flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-                  <input type="checkbox" name="experiencia_anterior" id="exp_ant" checked={formData.experiencia_anterior} onChange={handleChange} className="w-4 h-4 accent-[#10B981]" />
-                  <label htmlFor="exp_ant" className="text-sm text-gray-300 cursor-pointer">Tem experiência anterior com franquias</label>
-                </div>
-              )}
-
-              {/* RESUMO / OBSERVAÇÃO */}
-              <div className="lg:col-span-2">
-                <label className={labelClass}>📝 Observações / Resumo</label>
-                <textarea name="resumo_qualificacao" value={formData.resumo_qualificacao} onChange={handleChange} rows={3}
-                  className={inputClass + " resize-none"} placeholder="Anotações sobre o lead..." />
-              </div>
-
-              {/* MENSAGEM ORIGINAL */}
-              {lead?.mensagem_original && (
-                <div className="lg:col-span-2">
-                  <label className={labelClass}>Mensagem Original</label>
-                  <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-gray-300 text-sm">{lead.mensagem_original}</div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* FOOTER */}
-          <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose} disabled={isSaving} type="button"
-              className="flex-1 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all disabled:opacity-50">
-              Cancelar
-            </motion.button>
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSubmit} disabled={isSaving} type="button"
-              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:shadow-lg hover:shadow-[#10B981]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {isSaving
-                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>⏳</motion.div>Salvando...</>
-                : <>✓ {isNovo ? 'Criar Lead' : 'Salvar Alterações'}</>}
-            </motion.button>
-          </div>
-
-        </motion.div>
-      </div>
-<<<<<<< HEAD
-      {alertModal}
-=======
-
-      {/* ALERT MODAL */}
-      <AnimatePresence>
-        {alertModal.open && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-[#1a1a1f] border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center"
-            >
-              <div className="text-5xl mb-4">
-                {alertModal.tipo === 'error' ? '❌' : alertModal.tipo === 'success' ? '✅' : '⚠️'}
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">
-                {alertModal.tipo === 'error' ? 'Erro' : alertModal.tipo === 'success' ? 'Sucesso' : 'Atenção'}
-              </h3>
-              <p className="text-gray-400 mb-6">{alertModal.mensagem}</p>
-              <button
-                onClick={() => setAlertModal(prev => ({ ...prev, open: false }))}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold"
-              >
-                OK
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
->>>>>>> origin/fix/pos-demo
-    </AnimatePresence>
-  );
-}
