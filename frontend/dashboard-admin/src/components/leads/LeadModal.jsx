@@ -68,11 +68,7 @@ export default function LeadModal({ lead, onClose }) {
       if (mo) setMotivosList(mo);
     }
     fetchData();
-<<<<<<< HEAD
   }, [usuario?.tenant_id]);
-=======
-  }, [usuario]);
->>>>>>> origin/fix/pos-demo
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -86,13 +82,8 @@ export default function LeadModal({ lead, onClose }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-<<<<<<< HEAD
     if (!formData.id_marca) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Selecione uma Marca de Interesse!' }); return; }
     if (isPerdido && !formData.id_motivo_desistencia) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Informe o motivo da desistência!' }); return; }
-=======
-    if (!formData.id_marca) { showAlert('warning', 'Selecione uma Marca de Interesse!'); return; }
-    if (isPerdido && !formData.id_motivo_desistencia) { showAlert('warning', 'Informe o motivo da desistência!'); return; }
->>>>>>> origin/fix/pos-demo
     setIsSaving(true);
 
     try {
@@ -141,11 +132,7 @@ export default function LeadModal({ lead, onClose }) {
       onClose();
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
-<<<<<<< HEAD
       showAlert({ type: 'error', title: 'Erro ao Salvar', message: error.message });
-=======
-      showAlert('error', 'Erro ao salvar lead: ' + error.message);
->>>>>>> origin/fix/pos-demo
     } finally {
       setIsSaving(false);
     }
@@ -361,39 +348,7 @@ export default function LeadModal({ lead, onClose }) {
 
         </motion.div>
       </div>
-<<<<<<< HEAD
       {alertModal}
-=======
-
-      {/* ALERT MODAL */}
-      <AnimatePresence>
-        {alertModal.open && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative bg-[#1a1a1f] border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center"
-            >
-              <div className="text-5xl mb-4">
-                {alertModal.tipo === 'error' ? '❌' : alertModal.tipo === 'success' ? '✅' : '⚠️'}
-              </div>
-              <h3 className="text-lg font-bold text-white mb-2">
-                {alertModal.tipo === 'error' ? 'Erro' : alertModal.tipo === 'success' ? 'Sucesso' : 'Atenção'}
-              </h3>
-              <p className="text-gray-400 mb-6">{alertModal.mensagem}</p>
-              <button
-                onClick={() => setAlertModal(prev => ({ ...prev, open: false }))}
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold"
-              >
-                OK
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
->>>>>>> origin/fix/pos-demo
     </AnimatePresence>
   );
 }
