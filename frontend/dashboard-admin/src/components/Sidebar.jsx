@@ -2,12 +2,28 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
+const IconLeads = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true">
+    <circle cx="12" cy="12" r="8"/>
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+  </svg>
+);
+
+const IconSistema = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true">
+    <rect x="4" y="4" width="16" height="4" rx="2"/>
+    <rect x="4" y="10" width="16" height="4" rx="2"/>
+    <rect x="4" y="16" width="16" height="4" rx="2"/>
+  </svg>
+);
+
 // ─── Definição da navegação por grupos ────────────────────────
 const NAV_GROUPS = [
   {
     label: 'Principal',
     items: [
-      { path: '/dashboard',  icon: '⚡', label: 'Leads',   show: () => true },
+      { path: '/dashboard',  icon: <IconLeads />, label: 'Leads',   show: () => true },
     ],
   },
   {
@@ -29,7 +45,7 @@ const NAV_GROUPS = [
   {
     label: 'Institucional',
     items: [
-      { path: '/leads-sistema', icon: '🚀', label: 'Leads Sistema', show: (a) => a.isGestor() },
+      { path: '/leads-sistema', icon: <IconSistema />, label: 'Leads Sistema', show: (a) => a.isGestor() },
     ],
   },
   {
@@ -108,7 +124,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
                       }
                     `}
                   >
-                    <span className="text-lg leading-none">{item.icon}</span>
+                    <span className="text-lg leading-none flex items-center justify-center">{item.icon}</span>
                     <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
                       {item.label}
                     </span>
