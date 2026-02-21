@@ -25,7 +25,11 @@ export default defineConfig({
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'framer': ['framer-motion'],
+          'query': ['@tanstack/react-query'],
           'supabase': ['@supabase/supabase-js'],
+          'xlsx': ['xlsx'],
+          'charts': ['recharts'],
           'analytics': ['posthog-js'],
         },
       },

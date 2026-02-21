@@ -7,14 +7,14 @@ import {
   XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, Legend, CartesianGrid
 } from 'recharts'
 
-const COLORS = ['#ee7b4d','#f59e0b','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
+const COLORS = ['#10B981','#F97316','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
 const fmtK   = v => v >= 1000000 ? `R$ ${(v/1000000).toFixed(1)}mi` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : `R$ ${Math.round(v)}`
 const fmtFull = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0}).format(v)
 
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#1a1a1f] border border-[#ee7b4d]/20 rounded-xl px-4 py-3 shadow-xl text-xs">
+    <div className="bg-[#0F172A] border border-[#10B981]/20 rounded-xl px-4 py-3 shadow-xl text-xs">
       <p className="text-gray-400 mb-1 font-bold">{label}</p>
       {payload.map((p,i) => (
         <p key={i} style={{color:p.color}} className="font-bold">
@@ -48,7 +48,7 @@ const PERIODOS = [
 
 function StatCard({ label, value, sub, icon, cor }) {
   return (
-    <div className={`bg-[#12121a] border rounded-2xl p-5 flex flex-col gap-1.5 ${cor||'border-white/5'}`}>
+    <div className={`bg-[#1E293B] border rounded-2xl p-5 flex flex-col gap-1.5 ${cor||'border-white/5'}`}>
       <div className="flex items-center justify-between">
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</p>
         <span className="text-xl opacity-50">{icon}</span>
@@ -64,7 +64,7 @@ function RankingTable({ dados, colunas }) {
     <div className="overflow-x-auto rounded-2xl border border-white/5">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-white/5 bg-[#0a0a0b]">
+          <tr className="border-b border-white/5 bg-[#0F172A]">
             {colunas.map((c,i) => (
               <th key={i} className="px-4 py-3 text-left text-[9px] font-black uppercase tracking-wider text-gray-500">{c.label}</th>
             ))}
@@ -72,7 +72,7 @@ function RankingTable({ dados, colunas }) {
         </thead>
         <tbody>
           {dados.map((row, ri) => (
-            <tr key={ri} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${ri===0?'bg-[#ee7b4d]/5':''}`}>
+            <tr key={ri} className={`border-b border-white/5 hover:bg-white/3 transition-colors ${ri===0?'bg-[#10B981]/5':''}`}>
               {colunas.map((c,ci) => (
                 <td key={ci} className="px-4 py-3">
                   {c.render ? c.render(row[c.key], row, ri) : <span className="text-gray-300 text-xs">{row[c.key]}</span>}
@@ -113,10 +113,10 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 print:hidden">
         <motion.div initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }}>
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
-            Central de <span className="text-[#ee7b4d] font-bold">Relatórios</span>
+            Central de <span className="text-[#10B981] font-bold">Relatórios</span>
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">Relatórios Estratégicos e Operacionais</p>
           </div>
         </motion.div>
@@ -125,15 +125,15 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
         {tipoAtivo && (
           <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} className="flex items-center gap-2 flex-wrap">
             <button onClick={onExportCSV}
-              className="flex items-center gap-2 bg-[#12121a] border border-white/10 hover:border-green-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-green-400 transition-all">
+              className="flex items-center gap-2 bg-[#1E293B] border border-white/10 hover:border-green-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-green-400 transition-all">
               📊 CSV
             </button>
             <button onClick={exportPDF}
-              className="flex items-center gap-2 bg-[#12121a] border border-white/10 hover:border-red-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-red-400 transition-all">
+              className="flex items-center gap-2 bg-[#1E293B] border border-white/10 hover:border-red-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-red-400 transition-all">
               📄 PDF
             </button>
             <button onClick={onVoltar}
-              className="flex items-center gap-2 bg-[#ee7b4d] hover:bg-[#d4663a] px-5 py-2.5 rounded-xl text-xs font-black text-black transition-all shadow-lg shadow-[#ee7b4d]/20">
+              className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] px-5 py-2.5 rounded-xl text-xs font-black text-black transition-all shadow-lg shadow-[#10B981]/20">
               ← Voltar
             </button>
           </motion.div>
@@ -142,27 +142,27 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
 
       {/* FILTROS */}
       <div className="px-4 lg:px-10 mb-8 print:hidden">
-        <div className="bg-[#12121a] border border-white/5 rounded-2xl p-4 flex flex-wrap gap-3 items-center">
+        <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-4 flex flex-wrap gap-3 items-center">
           <span className="text-[9px] font-black uppercase tracking-wider text-gray-600">Filtros:</span>
 
           <select value={filtros.periodo} onChange={e => setFiltros(f=>({...f, periodo:e.target.value}))}
-            className="bg-[#0a0a0b] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#ee7b4d]/50 cursor-pointer">
+            className="bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#10B981]/50 cursor-pointer">
             {PERIODOS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
 
           <select value={filtros.marca} onChange={e => setFiltros(f=>({...f, marca:e.target.value}))}
-            className="bg-[#0a0a0b] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#ee7b4d]/50 cursor-pointer">
+            className="bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#10B981]/50 cursor-pointer">
             <option value="todas">Todas as Marcas</option>
             {(filtrosData?.marcas||[]).map(m => <option key={m.id} value={m.id}>{m.emoji} {m.nome}</option>)}
           </select>
 
           <select value={filtros.operador} onChange={e => setFiltros(f=>({...f, operador:e.target.value}))}
-            className="bg-[#0a0a0b] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#ee7b4d]/50 cursor-pointer">
+            className="bg-[#0F172A] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#10B981]/50 cursor-pointer">
             <option value="todos">Todos os Consultores</option>
             {(filtrosData?.operadores||[]).map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
           </select>
 
-          {isLoading && <span className="text-[10px] text-[#ee7b4d] animate-pulse font-black">⏳ Carregando...</span>}
+          {isLoading && <span className="text-[10px] text-[#10B981] animate-pulse font-black">⏳ Carregando...</span>}
 
           {/* KPIs rápidos */}
           <div className="ml-auto flex items-center gap-6">
@@ -175,7 +175,7 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
               <p className="text-[8px] text-gray-600 uppercase font-bold">Convertidos</p>
             </div>
             <div className="text-center">
-              <p className="text-base font-black text-[#ee7b4d]">{d.txConversao||'0.0'}%</p>
+              <p className="text-base font-black text-[#10B981]">{d.txConversao||'0.0'}%</p>
               <p className="text-[8px] text-gray-600 uppercase font-bold">TX Conv.</p>
             </div>
           </div>
@@ -209,7 +209,7 @@ export default function RelatoriosPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             {(d.funil||[]).map((f,i) => (
-              <div key={i} className="bg-[#12121a] border border-white/5 rounded-2xl p-5">
+              <div key={i} className="bg-[#1E293B] border border-white/5 rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold text-gray-400">{f.etapa}</p>
                   <span className="w-3 h-3 rounded-full flex-shrink-0" style={{backgroundColor:f.cor}} />
@@ -224,7 +224,7 @@ export default function RelatoriosPage() {
               </div>
             ))}
           </div>
-          <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+          <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Distribuição Visual do Funil</h4>
             <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -253,7 +253,7 @@ export default function RelatoriosPage() {
             <StatCard label="Score Médio"    value={d.scoreMedio||0}        icon="⚡" sub="De 0 a 100" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Evolução de Conversões</h4>
               <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -273,7 +273,7 @@ export default function RelatoriosPage() {
                 </ResponsiveContainer>
               </div>
             </div>
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Distribuição de Status</h4>
               <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -281,7 +281,7 @@ export default function RelatoriosPage() {
                     <Pie data={(d.funil||[]).filter(f=>f.count>0)} innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="etapa" stroke="none">
                       {(d.funil||[]).filter(f=>f.count>0).map((f,i) => <Cell key={i} fill={f.cor} />)}
                     </Pie>
-                    <ChartTooltip contentStyle={{backgroundColor:'#0a0a0b',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} />
+                    <ChartTooltip contentStyle={{backgroundColor:'#0F172A',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} />
                     <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{color:'#6a6a6f',fontSize:'10px'}}>{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -295,7 +295,7 @@ export default function RelatoriosPage() {
       case 'consultor': return (
         <div className="space-y-6">
           <RankingTable dados={d.porConsultor||[]} colunas={[
-            { key:'_rank',      label:'#',           render:(_,__,i)=><span className={`text-sm font-black ${i===0?'text-[#ee7b4d]':i===1?'text-gray-300':i===2?'text-yellow-600':'text-gray-600'}`}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span> },
+            { key:'_rank',      label:'#',           render:(_,__,i)=><span className={`text-sm font-black ${i===0?'text-[#10B981]':i===1?'text-gray-300':i===2?'text-yellow-600':'text-gray-600'}`}>{i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}º`}</span> },
             { key:'nome',       label:'Consultor',   render:v=><span className="text-white font-bold text-xs">{v}</span> },
             { key:'total',      label:'Leads',       render:v=><span className="text-gray-300 text-xs font-bold">{v}</span> },
             { key:'vendidos',   label:'Convertidos', render:v=><span className="text-green-400 text-xs font-bold">{v}</span> },
@@ -308,9 +308,9 @@ export default function RelatoriosPage() {
                 <span className="text-green-400 text-xs font-bold">{v}%</span>
               </div>
             )},
-            { key:'capital', label:'Capital', render:v=><span className="text-[#ee7b4d] text-xs font-bold">{fmtK(v)}</span> },
+            { key:'capital', label:'Capital', render:v=><span className="text-[#10B981] text-xs font-bold">{fmtK(v)}</span> },
           ]} />
-          <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+          <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Comparativo de Performance</h4>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -338,11 +338,11 @@ export default function RelatoriosPage() {
             { key:'nome',       label:'Marca',       render:v=><span className="text-white font-bold text-xs">{v}</span> },
             { key:'total',      label:'Leads',       render:v=><span className="text-gray-300 text-xs font-bold">{v}</span> },
             { key:'vendidos',   label:'Convertidos', render:v=><span className="text-green-400 text-xs font-bold">{v}</span> },
-            { key:'txConversao',label:'TX Conv.',    render:v=><span className="text-[#ee7b4d] text-xs font-bold">{v}%</span> },
-            { key:'capital',    label:'Capital',     render:v=><span className="text-[#ee7b4d] text-xs font-bold">{fmtK(v)}</span> },
+            { key:'txConversao',label:'TX Conv.',    render:v=><span className="text-[#10B981] text-xs font-bold">{v}%</span> },
+            { key:'capital',    label:'Capital',     render:v=><span className="text-[#10B981] text-xs font-bold">{fmtK(v)}</span> },
           ]} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Leads por Marca</h4>
               <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -350,13 +350,13 @@ export default function RelatoriosPage() {
                     <Pie data={d.porMarca||[]} innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="total" nameKey="nome" stroke="none">
                       {(d.porMarca||[]).map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                     </Pie>
-                    <ChartTooltip contentStyle={{backgroundColor:'#0a0a0b',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} />
+                    <ChartTooltip contentStyle={{backgroundColor:'#0F172A',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} />
                     <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{color:'#6a6a6f',fontSize:'10px'}}>{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Conversão por Marca</h4>
               <div className="h-[240px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -376,15 +376,15 @@ export default function RelatoriosPage() {
       // ── TEMPORAL ───────────────────────────
       case 'temporal': return (
         <div className="space-y-6">
-          <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+          <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Evolução de Leads no Período</h4>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:-10}}>
                   <defs>
                     <linearGradient id="gLt" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#ee7b4d" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#ee7b4d" stopOpacity={0}/>
+                      <stop offset="5%"  stopColor="#10B981" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="gVt" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor="#10b981" stopOpacity={0.2}/>
@@ -395,14 +395,14 @@ export default function RelatoriosPage() {
                   <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                   <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                   <ChartTooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="leads"    name="Leads"       stroke="#ee7b4d" fill="url(#gLt)" strokeWidth={2.5} dot={false} />
+                  <Area type="monotone" dataKey="leads"    name="Leads"       stroke="#10B981" fill="url(#gLt)" strokeWidth={2.5} dot={false} />
                   <Area type="monotone" dataKey="vendidos" name="Convertidos" stroke="#10b981" fill="url(#gVt)" strokeWidth={2}   dot={false} strokeDasharray="5 3" />
                   <Legend verticalAlign="top" height={28} formatter={v=><span style={{color:'#9ca3af',fontSize:'10px'}}>{v}</span>} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
-          <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+          <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Capital Convertido por Dia</h4>
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -411,7 +411,7 @@ export default function RelatoriosPage() {
                   <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                   <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} tickFormatter={v=>fmtK(v)} />
                   <ChartTooltip content={<CustomTooltip />} />
-                  <Bar dataKey="capital" name="Capital" fill="#ee7b4d" radius={[6,6,0,0]} barSize={16} />
+                  <Bar dataKey="capital" name="Capital" fill="#10B981" radius={[6,6,0,0]} barSize={16} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -423,7 +423,7 @@ export default function RelatoriosPage() {
       case 'fonte': return (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Leads por Fonte</h4>
               <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -431,7 +431,7 @@ export default function RelatoriosPage() {
                     <Pie data={d.porFonte||[]} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" nameKey="name" stroke="none">
                       {(d.porFonte||[]).map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                     </Pie>
-                    <ChartTooltip contentStyle={{backgroundColor:'#0a0a0b',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} />
+                    <ChartTooltip contentStyle={{backgroundColor:'#0F172A',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} />
                     <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{color:'#6a6a6f',fontSize:'10px'}}>{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
@@ -439,10 +439,10 @@ export default function RelatoriosPage() {
             </div>
             <div className="space-y-3">
               {(d.porFonte||[]).map((f,i) => (
-                <div key={i} className="bg-[#12121a] border border-white/5 rounded-xl px-4 py-3">
+                <div key={i} className="bg-[#1E293B] border border-white/5 rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-bold text-white">{f.name}</span>
-                    <span className="text-xs font-black text-[#ee7b4d]">{f.value} leads</span>
+                    <span className="text-xs font-black text-[#10B981]">{f.value} leads</span>
                   </div>
                   <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{width:`${d.total>0?(f.value/d.total*100).toFixed(0):0}%`, backgroundColor:COLORS[i%COLORS.length]}} />
@@ -464,7 +464,7 @@ export default function RelatoriosPage() {
             <StatCard label="Ciclo até Perda" value={`${d.cicloMedio||0}d`}      icon="⏱️" sub="Média até desistir"                   cor="border-orange-500/20" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Principais Motivos de Perda</h4>
               <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -481,7 +481,7 @@ export default function RelatoriosPage() {
             <div className="space-y-3">
               <h4 className="text-sm font-bold text-white">Ranking de Motivos</h4>
               {(d.motivosPerda||[]).map((m,i) => (
-                <div key={i} className="bg-[#12121a] border border-white/5 rounded-xl px-4 py-3">
+                <div key={i} className="bg-[#1E293B] border border-white/5 rounded-xl px-4 py-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-xs font-bold text-white">{m.motivo}</span>
                     <span className="text-xs font-black text-red-400">{m.valor}x</span>
@@ -501,7 +501,7 @@ export default function RelatoriosPage() {
       case 'regiao': return (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Leads por Estado</h4>
               <div className="h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -519,14 +519,14 @@ export default function RelatoriosPage() {
             <div className="space-y-2">
               <h4 className="text-sm font-bold text-white mb-3">Top Estados</h4>
               {(d.porRegiao||[]).map((r,i) => (
-                <div key={i} className="flex items-center gap-3 bg-[#12121a] border border-white/5 rounded-xl px-4 py-2.5">
+                <div key={i} className="flex items-center gap-3 bg-[#1E293B] border border-white/5 rounded-xl px-4 py-2.5">
                   <span className="text-base font-black text-gray-600 w-6 text-center">{i+1}</span>
                   <span className="flex-1 text-xs font-bold text-white">{r.name}</span>
                   <div className="flex items-center gap-2">
                     <div className="w-20 bg-white/5 rounded-full h-1.5 overflow-hidden">
                       <div className="h-full rounded-full" style={{width:`${d.total>0?(r.value/d.total*100).toFixed(0):0}%`, backgroundColor:COLORS[i%COLORS.length]}} />
                     </div>
-                    <span className="text-xs font-black text-[#ee7b4d] w-8 text-right">{r.value}</span>
+                    <span className="text-xs font-black text-[#10B981] w-8 text-right">{r.value}</span>
                   </div>
                 </div>
               ))}
@@ -542,9 +542,9 @@ export default function RelatoriosPage() {
             <StatCard label="Score Médio"  value={d.scoreMedio||0}   icon="⚡" sub="De 0 a 100" />
             <StatCard label="Total Leads"  value={d.total||0}         icon="🎯" />
             <StatCard label="Convertidos"  value={d.vendidos||0}      icon="✅" cor="border-green-500/20" />
-            <StatCard label="TX Conversão" value={`${d.txConversao||0}%`} icon="📈" cor="border-[#ee7b4d]/20" />
+            <StatCard label="TX Conversão" value={`${d.txConversao||0}%`} icon="📈" cor="border-[#10B981]/20" />
           </div>
-          <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+          <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Distribuição de Score</h4>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -554,7 +554,7 @@ export default function RelatoriosPage() {
                   <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                   <ChartTooltip content={<CustomTooltip />} />
                   <Bar dataKey="count" name="Leads" radius={[8,8,0,0]} barSize={44}>
-                    {(d.scoreDist||[]).map((_,i)=><Cell key={i} fill={['#3b82f6','#f59e0b','#ee7b4d','#ef4444','#dc2626'][i]} />)}
+                    {(d.scoreDist||[]).map((_,i)=><Cell key={i} fill={['#3b82f6','#F97316','#10B981','#ef4444','#dc2626'][i]} />)}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -567,13 +567,13 @@ export default function RelatoriosPage() {
       case 'capital': return (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Capital Total"      value={fmtK(d.capitalTotal||0)}      icon="💰" sub="Todos os leads"           cor="border-[#ee7b4d]/20" />
+            <StatCard label="Capital Total"      value={fmtK(d.capitalTotal||0)}      icon="💰" sub="Todos os leads"           cor="border-[#10B981]/20" />
             <StatCard label="Capital Convertido" value={fmtK(d.capitalConvertido||0)} icon="✅" sub={`${d.vendidos||0} conversões`} cor="border-green-500/20" />
             <StatCard label="Capital Pipeline"   value={fmtK(d.capitalPipeline||0)}   icon="🤝" sub="Em negociação"           cor="border-blue-500/20" />
             <StatCard label="Capital Perdido"    value={fmtK(d.capitalPerdido||0)}    icon="💔" sub={`${d.perdidos||0} perdidos`} cor="border-red-500/20" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Distribuição de Capital</h4>
               <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -587,28 +587,28 @@ export default function RelatoriosPage() {
                       <Cell fill="#3b82f6" />
                       <Cell fill="#ef4444" />
                     </Pie>
-                    <ChartTooltip contentStyle={{backgroundColor:'#0a0a0b',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} formatter={v=>fmtFull(v)} />
+                    <ChartTooltip contentStyle={{backgroundColor:'#0F172A',border:'1px solid rgba(238,123,77,0.2)',borderRadius:'12px'}} formatter={v=>fmtFull(v)} />
                     <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{color:'#6a6a6f',fontSize:'11px'}}>{v}</span>} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>
-            <div className="bg-[#12121a] border border-white/5 rounded-2xl p-6">
+            <div className="bg-[#1E293B] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Capital Diário</h4>
               <div className="h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:10}}>
                     <defs>
                       <linearGradient id="gCap" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#ee7b4d" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#ee7b4d" stopOpacity={0}/>
+                        <stop offset="5%"  stopColor="#10B981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                     <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                     <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} tickFormatter={v=>fmtK(v)} />
                     <ChartTooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="capital" name="Capital" stroke="#ee7b4d" fill="url(#gCap)" strokeWidth={2.5} dot={false} />
+                    <Area type="monotone" dataKey="capital" name="Capital" stroke="#10B981" fill="url(#gCap)" strokeWidth={2.5} dot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -625,7 +625,7 @@ export default function RelatoriosPage() {
   // RENDER PRINCIPAL
   // ════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32 print:bg-white print:text-black">
+    <div className="min-h-screen bg-[#0F172A] text-white pb-32 print:bg-white print:text-black">
 
       <PageHeader
         tipoAtivo={tipoAtivo}

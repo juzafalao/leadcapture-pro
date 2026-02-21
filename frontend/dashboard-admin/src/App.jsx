@@ -32,8 +32,8 @@ const queryClient = new QueryClient({
 });
 
 const PageFallback = () => (
-  <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-    <span className="text-[#ee7b4d] font-black tracking-widest animate-pulse">CARREGANDO...</span>
+  <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+    <span className="text-[#10B981] font-black tracking-widest animate-pulse">CARREGANDO...</span>
   </div>
 );
 
@@ -41,7 +41,7 @@ function PrivateRoute({ children, allowedRoles }) {
   const { usuario, loading, isAuthenticated } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
         <div className="text-6xl animate-pulse">⏳</div>
       </div>
     );
@@ -92,22 +92,25 @@ function AppRoutes() {
 function AuthenticatedLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
-    <div className="flex bg-[#0a0a0b] min-h-screen font-sans text-white">
+    <div className="flex bg-[#0F172A] min-h-screen font-sans text-white">
       {import.meta.env.DEV && <DebugInfo />}
       <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
       <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-white/5 py-6 text-center bg-[#0a0a0b]">
+        <footer className="border-t border-white/5 py-6 text-center bg-[#0F172A]">
           <div className="flex items-center justify-center gap-3 mb-2">
-            <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="10,20 90,20 55,50 90,80 10,80 45,50" fill="white"/>
-              <polygon points="30,55 70,55 90,80 10,80" fill="#22c55e"/>
+            <svg width="28" height="28" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"
+              style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.4))' }}>
+              <rect width="56" height="56" rx="14" fill="#0B1220"/>
+              <line x1="12" y1="16" x2="44" y2="16" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="44" y1="16" x2="12" y2="40" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="12" y1="40" x2="44" y2="40" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
             </svg>
-            <span className="text-white font-black text-sm tracking-wider">ZAFALÃO TECH</span>
+            <span className="text-[#F8FAFC] font-black text-sm tracking-wider">ZAFALÃO TECH</span>
           </div>
           <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
-            © 2026 LeadCapture Pro · Powered by <span className="text-green-500">Zafalão Tech</span>
+            © 2026 LeadCapture Pro · Powered by <span className="text-[#10B981]">Zafalão Tech</span>
           </p>
         </footer>
       </main>

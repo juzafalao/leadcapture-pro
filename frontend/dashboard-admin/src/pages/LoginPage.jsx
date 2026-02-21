@@ -41,25 +41,35 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <span className="text-[#ee7b4d] font-black tracking-widest animate-pulse">CARREGANDO...</span>
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <span className="text-[#10B981] font-black tracking-widest animate-pulse">CARREGANDO...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center p-6">
+    <div
+      className="min-h-screen flex items-center justify-center p-6"
+      style={{ background: 'radial-gradient(ellipse at center, rgba(16,185,129,0.08) 0%, #0F172A 70%)' }}
+    >
       <div className="w-full max-w-md">
         
         {/* Logo e Título */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-[#ee7b4d] rounded-xl flex items-center justify-center font-black text-xl text-black">
-              LC
-            </div>
+            <svg width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg"
+              style={{ filter: 'drop-shadow(0 0 12px rgba(16,185,129,0.5))' }}>
+              <rect width="56" height="56" rx="14" fill="#0B1220"/>
+              <line x1="12" y1="16" x2="44" y2="16" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="44" y1="16" x2="12" y2="40" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="12" y1="40" x2="44" y2="40" stroke="#10B981" strokeWidth="3" strokeLinecap="round"/>
+              <line x1="4" y1="16" x2="10" y2="16" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+              <line x1="4" y1="28" x2="10" y2="28" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" opacity="0.3"/>
+              <line x1="4" y1="40" x2="10" y2="40" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" opacity="0.4"/>
+            </svg>
           </div>
-          <h1 className="text-3xl font-light text-white mb-2">
-            Lead<span className="text-[#ee7b4d] font-bold">Capture</span> Pro
+          <h1 className="text-3xl font-light text-[#F8FAFC] mb-2">
+            LeadCapture <span className="text-[#10B981] font-bold">Pro</span>
           </h1>
           <p className="text-xs text-[#4a4a4f] tracking-wider">Acesse sua conta</p>
         </div>
@@ -67,7 +77,7 @@ export default function LoginPage() {
         {/* Form - APENAS LINHAS */}
         <form onSubmit={handleSubmit} className="space-y-8">
           
-          {/* Email - Apenas linha laranja */}
+          {/* Email */}
           <div>
             <input
               type="email"
@@ -76,11 +86,11 @@ export default function LoginPage() {
               placeholder="Email"
               disabled={isLogging}
               autoComplete="email"
-              className="w-full bg-transparent border-b-2 border-[#ee7b4d] px-0 py-3 text-white placeholder:text-[#6a6a6f] focus:outline-none focus:border-[#ee7b4d] transition-colors disabled:opacity-50"
+              className="w-full bg-transparent border-b-2 border-[#10B981] px-0 py-3 text-[#F8FAFC] placeholder:text-[#6a6a6f] focus:outline-none focus:border-[#10B981] transition-colors disabled:opacity-50"
             />
           </div>
 
-          {/* Senha - Apenas linha laranja */}
+          {/* Senha */}
           <div>
             <input
               type="password"
@@ -89,20 +99,20 @@ export default function LoginPage() {
               placeholder="Senha"
               disabled={isLogging}
               autoComplete="current-password"
-              className="w-full bg-transparent border-b-2 border-[#ee7b4d] px-0 py-3 text-white placeholder:text-[#6a6a6f] focus:outline-none focus:border-[#ee7b4d] transition-colors disabled:opacity-50"
+              className="w-full bg-transparent border-b-2 border-[#10B981] px-0 py-3 text-[#F8FAFC] placeholder:text-[#6a6a6f] focus:outline-none focus:border-[#10B981] transition-colors disabled:opacity-50"
             />
           </div>
 
-          {/* Error - Apenas texto, sem caixa */}
+          {/* Error */}
           {error && (
             <p className="text-[#ef4444] text-sm text-center">{error}</p>
           )}
 
-          {/* Botão - Simples e clean */}
+          {/* Botão */}
           <button
             type="submit"
             disabled={isLogging}
-            className="w-full bg-[#ee7b4d] text-black font-bold py-3.5 rounded-lg hover:bg-[#d4663a] disabled:opacity-50 transition-all"
+            className="w-full bg-[#10B981] text-black font-bold py-3.5 rounded-lg hover:bg-[#059669] disabled:opacity-50 transition-all"
           >
             {isLogging ? 'Entrando...' : 'Entrar'}
           </button>
@@ -110,8 +120,8 @@ export default function LoginPage() {
         </form>
 
         {/* Footer */}
-        <p className="text-center text-[9px] text-[#4a4a4f] mt-16 uppercase tracking-[0.3em]">
-          © 2026 LeadCapture Pro
+        <p className="text-center text-[9px] text-[#CBD5E1]/40 mt-16 uppercase tracking-widest">
+          Desenvolvido por Zafalão Tech
         </p>
       </div>
     </div>
