@@ -9,6 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
 import * as XLSX from 'xlsx';
+import Toast from '../components/shared/Toast.jsx';
+import { SkeletonCard, SkeletonRow } from '../components/shared/SkeletonLoader.jsx';
+import { useToast } from '../hooks/useToast.js';
 
 const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
 const PAGE_SIZE = 20;
@@ -32,43 +35,11 @@ function formatDate(dt) {
   });
 }
 
-// ── Alert Modal ──────────────────────────────────────────────
-function AlertModal({ tipo, mensagem, onClose }) {
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="relative bg-[#1a1a1f] border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center"
-      >
-        <div className="text-5xl mb-4">
-          {tipo === 'error' ? '❌' : tipo === 'success' ? '✅' : '⚠️'}
-        </div>
-        <h3 className="text-lg font-bold text-white mb-2">
-          {tipo === 'error' ? 'Erro' : tipo === 'success' ? 'Sucesso' : 'Atenção'}
-        </h3>
-        <p className="text-gray-400 mb-6">{mensagem}</p>
-        <button
-          onClick={onClose}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold"
-        >
-          OK
-        </button>
-      </motion.div>
-    </div>
-  );
-}
-
 // ── Modal de detalhes ────────────────────────────────────────
-function ProspectModal({ prospect, onClose, onUpdate }) {
+function ProspectModal({ prospect, onClose, onUpdate, toast }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
   const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
-  const [alertModal, setAlertModal] = useState({ open: false, tipo: 'warning', mensagem: '' });
-
-  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   if (!prospect) return null;
 
@@ -82,10 +53,11 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
     setSaving(false);
     if (error) {
       console.error('Erro ao atualizar prospect:', error);
-      showAlert('error', 'Erro ao salvar: ' + error.message);
+      toast.error('Erro ao salvar: ' + error.message);
       return;
     }
-    showAlert('success', 'Lead atualizado com sucesso!');
+    toast.success('Lead atualizado com sucesso!');
+    onUpdate();
   };
 
   return (
@@ -220,20 +192,6 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
           </div>
         </motion.div>
       </motion.div>
-
-      {/* ALERT MODAL */}
-      <AnimatePresence>
-        {alertModal.open && (
-          <AlertModal
-            tipo={alertModal.tipo}
-            mensagem={alertModal.mensagem}
-            onClose={() => {
-              setAlertModal(prev => ({ ...prev, open: false }));
-              if (alertModal.tipo === 'success') onUpdate();
-            }}
-          />
-        )}
-      </AnimatePresence>
     </AnimatePresence>
   );
 }
@@ -241,19 +199,19 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
 // ── Página principal ─────────────────────────────────────────
 export default function LeadsSistemaPage() {
   const { usuario } = useAuth();
+  const { toasts, toast } = useToast();
   const [prospects, setProspects] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [busca, setBusca]         = useState('');
   const [buscaInput, setBuscaInput] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [selected, setSelected]   = useState(null);
   const [page, setPage] = useState(1);
   const [exportando, setExportando] = useState(false);
-  const [alertModal, setAlertModal] = useState({ open: false, tipo: 'warning', mensagem: '' });
   const debounceRef = useRef(null);
-
-  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   const handleBuscaChange = useCallback((value) => {
     setBuscaInput(value);
@@ -285,8 +243,9 @@ export default function LeadsSistemaPage() {
     setPage(1);
   }, [prospects, busca, filtroStatus]);
 
-  const fetchProspects = async () => {
-    setLoading(true);
+  const fetchProspects = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     const { data, error } = await supabase
       .from('leads_sistema')
       .select('*')
@@ -296,17 +255,20 @@ export default function LeadsSistemaPage() {
       setProspects(data);
       setFiltrados(data);
     }
-    setLoading(false);
+    const now = new Date();
+    setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }));
+    if (isRefresh) setRefreshing(false);
+    else setLoading(false);
   };
 
   const handleUpdate = () => {
     setSelected(null);
-    fetchProspects();
+    fetchProspects(true);
   };
 
   const exportarParaExcel = async () => {
     if (filtrados.length === 0) {
-      showAlert('warning', 'Nenhum lead para exportar');
+      toast.warning('Nenhum lead para exportar');
       return;
     }
     setExportando(true);
@@ -335,10 +297,15 @@ export default function LeadsSistemaPage() {
       const nomeArquivo = `leads-sistema-${dataAtual}.xlsx`;
       XLSX.writeFile(workbook, nomeArquivo);
 
-      showAlert('success', `${filtrados.length} leads exportados para ${nomeArquivo}`);
+      console.log('📊 DEBUG Export:', {
+        total_leads: filtrados.length,
+        campos: Object.keys(dadosExport[0] || {})
+      });
+
+      toast.success(`${filtrados.length} leads exportados para ${nomeArquivo}`);
     } catch (error) {
       console.error('❌ Erro ao exportar:', error);
-      showAlert('error', 'Erro ao exportar planilha');
+      toast.error('Erro ao exportar planilha');
     } finally {
       setExportando(false);
     }
@@ -366,20 +333,44 @@ export default function LeadsSistemaPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          className="text-6xl"
-        >
-          ⏳
-        </motion.div>
+      <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+        <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
+          <div className="w-64 h-10 bg-white/5 rounded-2xl animate-pulse mb-3" />
+          <div className="w-40 h-3 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="px-4 lg:px-10 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        </div>
+        <div className="px-4 lg:px-10">
+          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Prospect</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Contato</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">Empresa</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Captado</th>
+                    <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...Array(8)].map((_, i) => <SkeletonRow key={i} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+      <Toast toasts={toasts} />
 
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
@@ -389,11 +380,28 @@ export default function LeadsSistemaPage() {
             <h1 className="text-2xl lg:text-4xl font-light text-white">
               Prospects <span className="text-[#ee7b4d] font-bold">LeadCapture Pro</span>
             </h1>
+            <button
+              onClick={() => fetchProspects(true)}
+              disabled={refreshing}
+              title="Atualizar dados"
+              className="ml-2 text-xl hover:scale-110 transition-transform disabled:opacity-50"
+            >
+              <motion.span
+                animate={refreshing ? { rotate: 360 } : {}}
+                transition={refreshing ? { duration: 1, repeat: Infinity, ease: 'linear' } : {}}
+                style={{ display: 'inline-block' }}
+              >
+                🔄
+              </motion.span>
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Interessados no produto · Desenvolvido por Zafalão Tech
+              {lastUpdated && (
+                <span className="ml-2 text-gray-700">· Atualizado às {lastUpdated}</span>
+              )}
             </p>
           </div>
         </motion.div>
@@ -429,7 +437,7 @@ export default function LeadsSistemaPage() {
               <div className="text-2xl font-black text-white">
                 {kpi.value}
               </div>
-              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}>
+              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}>  
                 {kpi.label}
               </div>
             </motion.button>
@@ -663,19 +671,9 @@ export default function LeadsSistemaPage() {
           prospect={selected}
           onClose={() => setSelected(null)}
           onUpdate={handleUpdate}
+          toast={toast}
         />
       )}
-
-      {/* ALERT MODAL */}
-      <AnimatePresence>
-        {alertModal.open && (
-          <AlertModal
-            tipo={alertModal.tipo}
-            mensagem={alertModal.mensagem}
-            onClose={() => setAlertModal(prev => ({ ...prev, open: false }))}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
