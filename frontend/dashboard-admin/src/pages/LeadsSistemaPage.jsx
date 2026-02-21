@@ -9,6 +9,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
 import * as XLSX from 'xlsx';
+import Toast from '../components/shared/Toast.jsx';
+import { SkeletonCard, SkeletonRow } from '../components/shared/SkeletonLoader.jsx';
+import { useToast } from '../hooks/useToast.js';
 
 const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
 const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
@@ -33,7 +36,7 @@ function formatDate(dt) {
 }
 
 // ── Modal de detalhes ────────────────────────────────────────
-function ProspectModal({ prospect, onClose, onUpdate }) {
+function ProspectModal({ prospect, onClose, onUpdate, toast }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
   const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
@@ -57,10 +60,10 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
     setSaving(false);
     if (error) {
       console.error('Erro ao atualizar prospect:', error);
-      alert('❌ Erro ao salvar: ' + error.message);
+      toast.error('Erro ao salvar: ' + error.message);
       return;
     }
-    alert("✅ Lead atualizado com sucesso!");
+    toast.success('Lead atualizado com sucesso!');
     onUpdate();
   };
 
@@ -203,9 +206,12 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
 // ── Página principal ─────────────────────────────────────────
 export default function LeadsSistemaPage() {
   const { usuario } = useAuth();
+  const { toasts, toast } = useToast();
   const [prospects, setProspects] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [busca, setBusca]         = useState('');
   const [buscaInput, setBuscaInput] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -244,8 +250,9 @@ export default function LeadsSistemaPage() {
     setPage(1); // 🆕 RESETAR PÁGINA QUANDO FILTROS MUDAM
   }, [prospects, busca, filtroStatus]);
 
-  const fetchProspects = async () => {
-    setLoading(true);
+  const fetchProspects = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
     const { data, error } = await supabase
       .from('leads_sistema')
       .select('*')
@@ -255,17 +262,20 @@ export default function LeadsSistemaPage() {
       setProspects(data);
       setFiltrados(data);
     }
-    setLoading(false);
+    const now = new Date();
+    setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }));
+    if (isRefresh) setRefreshing(false);
+    else setLoading(false);
   };
 
   const handleUpdate = () => {
     setSelected(null);
-    fetchProspects();
+    fetchProspects(true);
   };
 
   const exportarParaExcel = async () => {
     if (filtrados.length === 0) {
-      alert('⚠️ Nenhum lead para exportar');
+      toast.warning('Nenhum lead para exportar');
       return;
     }
     setExportando(true);
@@ -299,10 +309,10 @@ export default function LeadsSistemaPage() {
         campos: Object.keys(dadosExport[0] || {})
       });
 
-      alert(`✅ ${filtrados.length} leads exportados para ${nomeArquivo}`);
+      toast.success(`${filtrados.length} leads exportados para ${nomeArquivo}`);
     } catch (error) {
       console.error('❌ Erro ao exportar:', error);
-      alert('❌ Erro ao exportar planilha');
+      toast.error('Erro ao exportar planilha');
     } finally {
       setExportando(false);
     }
@@ -332,20 +342,44 @@ export default function LeadsSistemaPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
-          className="text-6xl"
-        >
-          ⏳
-        </motion.div>
+      <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+        <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
+          <div className="w-64 h-10 bg-white/5 rounded-2xl animate-pulse mb-3" />
+          <div className="w-40 h-3 bg-white/5 rounded animate-pulse" />
+        </div>
+        <div className="px-4 lg:px-10 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        </div>
+        <div className="px-4 lg:px-10">
+          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-white/5">
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Prospect</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Contato</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">Empresa</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Captado</th>
+                    <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...Array(8)].map((_, i) => <SkeletonRow key={i} />)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+      <Toast toasts={toasts} />
 
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
@@ -355,11 +389,28 @@ export default function LeadsSistemaPage() {
             <h1 className="text-2xl lg:text-4xl font-light text-white">
               Prospects <span className="text-[#ee7b4d] font-bold">LeadCapture Pro</span>
             </h1>
+            <button
+              onClick={() => fetchProspects(true)}
+              disabled={refreshing}
+              title="Atualizar dados"
+              className="ml-2 text-xl hover:scale-110 transition-transform disabled:opacity-50"
+            >
+              <motion.span
+                animate={refreshing ? { rotate: 360 } : {}}
+                transition={refreshing ? { duration: 1, repeat: Infinity, ease: 'linear' } : {}}
+                style={{ display: 'inline-block' }}
+              >
+                🔄
+              </motion.span>
+            </button>
           </div>
           <div className="flex items-center gap-3">
             <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Interessados no produto · Desenvolvido por Zafalão Tech
+              {lastUpdated && (
+                <span className="ml-2 text-gray-700">· Atualizado às {lastUpdated}</span>
+              )}
             </p>
           </div>
         </motion.div>
@@ -651,6 +702,7 @@ export default function LeadsSistemaPage() {
           prospect={selected}
           onClose={() => setSelected(null)}
           onUpdate={handleUpdate}
+          toast={toast}
         />
       )}
     </div>
