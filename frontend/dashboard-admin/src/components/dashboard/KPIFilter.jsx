@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 export default function KPIFilter({ kpis, kpiAtivo, setKpiAtivo }) {
   const kpiOptions = [
-    { id: 'All',  label: 'Total',  value: kpis.total, icon: '📊', color: '#ee7b4d', textColor: 'text-[#ee7b4d]',  bg: 'bg-[#ee7b4d]/10',  border: 'border-[#ee7b4d]/30' },
+    { id: 'All',  label: 'Total',  value: kpis.total, icon: '📊', color: '#10B981', textColor: 'text-[#10B981]',  bg: 'bg-[#10B981]/10',  border: 'border-[#10B981]/30' },
     { id: 'Hot',  label: 'Hot',   value: kpis.hot,   icon: '🔥', color: '#ef4444', textColor: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/30'   },
     { id: 'Warm', label: 'Warm',  value: kpis.warm,  icon: '🌤️', color: '#eab308', textColor: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
     { id: 'Cold', label: 'Cold',  value: kpis.cold,  icon: '❄️', color: '#3b82f6', textColor: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30'  },
@@ -29,7 +29,7 @@ export default function KPIFilter({ kpis, kpiAtivo, setKpiAtivo }) {
               border transition-all
               ${isActive
                 ? kpi.bg + ' ' + kpi.border + ' shadow-lg'
-                : 'bg-[#12121a] border-white/5 hover:border-white/10'
+                : 'bg-[#1E293B] border-white/5 hover:border-white/10'
               }
             `}
           >
@@ -71,7 +71,7 @@ export default function KPIFilter({ kpis, kpiAtivo, setKpiAtivo }) {
                   initial={{ width: 0 }}
                   animate={{ width: '100%' }}
                   transition={{ duration: 0.8, ease: "easeOut" }}
-                  className="h-full rounded-full bg-[#ee7b4d]"
+                  className="h-full rounded-full bg-[#10B981]"
                 />
               </div>
             )}

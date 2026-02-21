@@ -30,12 +30,12 @@ export default function FAB({ onClick }) {
         lg:h-auto
         lg:px-6
         lg:py-4
-        bg-[#ee7b4d]
-        hover:bg-[#d4663a]
+        bg-[#10B981]
+        hover:bg-[#059669]
         text-black
         rounded-full
         shadow-2xl
-        shadow-[#ee7b4d]/50
+        shadow-[#10B981]/50
         flex
         items-center
         justify-center
