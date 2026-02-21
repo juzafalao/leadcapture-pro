@@ -9,8 +9,8 @@ export function useMarcas(tenantId) {
         .from('marcas')
         .select('*')
         .eq('tenant_id', tenantId)
-        .eq('active', true)
-        .order('ordem', { ascending: true })
+        .eq('ativo', true)
+        .order('nome', { ascending: true })
       if (error) throw error
       return data ?? []
     },
@@ -22,15 +22,9 @@ export function useCreateMarca(tenantId) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (novaMarca) => {
-      const { data: last } = await supabase
-        .from('marcas')
-        .select('ordem')
-        .eq('tenant_id', tenantId)
-        .order('ordem', { ascending: false })
-        .limit(1).maybeSingle()
       const { data, error } = await supabase
         .from('marcas')
-        .insert({ tenant_id: tenantId, ...novaMarca, ordem: (last?.ordem || 0) + 1 })
+        .insert({ tenant_id: tenantId, ...novaMarca, ativo: true })
         .select().single()
       if (error) throw error
       return data

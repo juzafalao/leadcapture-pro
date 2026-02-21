@@ -38,7 +38,7 @@ export default function UsuariosPage() {
     try {
       const { data, error } = await supabase
         .from('usuarios')
-        .select('id, nome, email, role, status, ativo, tenant_id, created_at')
+        .select('id, nome, email, role, active, tenant_id, created_at')
         .eq('tenant_id', usuario.tenant_id)
         .order('created_at', { ascending: false })
         .limit(500);

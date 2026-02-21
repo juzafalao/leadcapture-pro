@@ -33,20 +33,14 @@ export default function MarcasPage() {
 
     const { data, error } = await supabase
       .from('marcas')
-      .select(`
-        *,
-        segmentos (
-          id,
-          nome,
-          emoji
-        ),
-        leads (id)
-      `)
+      .select('*')
       .eq('tenant_id', usuario.tenant_id)
       .order('created_at', { ascending: false });
 
     if (!error && data) {
       setMarcas(data);
+    } else if (error) {
+      alert('Erro ao buscar marcas: ' + error.message);
     }
     setLoading(false);
   };

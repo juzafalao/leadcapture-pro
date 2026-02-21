@@ -13,9 +13,8 @@ const NAV_GROUPS = [
   {
     label: 'Inteligência',
     items: [
-      { path: '/inteligencia', icon: '🧠', label: 'BI',        show: (a) => a.isGestor() },
-      { path: '/analytics',    icon: '📊', label: 'Analytics', show: (a) => a.isGestor() },
-      { path: '/relatorios',   icon: '📋', label: 'Relatórios',show: (a) => a.isGestor() },
+      { path: '/analytics',  icon: '📊', label: 'Analytics',  show: (a) => a.isGestor() },
+      { path: '/relatorios', icon: '📋', label: 'Relatórios', show: (a) => a.isGestor() },
     ],
   },
   {

@@ -1,70 +1,21 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from 'recharts';
 
 export default function KPIFilter({ kpis, kpiAtivo, setKpiAtivo }) {
   const kpiOptions = [
-    {
-      id: 'All',
-      label: 'Todos',
-      value: kpis.total,
-      icon: '📊',
-      color: 'text-white',
-      bg: 'bg-white/5',
-      border: 'border-white/10',
-      activeBg: 'bg-[#ee7b4d]/20',
-      activeText: 'text-white',
-      activeBorder: 'border-[#ee7b4d]/40',
-      showChart: true
-    },
-    {
-      id: 'Hot',
-      label: 'Hot',
-      value: kpis.hot,
-      icon: '🔥',
-      color: 'text-red-500',
-      bg: 'bg-red-500/10',
-      border: 'border-red-500/30',
-      activeBg: 'bg-red-500/20',
-      activeText: 'text-white',
-      activeBorder: 'border-red-500/40'
-    },
-    {
-      id: 'Warm',
-      label: 'Warm',
-      value: kpis.warm,
-      icon: '🌤️',
-      color: 'text-yellow-500',
-      bg: 'bg-yellow-500/10',
-      border: 'border-yellow-500/30',
-      activeBg: 'bg-yellow-500/20',
-      activeText: 'text-black',
-      activeBorder: 'border-yellow-500/40'
-    },
-    {
-      id: 'Cold',
-      label: 'Cold',
-      value: kpis.cold,
-      icon: '❄️',
-      color: 'text-blue-500',
-      bg: 'bg-blue-500/10',
-      border: 'border-blue-500/30',
-      activeBg: 'bg-blue-500/20',
-      activeText: 'text-white',
-      activeBorder: 'border-blue-500/40'
-    }
+    { id: 'All',  label: 'Total',  value: kpis.total, icon: '📊', color: '#ee7b4d', textColor: 'text-[#ee7b4d]',  bg: 'bg-[#ee7b4d]/10',  border: 'border-[#ee7b4d]/30' },
+    { id: 'Hot',  label: 'Hot',   value: kpis.hot,   icon: '🔥', color: '#ef4444', textColor: 'text-red-400',    bg: 'bg-red-500/10',    border: 'border-red-500/30'   },
+    { id: 'Warm', label: 'Warm',  value: kpis.warm,  icon: '🌤️', color: '#eab308', textColor: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+    { id: 'Cold', label: 'Cold',  value: kpis.cold,  icon: '❄️', color: '#3b82f6', textColor: 'text-blue-400',   bg: 'bg-blue-500/10',   border: 'border-blue-500/30'  },
   ];
+
+  const total = kpis.total || 1;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
       {kpiOptions.map((kpi) => {
         const isActive = kpiAtivo === kpi.id;
-        
-        const chartData = [{
-          name: kpi.label,
-          value: kpi.value,
-          fill: '#ee7b4d'
-        }];
+        const pct = Math.round((kpi.value / total) * 100) || 0;
 
         return (
           <motion.button
@@ -73,86 +24,63 @@ export default function KPIFilter({ kpis, kpiAtivo, setKpiAtivo }) {
             whileTap={{ scale: 0.98 }}
             onClick={() => setKpiAtivo(kpi.id)}
             className={`
-              relative
-              rounded-2xl
-              p-4 lg:p-6
-              border
-              transition-all
-              ${isActive 
-                ? `${kpi.activeBg} ${kpi.activeBorder} shadow-lg shadow-[#ee7b4d]/10` 
-                : `${kpi.bg} ${kpi.border} hover:border-opacity-50`
+              relative text-left
+              rounded-2xl p-4 lg:p-5
+              border transition-all
+              ${isActive
+                ? kpi.bg + ' ' + kpi.border + ' shadow-lg'
+                : 'bg-[#12121a] border-white/5 hover:border-white/10'
               }
             `}
           >
-            {kpi.showChart && isActive ? (
-              <div className="relative mb-2">
-                <div className="h-28 lg:h-32">
-                  <ResponsiveContainer width="100%" height={200}>
-                    <RadialBarChart
-                      innerRadius="60%"
-                      outerRadius="90%"
-                      data={chartData}
-                      startAngle={90}
-                      endAngle={-270}
-                    >
-                      <PolarAngleAxis
-                        type="number"
-                        domain={[0, Math.max(kpi.value * 1.2, 100)]}
-                        angleAxisId={0}
-                        tick={false}
-                      />
-                      <RadialBar
-                        background
-                        dataKey="value"
-                        cornerRadius={10}
-                        fill="#ee7b4d"
-                      />
-                    </RadialBarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <span className="text-2xl lg:text-3xl font-black text-white block">
-                      {kpi.value}
-                    </span>
-                    <span className="text-xs text-gray-400 uppercase tracking-wider">
-                      Leads
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="text-3xl lg:text-4xl mb-2">
-                  {kpi.icon}
-                </div>
+            {/* Ícone + Valor */}
+            <div className="flex items-start justify-between mb-3">
+              <span className="text-2xl">{kpi.icon}</span>
+              {isActive && (
+                <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${kpi.bg} ${kpi.textColor} border ${kpi.border}`}>
+                  Ativo
+                </span>
+              )}
+            </div>
 
-                <div className={`
-                  text-2xl lg:text-3xl
-                  font-black
-                  mb-1
-                  ${isActive ? kpi.activeText : kpi.color}
-                `}>
-                  {kpi.value}
-                </div>
-              </>
-            )}
+            {/* Número */}
+            <div className={`text-3xl lg:text-4xl font-black mb-1 ${isActive ? kpi.textColor : 'text-white'}`}>
+              {kpi.value}
+            </div>
 
-            <div className={`
-              text-xs lg:text-sm
-              font-bold
-              uppercase
-              tracking-wide
-              ${isActive ? kpi.activeText : 'text-gray-400'}
-            `}>
+            {/* Label */}
+            <div className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">
               {kpi.label}
             </div>
 
+            {/* Barra de progresso */}
+            {kpi.id !== 'All' && (
+              <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: isActive ? `${pct}%` : `${pct}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full"
+                  style={{ backgroundColor: kpi.color }}
+                />
+              </div>
+            )}
+            {kpi.id === 'All' && (
+              <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="h-full rounded-full bg-[#ee7b4d]"
+                />
+              </div>
+            )}
+
+            {/* Borda ativa animada */}
             {isActive && (
               <motion.div
                 layoutId="activeKPI"
-                className="absolute inset-0 rounded-2xl border-2 border-[#ee7b4d]/30"
+                className={`absolute inset-0 rounded-2xl border-2 ${kpi.border} pointer-events-none`}
                 transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
               />
             )}

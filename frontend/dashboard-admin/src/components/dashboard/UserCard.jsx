@@ -110,8 +110,8 @@ export default function UserCard({ user, index, onClick }) {
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-white/5 relative z-10">
-        <span className={`text-xs font-semibold ${user.ativo ? 'text-green-500' : 'text-red-500'}`}>
-          {user.ativo ? '🟢 Ativo' : '🔴 Inativo'}
+        <span className={`text-xs font-semibold ${user.active ? 'text-green-500' : 'text-red-500'}`}>
+          {user.active ? '🟢 Ativo' : '🔴 Inativo'}
         </span>
         
         <motion.button
