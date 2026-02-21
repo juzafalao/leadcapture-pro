@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../AuthContext';
+import LeadCaptureLogo from '../LeadCaptureLogo';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
@@ -28,12 +29,10 @@ export default function Header({ onMenuClick }) {
           </button>
           
           {/* Título do Sistema */}
-          <div>
-            <h1 className="text-base lg:text-xl font-light text-[#f5f5f4]">
-              Lead<span className="text-[#ee7b4d] font-semibold">Capture</span> Pro
-            </h1>
+          <div className="flex items-center gap-2">
+            <LeadCaptureLogo variant="icon" size={32} />
             {tenant?.nome && (
-              <p className="text-[8px] lg:text-[9px] text-[#4a4a4f] uppercase tracking-wider">
+              <p className="text-[8px] lg:text-[9px] text-[#4a4a4f] uppercase tracking-wider hidden sm:block">
                 {tenant.nome}
               </p>
             )}

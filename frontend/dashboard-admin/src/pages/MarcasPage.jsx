@@ -5,6 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import MarcaCard from '../components/dashboard/MarcaCard';
 import FAB from '../components/dashboard/FAB';
 import MarcaModal from '../components/marcas/MarcaModal';
+import LeadCaptureLogo from '../components/LeadCaptureLogo';
 
 const PAGE_SIZE = 20;
 
@@ -139,13 +140,9 @@ export default function MarcasPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="text-6xl"
-        >
-          ⏳
-        </motion.div>
+        <div className="animate-pulse">
+          <LeadCaptureLogo variant="icon" size={64} />
+        </div>
       </div>
     );
   }

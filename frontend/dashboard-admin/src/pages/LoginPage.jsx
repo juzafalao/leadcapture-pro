@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
+import LeadCaptureLogo from '../components/LeadCaptureLogo';
 
 export default function LoginPage() {
   const { login, isAuthenticated, loading } = useAuth();
@@ -41,8 +42,10 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <span className="text-[#ee7b4d] font-black tracking-widest animate-pulse">CARREGANDO...</span>
+      <div className="min-h-screen bg-[#0a0a0b] flex flex-col items-center justify-center gap-6">
+        <div className="animate-pulse">
+          <LeadCaptureLogo variant="full" size={160} />
+        </div>
       </div>
     );
   }
@@ -54,13 +57,8 @@ export default function LoginPage() {
         {/* Logo e Título */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-[#ee7b4d] rounded-xl flex items-center justify-center font-black text-xl text-black">
-              LC
-            </div>
+            <LeadCaptureLogo variant="full" size={160} />
           </div>
-          <h1 className="text-3xl font-light text-white mb-2">
-            Lead<span className="text-[#ee7b4d] font-bold">Capture</span> Pro
-          </h1>
           <p className="text-xs text-[#4a4a4f] tracking-wider">Acesse sua conta</p>
         </div>
 
@@ -110,8 +108,8 @@ export default function LoginPage() {
         </form>
 
         {/* Footer */}
-        <p className="text-center text-[9px] text-[#4a4a4f] mt-16 uppercase tracking-[0.3em]">
-          © 2026 LeadCapture Pro
+        <p className="text-center text-[9px] text-white/20 mt-16 font-black uppercase tracking-widest">
+          LeadCapture Pro — Desenvolvido por Zafalão Tech
         </p>
       </div>
     </div>
