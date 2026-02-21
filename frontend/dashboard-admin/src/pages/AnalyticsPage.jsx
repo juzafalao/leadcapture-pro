@@ -9,7 +9,7 @@ import {
   ResponsiveContainer, Legend, CartesianGrid
 } from 'recharts'
 
-const COLORS = ['#ee7b4d','#f59e0b','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
+const COLORS = ['#10B981','#F97316','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
 
 const fmt = (v) => new Intl.NumberFormat('pt-BR',{ style:'currency', currency:'BRL', minimumFractionDigits:0 }).format(v)
 const fmtK = (v) => v >= 1000000 ? `R$ ${(v/1000000).toFixed(1)} mi` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)} k` : `R$ ${v}`
@@ -27,14 +27,14 @@ function KPICard({ label, value, sub, icon, highlight }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      className={`relative bg-[#12121a] border rounded-3xl p-6 flex flex-col gap-2 overflow-hidden
-        ${highlight ? 'border-[#ee7b4d]/40' : 'border-white/5'}`}
+      className={`relative bg-[#1E293B] border rounded-3xl p-6 flex flex-col gap-2 overflow-hidden
+        ${highlight ? 'border-[#10B981]/40' : 'border-white/5'}`}
     >
       <div className="flex items-start justify-between">
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</p>
         <span className="text-2xl opacity-40">{icon}</span>
       </div>
-      <p className={`text-2xl lg:text-3xl font-black ${highlight ? 'text-[#ee7b4d]' : 'text-white'}`}>{value}</p>
+      <p className={`text-2xl lg:text-3xl font-black ${highlight ? 'text-[#10B981]' : 'text-white'}`}>{value}</p>
       {sub && <p className="text-[10px] text-gray-600">{sub}</p>}
     </motion.div>
   )
@@ -49,7 +49,7 @@ function FeedItem({ lead, isNew }) {
       transition={{ duration: 0.5 }}
       className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0"
     >
-      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex-shrink-0 flex items-center justify-center text-black font-black text-sm">
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#10B981] to-[#F97316] flex-shrink-0 flex items-center justify-center text-black font-black text-sm">
         {lead.nome?.charAt(0).toUpperCase() || '?'}
       </div>
       <div className="flex-1 min-w-0">
@@ -59,7 +59,7 @@ function FeedItem({ lead, isNew }) {
         </p>
       </div>
       <div className="text-right flex-shrink-0">
-        <p className="text-xs font-bold text-[#ee7b4d]">
+        <p className="text-xs font-bold text-[#10B981]">
           {lead.capital_disponivel ? fmtK(lead.capital_disponivel) : '—'}
         </p>
         <p className="text-[10px] text-gray-600">{timeAgo(lead.created_at)}</p>
@@ -72,7 +72,7 @@ function FeedItem({ lead, isNew }) {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-[#1a1a1f] border border-[#ee7b4d]/20 rounded-xl px-4 py-3 shadow-xl">
+    <div className="bg-[#0F172A] border border-[#10B981]/20 rounded-xl px-4 py-3 shadow-xl">
       <p className="text-xs text-gray-400 mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} className="text-sm font-bold" style={{ color: p.color }}>{p.name}: {p.value}</p>
@@ -131,7 +131,7 @@ export default function AnalyticsPage() {
   }
 
   if (isLoading) return (
-    <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
       <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} className="text-6xl">⏳</motion.div>
     </div>
   )
@@ -139,16 +139,16 @@ export default function AnalyticsPage() {
   const d = data || {}
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+    <div className="min-h-screen bg-[#0F172A] text-white pb-32">
 
       {/* ── TOPBAR ── */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
-            Analytics <span className="text-[#ee7b4d] font-bold">& BI</span>
+            Analytics <span className="text-[#10B981] font-bold">& BI</span>
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Centro de Inteligência Comercial
             </p>
@@ -157,24 +157,24 @@ export default function AnalyticsPage() {
 
         <div className="flex items-center gap-3">
           {/* Ao Vivo */}
-          <div className="flex items-center gap-2 bg-[#12121a] border border-white/5 rounded-2xl px-4 py-2">
+          <div className="flex items-center gap-2 bg-[#1E293B] border border-white/5 rounded-2xl px-4 py-2">
             <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
             <span className="text-[10px] font-black text-green-400 uppercase tracking-wider">AO VIVO</span>
             <span className="text-[10px] text-gray-500">{clock.toLocaleTimeString('pt-BR')}</span>
           </div>
           {/* Período */}
-          <div className="flex bg-[#12121a] border border-white/5 rounded-2xl p-1 gap-1">
+          <div className="flex bg-[#1E293B] border border-white/5 rounded-2xl p-1 gap-1">
             {PERIODOS.map(p => (
               <button key={p.value} onClick={() => setPeriodo(p.value)}
                 className={`px-3 py-2 rounded-xl text-xs font-black transition-all
-                  ${periodo === p.value ? 'bg-[#ee7b4d] text-black' : 'text-gray-500 hover:text-white'}`}>
+                  ${periodo === p.value ? 'bg-[#10B981] text-black' : 'text-gray-500 hover:text-white'}`}>
                 {p.label}
               </button>
             ))}
           </div>
           {/* Export */}
           <button onClick={exportCSV}
-            className="flex items-center gap-2 bg-[#12121a] border border-white/5 hover:border-[#ee7b4d]/30 px-4 py-2.5 rounded-2xl text-xs font-black text-gray-400 hover:text-white transition-all">
+            className="flex items-center gap-2 bg-[#1E293B] border border-white/5 hover:border-[#10B981]/30 px-4 py-2.5 rounded-2xl text-xs font-black text-gray-400 hover:text-white transition-all">
             📥 CSV
           </button>
         </div>
@@ -193,7 +193,7 @@ export default function AnalyticsPage() {
 
         {/* GRÁFICO PRINCIPAL */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-          className="lg:col-span-2 bg-[#12121a] border border-white/5 rounded-3xl p-6">
+          className="lg:col-span-2 bg-[#1E293B] border border-white/5 rounded-3xl p-6">
 
           {/* Header gráfico */}
           <div className="flex items-center justify-between mb-2">
@@ -202,7 +202,7 @@ export default function AnalyticsPage() {
               <p className="text-[10px] text-gray-500">Evolução real vs forecast</p>
             </div>
             <div className="flex gap-3 text-[10px] text-gray-500">
-              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#ee7b4d] inline-block" /> Leads</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#10B981] inline-block" /> Leads</span>
               <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-blue-400 inline-block border-dashed border-t border-blue-400" /> Forecast</span>
             </div>
           </div>
@@ -213,8 +213,8 @@ export default function AnalyticsPage() {
               <AreaChart data={d.evolucao || []} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
                 <defs>
                   <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#ee7b4d" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ee7b4d" stopOpacity={0} />
+                    <stop offset="5%"  stopColor="'#10B981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="'#10B981" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gVendidos" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.2} />
@@ -225,7 +225,7 @@ export default function AnalyticsPage() {
                 <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                 <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                 <ChartTooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="leads"    name="Leads"     stroke="#ee7b4d" fill="url(#gLeads)"   strokeWidth={2.5} dot={false} />
+                <Area type="monotone" dataKey="leads"    name="Leads"     stroke="'#10B981" fill="url(#gLeads)"   strokeWidth={2.5} dot={false} />
                 <Area type="monotone" dataKey="vendidos" name="Convertidos" stroke="#3b82f6" fill="url(#gVendidos)" strokeWidth={2} dot={false} strokeDasharray="5 3" />
               </AreaChart>
             </ResponsiveContainer>
@@ -239,7 +239,7 @@ export default function AnalyticsPage() {
             </div>
             <div>
               <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Forecast 30D</p>
-              <p className="text-lg font-black text-[#ee7b4d]">{d.forecast || 0} leads</p>
+              <p className="text-lg font-black text-[#10B981]">{d.forecast || 0} leads</p>
             </div>
             <div>
               <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Taxa Perca</p>
@@ -250,7 +250,7 @@ export default function AnalyticsPage() {
 
         {/* FEED AO VIVO */}
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-          className="bg-[#12121a] border border-white/5 rounded-3xl p-6 flex flex-col">
+          className="bg-[#1E293B] border border-white/5 rounded-3xl p-6 flex flex-col">
 
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -283,15 +283,15 @@ export default function AnalyticsPage() {
 
         {/* PREVISÃO IA */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="bg-gradient-to-br from-[#1a1a1f] to-[#12121a] border border-[#ee7b4d]/20 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#ee7b4d]/5 rounded-full -translate-y-8 translate-x-8" />
+          className="bg-gradient-to-br from-[#0F172A] to-[#1E293B] border border-[#10B981]/20 rounded-3xl p-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#10B981]/5 rounded-full -translate-y-8 translate-x-8" />
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xl">🤖</span>
             <div>
-              <p className="text-[9px] font-black text-[#ee7b4d] uppercase tracking-wider">Previsão IA</p>
+              <p className="text-[9px] font-black text-[#10B981] uppercase tracking-wider">Previsão IA</p>
               <p className="text-[8px] text-gray-600">Baseado no histórico do período</p>
             </div>
-            <span className="ml-auto text-[8px] bg-[#ee7b4d]/10 border border-[#ee7b4d]/20 text-[#ee7b4d] px-2 py-0.5 rounded-full font-black uppercase">AUTO</span>
+            <span className="ml-auto text-[8px] bg-[#10B981]/10 border border-[#10B981]/20 text-[#10B981] px-2 py-0.5 rounded-full font-black uppercase">AUTO</span>
           </div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Fechamento Estimado</p>
           <p className="text-3xl lg:text-4xl font-black text-white mb-1">{fmtK(d.previsaoIA || 0)}</p>
@@ -306,7 +306,7 @@ export default function AnalyticsPage() {
 
         {/* PACE 90D */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-          className="bg-[#12121a] border border-white/5 rounded-3xl p-6 relative overflow-hidden">
+          className="bg-[#1E293B] border border-white/5 rounded-3xl p-6 relative overflow-hidden">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xl">📊</span>
             <div>
@@ -327,7 +327,7 @@ export default function AnalyticsPage() {
                 initial={{ width: 0 }}
                 animate={{ width: `${Math.min(100, Math.round((d.total / Math.max(d.pace90, 1)) * 100))}%` }}
                 transition={{ duration: 1, delay: 0.5 }}
-                className="h-full bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] rounded-full"
+                className="h-full bg-gradient-to-r from-[#10B981] to-[#F97316] rounded-full"
               />
             </div>
           </div>
@@ -335,7 +335,7 @@ export default function AnalyticsPage() {
 
         {/* INSIGHTS RÁPIDOS */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-          className="bg-[#12121a] border border-white/5 rounded-3xl p-6 flex flex-col gap-3">
+          className="bg-[#1E293B] border border-white/5 rounded-3xl p-6 flex flex-col gap-3">
           <h3 className="text-sm font-bold text-white mb-1">💡 Insights</h3>
 
           {[
@@ -373,7 +373,7 @@ export default function AnalyticsPage() {
 
         {/* PIE: Leads por Marca */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-          className="bg-[#12121a] border border-white/5 rounded-3xl p-6">
+          className="bg-[#1E293B] border border-white/5 rounded-3xl p-6">
           <h3 className="text-sm font-bold text-white mb-6">🏢 Leads por Marca</h3>
           {(d.porMarca || []).length > 0 ? (
             <div className="h-[260px]">
@@ -382,7 +382,7 @@ export default function AnalyticsPage() {
                   <Pie data={d.porMarca} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
                     {(d.porMarca || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <ChartTooltip contentStyle={{ backgroundColor:'#0a0a0b', border:'1px solid rgba(238,123,77,0.2)', borderRadius:'12px' }} />
+                  <ChartTooltip contentStyle={{ backgroundColor:'#0F172A', border:'1px solid rgba(238,123,77,0.2)', borderRadius:'12px' }} />
                   <Legend verticalAlign="bottom" height={36} formatter={v => <span style={{ color:'#6a6a6f', fontSize:'11px' }}>{v}</span>} />
                 </PieChart>
               </ResponsiveContainer>
@@ -394,7 +394,7 @@ export default function AnalyticsPage() {
 
         {/* BAR: Motivos de Perda */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-          className="bg-[#12121a] border border-white/5 rounded-3xl p-6">
+          className="bg-[#1E293B] border border-white/5 rounded-3xl p-6">
           <h3 className="text-sm font-bold text-white mb-6">📉 Motivos de Perda</h3>
           {(d.motivosPerda || []).length > 0 ? (
             <div className="h-[260px]">
@@ -404,7 +404,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="motivo" stroke="#374151" fontSize={8} axisLine={false} tickLine={false} angle={-20} textAnchor="end" />
                   <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                   <ChartTooltip content={<CustomTooltip />} />
-                  <Bar dataKey="valor" name="Leads" fill="#ee7b4d" radius={[8,8,0,0]} barSize={32} />
+                  <Bar dataKey="valor" name="Leads" fill="'#10B981" radius={[8,8,0,0]} barSize={32} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -13,7 +13,7 @@ export default function Header({ onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0a0a0b]/95 backdrop-blur-xl border-b border-[#1f1f23] w-full">
+    <header className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-xl border-b border-[#1F2937] w-full">
       {/* REDUZIDO: py-4 para py-3 no mobile, py-4 no desktop */}
       <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
         
@@ -29,8 +29,8 @@ export default function Header({ onMenuClick }) {
           
           {/* Título do Sistema */}
           <div>
-            <h1 className="text-base lg:text-xl font-light text-[#f5f5f4]">
-              Lead<span className="text-[#ee7b4d] font-semibold">Capture</span> Pro
+            <h1 className="text-base lg:text-xl font-light text-[#F8FAFC]">
+              Lead<span className="text-[#10B981] font-semibold">Capture</span> Pro
             </h1>
             {tenant?.nome && (
               <p className="text-[8px] lg:text-[9px] text-[#4a4a4f] uppercase tracking-wider">
@@ -46,7 +46,7 @@ export default function Header({ onMenuClick }) {
             <p className="text-xs lg:text-sm font-medium text-[#f5f5f4]">
               {usuario?.nome || 'Usuário'}
             </p>
-            <p className="text-[8px] lg:text-[9px] text-[#ee7b4d] font-bold uppercase tracking-wider">
+            <p className="text-[8px] lg:text-[9px] text-[#10B981] font-bold uppercase tracking-wider">
               {usuario?.role || 'Sem Permissão'}
             </p>
           </div>
