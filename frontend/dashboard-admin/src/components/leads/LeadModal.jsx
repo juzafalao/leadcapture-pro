@@ -38,9 +38,7 @@ export default function LeadModal({ lead, onClose }) {
   const [statusList, setStatusList]   = useState([]);
   const [motivosList, setMotivosList] = useState([]);
   const [isSaving, setIsSaving]       = useState(false);
-  const [alertModal, setAlertModal]   = useState({ open: false, tipo: 'warning', mensagem: '' });
 
-  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   const statusAtual = statusList.find(s => s.id === formData.id_status);
   const isPerdido   = statusAtual?.slug === 'perdido';
