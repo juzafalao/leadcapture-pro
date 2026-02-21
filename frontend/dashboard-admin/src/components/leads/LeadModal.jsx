@@ -3,17 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../AuthContext';
+import { useAlertModal } from '../../hooks/useAlertModal';
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
 
 export default function LeadModal({ lead, onClose }) {
   const { usuario } = useAuth();
   const queryClient = useQueryClient();
+  const { alertModal, showAlert } = useAlertModal();
   const isGestor = ROLES_GESTOR.includes(usuario?.role);
 
-  // DEBUG - remover depois
-  console.log('👤 usuario:', usuario);
-  console.log('🏢 tenant_id:', usuario?.tenant_id);
   const isNovo = !lead?.id;
 
   const [formData, setFormData] = useState({
@@ -47,6 +46,8 @@ export default function LeadModal({ lead, onClose }) {
   const isPerdido   = statusAtual?.slug === 'perdido';
 
   useEffect(() => {
+    if (!usuario?.tenant_id) return;
+
     async function fetchData() {
       if (!usuario?.tenant_id) return;
       const tenantId = usuario.tenant_id;
@@ -67,7 +68,11 @@ export default function LeadModal({ lead, onClose }) {
       if (mo) setMotivosList(mo);
     }
     fetchData();
+<<<<<<< HEAD
+  }, [usuario?.tenant_id]);
+=======
   }, [usuario]);
+>>>>>>> origin/fix/pos-demo
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -81,8 +86,13 @@ export default function LeadModal({ lead, onClose }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+<<<<<<< HEAD
+    if (!formData.id_marca) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Selecione uma Marca de Interesse!' }); return; }
+    if (isPerdido && !formData.id_motivo_desistencia) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Informe o motivo da desistência!' }); return; }
+=======
     if (!formData.id_marca) { showAlert('warning', 'Selecione uma Marca de Interesse!'); return; }
     if (isPerdido && !formData.id_motivo_desistencia) { showAlert('warning', 'Informe o motivo da desistência!'); return; }
+>>>>>>> origin/fix/pos-demo
     setIsSaving(true);
 
     try {
@@ -131,13 +141,17 @@ export default function LeadModal({ lead, onClose }) {
       onClose();
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
+<<<<<<< HEAD
+      showAlert({ type: 'error', title: 'Erro ao Salvar', message: error.message });
+=======
       showAlert('error', 'Erro ao salvar lead: ' + error.message);
+>>>>>>> origin/fix/pos-demo
     } finally {
       setIsSaving(false);
     }
   };
 
-  const inputClass   = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 focus:ring-2 focus:ring-[#ee7b4d]/20 transition-all";
+  const inputClass   = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 focus:ring-2 focus:ring-[#10B981]/20 transition-all";
   const readOnlyClass = "w-full bg-white/3 border border-white/5 rounded-xl px-4 py-3 text-gray-400";
   const labelClass   = "block text-sm font-bold text-gray-400 mb-2";
 
@@ -149,12 +163,12 @@ export default function LeadModal({ lead, onClose }) {
 
         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-2xl max-h-[90vh] bg-[#1a1a1f] rounded-3xl shadow-2xl border border-white/10 overflow-hidden flex flex-col">
+          className="relative w-full max-w-2xl max-h-[90vh] bg-[#1E293B] rounded-3xl shadow-2xl border border-white/10 overflow-hidden flex flex-col">
 
           {/* HEADER */}
           <div className="px-6 py-5 border-b border-white/5 flex-shrink-0 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-white font-bold text-lg">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-white font-bold text-lg">
                 {lead?.nome?.charAt(0).toUpperCase() || '+'}
               </div>
               <div>
@@ -309,7 +323,7 @@ export default function LeadModal({ lead, onClose }) {
               {/* EXPERIÊNCIA ANTERIOR */}
               {(isGestor || isNovo) && (
                 <div className="lg:col-span-2 flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-                  <input type="checkbox" name="experiencia_anterior" id="exp_ant" checked={formData.experiencia_anterior} onChange={handleChange} className="w-4 h-4 accent-[#ee7b4d]" />
+                  <input type="checkbox" name="experiencia_anterior" id="exp_ant" checked={formData.experiencia_anterior} onChange={handleChange} className="w-4 h-4 accent-[#10B981]" />
                   <label htmlFor="exp_ant" className="text-sm text-gray-300 cursor-pointer">Tem experiência anterior com franquias</label>
                 </div>
               )}
@@ -338,7 +352,7 @@ export default function LeadModal({ lead, onClose }) {
               Cancelar
             </motion.button>
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSubmit} disabled={isSaving} type="button"
-              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold hover:shadow-lg hover:shadow-[#ee7b4d]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:shadow-lg hover:shadow-[#10B981]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {isSaving
                 ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>⏳</motion.div>Salvando...</>
                 : <>✓ {isNovo ? 'Criar Lead' : 'Salvar Alterações'}</>}
@@ -347,6 +361,9 @@ export default function LeadModal({ lead, onClose }) {
 
         </motion.div>
       </div>
+<<<<<<< HEAD
+      {alertModal}
+=======
 
       {/* ALERT MODAL */}
       <AnimatePresence>
@@ -376,6 +393,7 @@ export default function LeadModal({ lead, onClose }) {
           </div>
         )}
       </AnimatePresence>
+>>>>>>> origin/fix/pos-demo
     </AnimatePresence>
   );
 }

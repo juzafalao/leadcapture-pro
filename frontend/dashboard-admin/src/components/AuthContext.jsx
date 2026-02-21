@@ -16,7 +16,6 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserData = async (authId) => {
     try {
-      console.log('🔍 Carregando usuário:', authId);
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')
@@ -24,10 +23,8 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) throw error;
-      console.log('✅ Usuário:', data?.nome, '| Role:', data?.role);
       setUsuario(data);
     } catch (err) {
-      console.error('❌ Erro ao carregar usuário:', err);
       setUsuario(null);
     }
   };
@@ -39,16 +36,17 @@ export const AuthProvider = ({ children }) => {
 
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error) throw error;
-
-      if (session?.user) {
-        console.log('✅ Sessão ativa:', session.user.email);
+      if (error) {
+        if (error.message?.includes('Refresh Token')) {
+          await supabase.auth.signOut();
+        }
+        setUsuario(null);
+      } else if (session?.user) {
         await loadUserData(session.user.id);
       } else {
         setUsuario(null);
       }
     } catch (error) {
-      console.error('❌ Erro sessão:', error);
       setUsuario(null);
     } finally {
       setLoading(false);
@@ -77,11 +75,13 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🔔 Auth event:', event);
+        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+          await supabase.auth.signOut();
+          setUsuario(null);
+          return;
+        }
         if (event === 'SIGNED_IN' && session?.user) {
           await loadUserData(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUsuario(null);
         }
       }
     );

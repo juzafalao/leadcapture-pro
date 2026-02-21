@@ -64,7 +64,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
       <aside
         className={`
           fixed left-0 top-0 h-full
-          bg-[#0a0a0b] border-r border-white/5
+          bg-[#0F172A] border-r border-white/5
           flex flex-col items-center py-8
           z-50 w-32
           transition-transform duration-300 ease-in-out
@@ -75,7 +75,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         <Link
           to="/dashboard"
           onClick={handleNavClick}
-          className="mb-10 w-12 h-12 bg-[#ee7b4d] flex items-center justify-center font-black text-black rounded-2xl shadow-lg hover:opacity-85 transition-opacity"
+          className="mb-10 w-12 h-12 bg-[#10B981] flex items-center justify-center font-black text-black rounded-2xl shadow-lg hover:opacity-85 transition-opacity"
           title="LeadCapture Pro"
         >
           LC
@@ -103,7 +103,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
                       p-3 rounded-2xl mb-1
                       transition-all duration-150
                       ${isActive(item.path)
-                        ? 'bg-[#ee7b4d] text-black shadow-md shadow-[#ee7b4d]/20'
+                        ? 'bg-[#10B981] text-black shadow-md shadow-[#10B981]/20'
                         : 'text-gray-600 hover:bg-white/5 hover:text-gray-400'
                       }
                     `}
@@ -123,14 +123,14 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         <div className="lg:hidden mt-auto pt-4 border-t border-white/5 w-full px-4">
           <div className="text-center">
             <p className="text-xs text-white font-medium truncate">{auth.usuario?.nome}</p>
-            <p className="text-[8px] text-[#ee7b4d] font-bold uppercase mt-1">{auth.usuario?.role}</p>
+            <p className="text-[8px] text-[#10B981] font-bold uppercase mt-1">{auth.usuario?.role}</p>
           </div>
         </div>
 
         {/* Avatar usuário (Desktop) */}
         <div className="hidden lg:flex mt-auto pt-4 border-t border-white/5 w-full items-center justify-center">
           <div
-            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-bold text-sm"
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-bold text-sm"
             title={`${auth.usuario?.nome} · ${auth.usuario?.role}`}
           >
             {auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}

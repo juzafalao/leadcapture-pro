@@ -8,13 +8,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
+import { useAlertModal } from '../hooks/useAlertModal';
 import * as XLSX from 'xlsx';
-import Toast from '../components/shared/Toast.jsx';
-import { SkeletonCard, SkeletonRow } from '../components/shared/SkeletonLoader.jsx';
-import { useToast } from '../hooks/useToast.js';
 
 const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
 
 const STATUS_STYLE = {
   novo:        'bg-blue-500/10 text-blue-400 border-blue-500/30',
@@ -36,10 +34,11 @@ function formatDate(dt) {
 }
 
 // ── Modal de detalhes ────────────────────────────────────────
-function ProspectModal({ prospect, onClose, onUpdate, toast }) {
+function ProspectModal({ prospect, onClose, onUpdate }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
   const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
+  const { alertModal, showAlert } = useAlertModal();
 
   if (!prospect) return null;
 
@@ -52,11 +51,10 @@ function ProspectModal({ prospect, onClose, onUpdate, toast }) {
       .select();
     setSaving(false);
     if (error) {
-      console.error('Erro ao atualizar prospect:', error);
-      toast.error('Erro ao salvar: ' + error.message);
+      showAlert({ type: 'error', title: 'Erro ao Salvar', message: error.message });
       return;
     }
-    toast.success('Lead atualizado com sucesso!');
+    showAlert({ type: 'success', title: 'Sucesso', message: 'Lead atualizado com sucesso!' });
     onUpdate();
   };
 
@@ -76,7 +74,7 @@ function ProspectModal({ prospect, onClose, onUpdate, toast }) {
 
         {/* Modal */}
         <motion.div
-          className="relative z-10 w-full max-w-lg bg-[#111118] border border-white/10 rounded-3xl p-6 shadow-2xl"
+          className="relative z-10 w-full max-w-lg bg-[#1E293B] border border-white/10 rounded-3xl p-6 shadow-2xl"
           initial={{ scale: 0.95, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 20 }}
@@ -84,7 +82,7 @@ function ProspectModal({ prospect, onClose, onUpdate, toast }) {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-black text-xl">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-black text-xl">
                 {prospect.nome?.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -167,7 +165,7 @@ function ProspectModal({ prospect, onClose, onUpdate, toast }) {
               onChange={e => setObservacaoInterna(e.target.value)}
               rows={3}
               placeholder="Notas internas sobre este prospect..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 resize-none transition-all"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 resize-none transition-all"
             />
             <p className="text-xs text-white/30 mt-1">
               Nota: Essas observações são internas e não sobrescrevem a mensagem original do prospect
@@ -185,13 +183,14 @@ function ProspectModal({ prospect, onClose, onUpdate, toast }) {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-black text-sm hover:opacity-90 disabled:opacity-50 transition-all"
+              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-sm hover:opacity-90 disabled:opacity-50 transition-all"
             >
               {saving ? '⏳ Salvando...' : '✅ Salvar'}
             </button>
           </div>
         </motion.div>
       </motion.div>
+      {alertModal}
     </AnimatePresence>
   );
 }
@@ -199,17 +198,15 @@ function ProspectModal({ prospect, onClose, onUpdate, toast }) {
 // ── Página principal ─────────────────────────────────────────
 export default function LeadsSistemaPage() {
   const { usuario } = useAuth();
-  const { toasts, toast } = useToast();
+  const { alertModal, showAlert } = useAlertModal();
   const [prospects, setProspects] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
   const [loading, setLoading]     = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [busca, setBusca]         = useState('');
   const [buscaInput, setBuscaInput] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [selected, setSelected]   = useState(null);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
   const [exportando, setExportando] = useState(false);
   const debounceRef = useRef(null);
 
@@ -240,12 +237,11 @@ export default function LeadsSistemaPage() {
       );
     }
     setFiltrados(lista);
-    setPage(1);
+    setPage(1); // 🆕 RESETAR PÁGINA QUANDO FILTROS MUDAM
   }, [prospects, busca, filtroStatus]);
 
-  const fetchProspects = async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  const fetchProspects = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('leads_sistema')
       .select('*')
@@ -255,20 +251,17 @@ export default function LeadsSistemaPage() {
       setProspects(data);
       setFiltrados(data);
     }
-    const now = new Date();
-    setLastUpdated(now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false }));
-    if (isRefresh) setRefreshing(false);
-    else setLoading(false);
+    setLoading(false);
   };
 
   const handleUpdate = () => {
     setSelected(null);
-    fetchProspects(true);
+    fetchProspects();
   };
 
   const exportarParaExcel = async () => {
     if (filtrados.length === 0) {
-      toast.warning('Nenhum lead para exportar');
+      showAlert({ type: 'warning', title: 'Atenção', message: 'Nenhum lead para exportar' });
       return;
     }
     setExportando(true);
@@ -297,20 +290,15 @@ export default function LeadsSistemaPage() {
       const nomeArquivo = `leads-sistema-${dataAtual}.xlsx`;
       XLSX.writeFile(workbook, nomeArquivo);
 
-      console.log('📊 DEBUG Export:', {
-        total_leads: filtrados.length,
-        campos: Object.keys(dadosExport[0] || {})
-      });
-
-      toast.success(`${filtrados.length} leads exportados para ${nomeArquivo}`);
+      showAlert({ type: 'success', title: 'Exportado!', message: `${filtrados.length} leads exportados para ${nomeArquivo}` });
     } catch (error) {
-      console.error('❌ Erro ao exportar:', error);
-      toast.error('Erro ao exportar planilha');
+      showAlert({ type: 'error', title: 'Erro ao Exportar', message: 'Não foi possível exportar a planilha' });
     } finally {
       setExportando(false);
     }
   };
 
+  // 🆕 PAGINAÇÃO
   const totalPages = Math.ceil(filtrados.length / PAGE_SIZE);
   const paginatedLeads = filtrados.slice(
     (page - 1) * PAGE_SIZE,
@@ -319,6 +307,7 @@ export default function LeadsSistemaPage() {
   const startIndex = (page - 1) * PAGE_SIZE + 1;
   const endIndex = Math.min(page * PAGE_SIZE, filtrados.length);
 
+  // KPIs
   const kpis = {
     total:      prospects.length,
     novo:       prospects.filter(p => p.status === 'novo').length,
@@ -333,44 +322,20 @@ export default function LeadsSistemaPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
-        <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
-          <div className="w-64 h-10 bg-white/5 rounded-2xl animate-pulse mb-3" />
-          <div className="w-40 h-3 bg-white/5 rounded animate-pulse" />
-        </div>
-        <div className="px-4 lg:px-10 mb-8">
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            {[...Array(5)].map((_, i) => <SkeletonCard key={i} />)}
-          </div>
-        </div>
-        <div className="px-4 lg:px-10">
-          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-white/5">
-                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Prospect</th>
-                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Contato</th>
-                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">Empresa</th>
-                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Captado</th>
-                    <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...Array(8)].map((_, i) => <SkeletonRow key={i} />)}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+          className="text-6xl"
+        >
+          ⏳
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
-      <Toast toasts={toasts} />
+    <div className="min-h-screen bg-[#0F172A] text-[#F8FAFC] pb-32">
 
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
@@ -378,30 +343,13 @@ export default function LeadsSistemaPage() {
           <div className="flex items-center gap-3 mb-2">
             <span className="text-3xl">🚀</span>
             <h1 className="text-2xl lg:text-4xl font-light text-white">
-              Prospects <span className="text-[#ee7b4d] font-bold">LeadCapture Pro</span>
+              Prospects <span className="text-[#10B981] font-bold">LeadCapture Pro</span>
             </h1>
-            <button
-              onClick={() => fetchProspects(true)}
-              disabled={refreshing}
-              title="Atualizar dados"
-              className="ml-2 text-xl hover:scale-110 transition-transform disabled:opacity-50"
-            >
-              <motion.span
-                animate={refreshing ? { rotate: 360 } : {}}
-                transition={refreshing ? { duration: 1, repeat: Infinity, ease: 'linear' } : {}}
-                style={{ display: 'inline-block' }}
-              >
-                🔄
-              </motion.span>
-            </button>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Interessados no produto · Desenvolvido por Zafalão Tech
-              {lastUpdated && (
-                <span className="ml-2 text-gray-700">· Atualizado às {lastUpdated}</span>
-              )}
             </p>
           </div>
         </motion.div>
@@ -411,7 +359,7 @@ export default function LeadsSistemaPage() {
       <div className="px-4 lg:px-10 mb-8">
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           {[
-            { label: 'Total', value: kpis.total,      icon: '📊', color: 'from-[#ee7b4d] to-[#f59e42]', id: 'todos' },
+            { label: 'Total', value: kpis.total,      icon: '📊', color: 'from-[#10B981] to-[#059669]', id: 'todos' },
             { label: 'Novos', value: kpis.novo,       icon: '🆕', color: 'from-blue-600 to-blue-400',   id: 'novo' },
             { label: 'Negociando', value: kpis.negociacao, icon: '🤝', color: 'from-orange-600 to-orange-400', id: 'negociacao' },
             { label: 'Fechados', value: kpis.fechado, icon: '✅', color: 'from-green-600 to-green-400', id: 'fechado' },
@@ -429,15 +377,15 @@ export default function LeadsSistemaPage() {
                 relative overflow-hidden rounded-2xl p-4 text-left transition-all
                 ${filtroStatus === kpi.id && kpi.id !== 'todos'
                   ? `bg-gradient-to-br ${kpi.color} shadow-lg`
-                  : 'bg-[#12121a] border border-white/5 hover:border-white/10'
+                  : 'bg-[#1E293B] border border-white/5 hover:border-white/10'
                 }
               `}
             >
               <div className="text-2xl mb-2">{kpi.icon}</div>
-              <div className="text-2xl font-black text-white">
+              <div className={`text-2xl font-black ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white' : 'text-white'}`}>
                 {kpi.value}
               </div>
-              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}>  
+              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}>
                 {kpi.label}
               </div>
             </motion.button>
@@ -448,13 +396,14 @@ export default function LeadsSistemaPage() {
       {/* FILTROS */}
       <div className="px-4 lg:px-10 mb-8">
         <div className="flex flex-col lg:flex-row gap-3">
+          {/* Search */}
           <div className="relative flex-1">
             <input
               type="text"
               value={buscaInput}
               onChange={e => handleBuscaChange(e.target.value)}
               placeholder="🔍 Buscar por nome, e-mail, empresa ou telefone..."
-              className="w-full bg-[#12121a] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 focus:ring-2 focus:ring-[#ee7b4d]/20 transition-all"
+              className="w-full bg-[#1E293B] border border-white/5 rounded-2xl px-5 py-4 text-sm text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 focus:ring-2 focus:ring-[#10B981]/20 transition-all"
             />
             {buscaInput && (
               <button
@@ -466,6 +415,7 @@ export default function LeadsSistemaPage() {
             )}
           </div>
 
+          {/* Status filter pills + Export */}
           <div className="flex gap-2 flex-wrap items-center">
             {['todos', ...STATUS_OPTS].map(s => (
               <button
@@ -475,9 +425,9 @@ export default function LeadsSistemaPage() {
                   px-4 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap
                   ${filtroStatus === s
                     ? s === 'todos'
-                      ? 'bg-[#ee7b4d] text-black border-[#ee7b4d]'
+                      ? 'bg-[#10B981] text-black border-[#10B981]'
                       : STATUS_STYLE[s] + ' shadow-md'
-                    : 'bg-[#12121a] border-white/5 text-gray-500 hover:bg-white/5'
+                    : 'bg-[#1E293B] border-white/5 text-gray-500 hover:bg-white/5'
                   }
                 `}
               >
@@ -485,12 +435,17 @@ export default function LeadsSistemaPage() {
               </button>
             ))}
 
+            {/* Botão Export Excel */}
             <button
               onClick={exportarParaExcel}
               disabled={filtrados.length === 0 || exportando}
               className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-white text-xs font-bold border border-green-600/50 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
             >
-              {exportando ? <>⏳ Exportando...</> : <>📊 Excel ({filtrados.length})</>}
+              {exportando ? (
+                <>⏳ Exportando...</>
+              ) : (
+                <>📊 Excel ({filtrados.length})</>
+              )}
             </button>
           </div>
         </div>
@@ -517,14 +472,14 @@ export default function LeadsSistemaPage() {
             {(buscaInput || filtroStatus !== 'todos') && (
               <button
                 onClick={() => { setBuscaInput(''); setBusca(''); setFiltroStatus('todos'); }}
-                className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
+                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
               >
                 Limpar Filtros
               </button>
             )}
           </motion.div>
         ) : (
-          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+          <div className="bg-[#1E293B] border border-white/5 rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -538,7 +493,7 @@ export default function LeadsSistemaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedLeads.map((p, i) => (
+                  {paginatedLeads.map((p, i) => ( /* 🆕 USANDO paginatedLeads */
                     <motion.tr
                       key={p.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -546,9 +501,10 @@ export default function LeadsSistemaPage() {
                       transition={{ delay: i * 0.04 }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
+                      {/* Prospect */}
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-bold">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-bold">
                             {p.nome?.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -559,14 +515,20 @@ export default function LeadsSistemaPage() {
                           </div>
                         </div>
                       </td>
+
+                      {/* Contato */}
                       <td className="px-4 py-4 hidden lg:table-cell">
                         <div className="text-sm text-gray-300">{p.email || '—'}</div>
                         <div className="text-xs text-gray-500">{p.telefone || '—'}</div>
                       </td>
+
+                      {/* Empresa */}
                       <td className="px-4 py-4 hidden xl:table-cell">
                         <div className="text-sm text-gray-300">{p.companhia || '—'}</div>
                         <div className="text-xs text-gray-500">{p.fonte || '—'}</div>
                       </td>
+
+                      {/* Status */}
                       <td className="px-4 py-4">
                         <span className={`
                           inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border
@@ -575,9 +537,13 @@ export default function LeadsSistemaPage() {
                           {STATUS_EMOJI[p.status] || '🆕'} {p.status || 'novo'}
                         </span>
                       </td>
+
+                      {/* Captado */}
                       <td className="px-4 py-4 hidden lg:table-cell">
                         <div className="text-sm text-gray-400">{formatDate(p.created_at)}</div>
                       </td>
+
+                      {/* Ações */}
                       <td className="px-4 py-4 text-right">
                         <motion.button
                           whileHover={{ scale: 1.05 }}
@@ -594,9 +560,10 @@ export default function LeadsSistemaPage() {
               </table>
             </div>
 
-            {/* FOOTER COM PAGINAÇÃO */}
+            {/* 🆕 FOOTER COM PAGINAÇÃO */}
             <div className="px-4 py-4 border-t border-white/5">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                {/* Info */}
                 <p className="text-xs text-gray-600">
                   Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
                   <span className="text-white font-bold">{endIndex}</span> de{' '}
@@ -606,6 +573,7 @@ export default function LeadsSistemaPage() {
                   )}
                 </p>
 
+                {/* Pagination Controls */}
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <button
@@ -619,6 +587,7 @@ export default function LeadsSistemaPage() {
                     <div className="flex items-center gap-1">
                       {[...Array(totalPages)].map((_, i) => {
                         const pageNum = i + 1;
+                        // Show first, last, current, and neighbors
                         if (
                           pageNum === 1 ||
                           pageNum === totalPages ||
@@ -631,7 +600,7 @@ export default function LeadsSistemaPage() {
                               className={`
                                 w-8 h-8 rounded-lg text-xs font-bold transition-all
                                 ${page === pageNum
-                                  ? 'bg-[#ee7b4d] text-black'
+                                  ? 'bg-[#10B981] text-black'
                                   : 'bg-white/5 text-gray-400 hover:bg-white/10'
                                 }
                               `}
@@ -656,6 +625,7 @@ export default function LeadsSistemaPage() {
                   </div>
                 )}
 
+                {/* Branding */}
                 <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
                   LeadCapture Pro · Zafalão Tech
                 </p>
@@ -671,9 +641,9 @@ export default function LeadsSistemaPage() {
           prospect={selected}
           onClose={() => setSelected(null)}
           onUpdate={handleUpdate}
-          toast={toast}
         />
       )}
+      {alertModal}
     </div>
   );
 }
