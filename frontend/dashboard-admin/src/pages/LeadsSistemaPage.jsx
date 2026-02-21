@@ -32,11 +32,43 @@ function formatDate(dt) {
   });
 }
 
+// ── Alert Modal ──────────────────────────────────────────────
+function AlertModal({ tipo, mensagem, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="relative bg-[#1a1a1f] border border-white/10 rounded-3xl p-6 shadow-2xl max-w-sm w-full text-center"
+      >
+        <div className="text-5xl mb-4">
+          {tipo === 'error' ? '❌' : tipo === 'success' ? '✅' : '⚠️'}
+        </div>
+        <h3 className="text-lg font-bold text-white mb-2">
+          {tipo === 'error' ? 'Erro' : tipo === 'success' ? 'Sucesso' : 'Atenção'}
+        </h3>
+        <p className="text-gray-400 mb-6">{mensagem}</p>
+        <button
+          onClick={onClose}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold"
+        >
+          OK
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
 // ── Modal de detalhes ────────────────────────────────────────
 function ProspectModal({ prospect, onClose, onUpdate }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
   const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
+  const [alertModal, setAlertModal] = useState({ open: false, tipo: 'warning', mensagem: '' });
+
+  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   if (!prospect) return null;
 
@@ -57,11 +89,10 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
     setSaving(false);
     if (error) {
       console.error('Erro ao atualizar prospect:', error);
-      alert('❌ Erro ao salvar: ' + error.message);
+      showAlert('error', 'Erro ao salvar: ' + error.message);
       return;
     }
-    alert("✅ Lead atualizado com sucesso!");
-    onUpdate();
+    showAlert('success', 'Lead atualizado com sucesso!');
   };
 
   return (
@@ -196,6 +227,20 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* ALERT MODAL */}
+      <AnimatePresence>
+        {alertModal.open && (
+          <AlertModal
+            tipo={alertModal.tipo}
+            mensagem={alertModal.mensagem}
+            onClose={() => {
+              setAlertModal(prev => ({ ...prev, open: false }));
+              if (alertModal.tipo === 'success') onUpdate();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </AnimatePresence>
   );
 }
@@ -212,7 +257,10 @@ export default function LeadsSistemaPage() {
   const [selected, setSelected]   = useState(null);
   const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
   const [exportando, setExportando] = useState(false);
+  const [alertModal, setAlertModal] = useState({ open: false, tipo: 'warning', mensagem: '' });
   const debounceRef = useRef(null);
+
+  const showAlert = (tipo, mensagem) => setAlertModal({ open: true, tipo, mensagem });
 
   const handleBuscaChange = useCallback((value) => {
     setBuscaInput(value);
@@ -265,7 +313,7 @@ export default function LeadsSistemaPage() {
 
   const exportarParaExcel = async () => {
     if (filtrados.length === 0) {
-      alert('⚠️ Nenhum lead para exportar');
+      showAlert('warning', 'Nenhum lead para exportar');
       return;
     }
     setExportando(true);
@@ -299,10 +347,10 @@ export default function LeadsSistemaPage() {
         campos: Object.keys(dadosExport[0] || {})
       });
 
-      alert(`✅ ${filtrados.length} leads exportados para ${nomeArquivo}`);
+      showAlert('success', `${filtrados.length} leads exportados para ${nomeArquivo}`);
     } catch (error) {
       console.error('❌ Erro ao exportar:', error);
-      alert('❌ Erro ao exportar planilha');
+      showAlert('error', 'Erro ao exportar planilha');
     } finally {
       setExportando(false);
     }
@@ -653,6 +701,17 @@ export default function LeadsSistemaPage() {
           onUpdate={handleUpdate}
         />
       )}
+
+      {/* ALERT MODAL */}
+      <AnimatePresence>
+        {alertModal.open && (
+          <AlertModal
+            tipo={alertModal.tipo}
+            mensagem={alertModal.mensagem}
+            onClose={() => setAlertModal(prev => ({ ...prev, open: false }))}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
