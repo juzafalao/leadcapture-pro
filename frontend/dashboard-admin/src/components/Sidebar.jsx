@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import LeadCaptureLogo from './LeadCaptureLogo';
 
 const IconLeads = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true">
@@ -91,10 +92,10 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         <Link
           to="/dashboard"
           onClick={handleNavClick}
-          className="mb-10 w-12 h-12 bg-[#ee7b4d] flex items-center justify-center font-black text-black rounded-2xl shadow-lg hover:opacity-85 transition-opacity"
+          className="mb-10 hover:opacity-85 transition-opacity"
           title="LeadCapture Pro"
         >
-          LC
+          <LeadCaptureLogo variant="icon" size={48} />
         </Link>
 
         {/* Nav por grupos */}

@@ -1,4 +1,5 @@
 import React, { useState, lazy, Suspense } from 'react';
+import LeadCaptureLogo from './components/LeadCaptureLogo';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/layout/Header';
@@ -25,8 +26,9 @@ const queryClient = new QueryClient({
 });
 
 const PageFallback = () => (
-  <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-    <span className="text-[#ee7b4d] font-black tracking-widest animate-pulse">CARREGANDO...</span>
+  <div className="min-h-screen bg-[#0a0a0b] flex flex-col items-center justify-center gap-6">
+    <LeadCaptureLogo variant="full" size={120} />
+    <span className="text-white/40 text-xs font-black tracking-[0.4em] uppercase animate-pulse">CARREGANDO...</span>
   </div>
 );
 
@@ -34,8 +36,10 @@ function PrivateRoute({ children, allowedRoles }) {
   const { usuario, loading, isAuthenticated } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <div className="text-6xl animate-pulse">⏳</div>
+      <div className="min-h-screen bg-[#0a0a0b] flex flex-col items-center justify-center gap-6">
+        <div className="animate-pulse">
+          <LeadCaptureLogo variant="icon" size={64} />
+        </div>
       </div>
     );
   }
@@ -55,16 +59,9 @@ function AuthenticatedLayout({ children }) {
       <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-white/5 py-6 text-center bg-[#0a0a0b]">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="10,20 90,20 55,50 90,80 10,80 45,50" fill="white"/>
-              <polygon points="30,55 70,55 90,80 10,80" fill="#22c55e"/>
-            </svg>
-            <span className="text-white font-black text-sm tracking-wider">ZAFALÃO TECH</span>
-          </div>
-          <p className="text-[9px] text-gray-600 font-bold uppercase tracking-[0.2em]">
-            © 2026 LeadCapture Pro · Powered by <span className="text-green-500">Zafalão Tech</span>
+        <footer className="border-t border-white/5 py-4 text-center bg-[#0a0a0b]">
+          <p className="text-[9px] text-white/20 font-black uppercase tracking-widest">
+            LeadCapture Pro — Desenvolvido por Zafalão Tech
           </p>
         </footer>
       </main>

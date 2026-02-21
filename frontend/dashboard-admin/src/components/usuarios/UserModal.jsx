@@ -64,7 +64,7 @@ export default function UserModal({ usuario, onClose }) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-[#1a1a1f] rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
+          className="relative w-full max-w-md bg-[#12121a] rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
         >
           {/* Header */}
           <div className="px-6 py-5 border-b border-white/5">

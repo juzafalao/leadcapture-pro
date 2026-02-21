@@ -52,7 +52,7 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
 
       <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center p-0 lg:p-4">
         <div 
-          className="bg-[#12121a] border-t lg:border border-[#1f1f23] rounded-t-3xl lg:rounded-2xl w-full lg:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-[#12121a] border-t lg:border border-white/10 rounded-t-3xl lg:rounded-3xl w-full lg:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           
