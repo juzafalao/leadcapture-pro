@@ -112,10 +112,7 @@ export default function LeadModal({ lead, onClose }) {
       const payload = isGestor ? payloadGestor : payloadConsultor;
 
       if (isNovo) {
-        const { error } = await supabase.from('leads').insert([{
-          ...payloadGestor,
-          tenant_id: usuario.tenant_id,
-        }]);
+        const { error } = await supabase.from('leads').insert([{...payloadGestor, tenant_id: usuario.tenant_id,}]);
         if (error) throw error;
       } else {
         const { error } = await supabase.from('leads')
@@ -135,9 +132,9 @@ export default function LeadModal({ lead, onClose }) {
     }
   };
 
-  const inputClass   = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 focus:ring-2 focus:ring-[#10B981]/20 transition-all";
+  const inputClass    = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 focus:ring-2 focus:ring-[#10B981]/20 transition-all";
   const readOnlyClass = "w-full bg-white/3 border border-white/5 rounded-xl px-4 py-3 text-gray-400";
-  const labelClass   = "block text-sm font-bold text-gray-400 mb-2";
+  const labelClass    = "block text-sm font-bold text-gray-400 mb-2";
 
   return (
     <AnimatePresence>
@@ -189,3 +186,164 @@ export default function LeadModal({ lead, onClose }) {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+              {/* NOME */}
+              <div className="lg:col-span-2">
+                <label className={labelClass}>Nome Completo *</label>
+                {isGestor || isNovo
+                  ? <input type="text" name="nome" value={formData.nome} onChange={handleChange} required className={inputClass} placeholder="Nome completo" />
+                  : <div className={readOnlyClass}>{formData.nome}</div>}
+              </div>
+
+              {/* EMAIL */}
+              <div>
+                <label className={labelClass}>Email</label>
+                {isGestor || isNovo
+                  ? <input type="email" name="email" value={formData.email} onChange={handleChange} className={inputClass} placeholder="email@exemplo.com" />
+                  : <div className={readOnlyClass}>{formData.email || '—'}</div>}
+              </div>
+
+              {/* TELEFONE */}
+              <div>
+                <label className={labelClass}>Telefone</label>
+                {isGestor || isNovo
+                  ? <input type="tel" name="telefone" value={formData.telefone} onChange={handleChange} className={inputClass} placeholder="(00) 00000-0000" />
+                  : <div className={readOnlyClass}>{formData.telefone || '—'}</div>}
+              </div>
+
+              {/* CIDADE */}
+              <div>
+                <label className={labelClass}>Cidade</label>
+                {isGestor || isNovo
+                  ? <input type="text" name="cidade" value={formData.cidade} onChange={handleChange} className={inputClass} placeholder="São Paulo" />
+                  : <div className={readOnlyClass}>{formData.cidade || '—'}</div>}
+              </div>
+
+              {/* ESTADO */}
+              <div>
+                <label className={labelClass}>Estado</label>
+                {isGestor || isNovo
+                  ? <input type="text" name="estado" value={formData.estado} onChange={handleChange} maxLength={2} className={inputClass + " uppercase"} placeholder="SP" />
+                  : <div className={readOnlyClass}>{formData.estado || '—'}</div>}
+              </div>
+
+              {/* MARCA */}
+              <div>
+                <label className={labelClass}>🏷️ Marca de Interesse *</label>
+                {isNovo ? (
+                  <select name="id_marca" value={formData.id_marca} onChange={handleChange} required className={inputClass}>
+                    <option value="">Selecione a marca</option>
+                    {marcas.map(m => <option key={m.id} value={m.id}>{m.emoji} {m.nome}</option>)}
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2 bg-white/5 border border-white/5 rounded-xl px-4 py-3">
+                    <span className="text-xl">{lead?.marca?.emoji}</span>
+                    <span className="text-white font-bold">{lead?.marca?.nome || '—'}</span>
+                    <span className="ml-auto text-[10px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-wider">Fixo</span>
+                  </div>
+                )}
+              </div>
+
+              {/* CAPITAL */}
+              <div>
+                <label className={labelClass}>Capital Disponível (R$)</label>
+                {isGestor || isNovo
+                  ? <input type="number" name="capital_disponivel" value={formData.capital_disponivel} onChange={handleChange} min="0" step="1000" className={inputClass} placeholder="0" />
+                  : <div className={readOnlyClass}>{formData.capital_disponivel ? `R$ ${Number(formData.capital_disponivel).toLocaleString('pt-BR')}` : '—'}</div>}
+              </div>
+
+              {/* STATUS COMERCIAL */}
+              <div>
+                <label className={labelClass}>📋 Status Comercial</label>
+                <select name="id_status" value={formData.id_status} onChange={handleChange} className={inputClass}>
+                  <option value="">Selecione o status</option>
+                  {statusList.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                </select>
+              </div>
+
+              {/* MOTIVO DESISTÊNCIA */}
+              {isPerdido && (
+                <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                  <label className={labelClass + " !text-red-400"}>⚠️ Motivo da Desistência *</label>
+                  <select name="id_motivo_desistencia" value={formData.id_motivo_desistencia} onChange={handleChange} required
+                    className={inputClass + " border-red-500/30 focus:border-red-500/50"}>
+                    <option value="">Selecione o motivo</option>
+                    {motivosList.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+                  </select>
+                </motion.div>
+              )}
+
+              {/* CATEGORIA */}
+              {(isGestor || isNovo) && (
+                <div>
+                  <label className={labelClass}>Categoria</label>
+                  <select name="categoria" value={formData.categoria} onChange={handleChange} className={inputClass}>
+                    <option value="Hot">🔥 Hot</option>
+                    <option value="Warm">🌤️ Warm</option>
+                    <option value="Cold">❄️ Cold</option>
+                  </select>
+                </div>
+              )}
+
+              {/* SCORE */}
+              {(isGestor || isNovo) && (
+                <div>
+                  <label className={labelClass}>Score (0-100)</label>
+                  <input type="number" name="score" value={formData.score} onChange={handleChange} min="0" max="100" className={inputClass} />
+                </div>
+              )}
+
+              {/* FONTE */}
+              {(isGestor || isNovo) && (
+                <div className="lg:col-span-2">
+                  <label className={labelClass}>Fonte</label>
+                  <input type="text" name="fonte" value={formData.fonte} onChange={handleChange} className={inputClass} placeholder="Instagram, Facebook, Site..." />
+                </div>
+              )}
+
+              {/* EXPERIÊNCIA ANTERIOR */}
+              {(isGestor || isNovo) && (
+                <div className="lg:col-span-2 flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                  <input type="checkbox" name="experiencia_anterior" id="exp_ant" checked={formData.experiencia_anterior} onChange={handleChange} className="w-4 h-4 accent-[#10B981]" />
+                  <label htmlFor="exp_ant" className="text-sm text-gray-300 cursor-pointer">Tem experiência anterior com franquias</label>
+                </div>
+              )}
+
+              {/* RESUMO / OBSERVAÇÃO */}
+              <div className="lg:col-span-2">
+                <label className={labelClass}>📝 Observações / Resumo</label>
+                <textarea name="resumo_qualificacao" value={formData.resumo_qualificacao} onChange={handleChange} rows={3}
+                  className={inputClass + " resize-none"} placeholder="Anotações sobre o lead..." />
+              </div>
+
+              {/* MENSAGEM ORIGINAL */}
+              {lead?.mensagem_original && (
+                <div className="lg:col-span-2">
+                  <label className={labelClass}>Mensagem Original</label>
+                  <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-gray-300 text-sm">{lead.mensagem_original}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div className="px-6 py-4 border-t border-white/5 flex gap-3 flex-shrink-0">
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClose} disabled={isSaving} type="button"
+              className="flex-1 px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all disabled:opacity-50">
+              Cancelar
+            </motion.button>
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSubmit} disabled={isSaving} type="button"
+              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:shadow-lg hover:shadow-[#10B981]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              {isSaving
+                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>⏳</motion.div>Salvando...</>
+                : <>✓ {isNovo ? 'Criar Lead' : 'Salvar Alterações'}</>}
+            </motion.button>
+          </div>
+
+        </motion.div>
+      </div>
+
+      {alertModal}
+    </AnimatePresence>
+  );
+}
