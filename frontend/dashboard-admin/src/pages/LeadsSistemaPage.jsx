@@ -11,7 +11,7 @@ import { useAuth } from '../components/AuthContext';
 import * as XLSX from 'xlsx';
 
 const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
-const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
+const PAGE_SIZE = 20;
 
 const STATUS_STYLE = {
   novo:        'bg-blue-500/10 text-blue-400 border-blue-500/30',
@@ -74,13 +74,6 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
 
   const handleSave = async () => {
     setSaving(true);
-    console.log('🔍 DEBUG ProspectModal Save:', {
-      prospect_id: prospect.id,
-      status: status,
-      observacao_original: prospect.observacao,
-      observacao_interna: observacaoInterna,
-      vai_salvar_em: 'observacao_interna'
-    });
     const { error } = await supabase
       .from('leads_sistema')
       .update({ status, observacao_interna: observacaoInterna })
@@ -242,7 +235,6 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
         )}
       </AnimatePresence>
     </AnimatePresence>
-  );
 }
 
 // ── Página principal ─────────────────────────────────────────
@@ -255,7 +247,7 @@ export default function LeadsSistemaPage() {
   const [buscaInput, setBuscaInput] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [selected, setSelected]   = useState(null);
-  const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
+  const [page, setPage] = useState(1);
   const [exportando, setExportando] = useState(false);
   const [alertModal, setAlertModal] = useState({ open: false, tipo: 'warning', mensagem: '' });
   const debounceRef = useRef(null);
@@ -289,7 +281,7 @@ export default function LeadsSistemaPage() {
       );
     }
     setFiltrados(lista);
-    setPage(1); // 🆕 RESETAR PÁGINA QUANDO FILTROS MUDAM
+    setPage(1);
   }, [prospects, busca, filtroStatus]);
 
   const fetchProspects = async () => {
@@ -342,11 +334,6 @@ export default function LeadsSistemaPage() {
       const nomeArquivo = `leads-sistema-${dataAtual}.xlsx`;
       XLSX.writeFile(workbook, nomeArquivo);
 
-      console.log('📊 DEBUG Export:', {
-        total_leads: filtrados.length,
-        campos: Object.keys(dadosExport[0] || {})
-      });
-
       showAlert('success', `${filtrados.length} leads exportados para ${nomeArquivo}`);
     } catch (error) {
       console.error('❌ Erro ao exportar:', error);
@@ -356,7 +343,6 @@ export default function LeadsSistemaPage() {
     }
   };
 
-  // 🆕 PAGINAÇÃO
   const totalPages = Math.ceil(filtrados.length / PAGE_SIZE);
   const paginatedLeads = filtrados.slice(
     (page - 1) * PAGE_SIZE,
@@ -440,10 +426,10 @@ export default function LeadsSistemaPage() {
               `}
             >
               <div className="text-2xl mb-2">{kpi.icon}</div>
-              <div className={`text-2xl font-black ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white' : 'text-white'}`}>
+              <div className="text-2xl font-black text-white">
                 {kpi.value}
               </div>
-              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}>
+              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}> 
                 {kpi.label}
               </div>
             </motion.button>
@@ -551,7 +537,7 @@ export default function LeadsSistemaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedLeads.map((p, i) => ( /* 🆕 USANDO paginatedLeads */
+                  {paginatedLeads.map((p, i) => (
                     <motion.tr
                       key={p.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -559,7 +545,6 @@ export default function LeadsSistemaPage() {
                       transition={{ delay: i * 0.04 }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
-                      {/* Prospect */}
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-bold">
@@ -573,35 +558,25 @@ export default function LeadsSistemaPage() {
                           </div>
                         </div>
                       </td>
-
-                      {/* Contato */}
                       <td className="px-4 py-4 hidden lg:table-cell">
                         <div className="text-sm text-gray-300">{p.email || '—'}</div>
                         <div className="text-xs text-gray-500">{p.telefone || '—'}</div>
                       </td>
-
-                      {/* Empresa */}
                       <td className="px-4 py-4 hidden xl:table-cell">
                         <div className="text-sm text-gray-300">{p.companhia || '—'}</div>
                         <div className="text-xs text-gray-500">{p.fonte || '—'}</div>
                       </td>
-
-                      {/* Status */}
                       <td className="px-4 py-4">
                         <span className={`
                           inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border
                           ${STATUS_STYLE[p.status] || STATUS_STYLE.novo}
-                        `}>
+                        `}> 
                           {STATUS_EMOJI[p.status] || '🆕'} {p.status || 'novo'}
                         </span>
                       </td>
-
-                      {/* Captado */}
                       <td className="px-4 py-4 hidden lg:table-cell">
                         <div className="text-sm text-gray-400">{formatDate(p.created_at)}</div>
                       </td>
-
-                      {/* Ações */}
                       <td className="px-4 py-4 text-right">
                         <motion.button
                           whileHover={{ scale: 1.05 }}
@@ -618,10 +593,9 @@ export default function LeadsSistemaPage() {
               </table>
             </div>
 
-            {/* 🆕 FOOTER COM PAGINAÇÃO */}
+            {/* FOOTER COM PAGINAÇÃO */}
             <div className="px-4 py-4 border-t border-white/5">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                {/* Info */}
                 <p className="text-xs text-gray-600">
                   Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
                   <span className="text-white font-bold">{endIndex}</span> de{' '}
@@ -631,7 +605,6 @@ export default function LeadsSistemaPage() {
                   )}
                 </p>
 
-                {/* Pagination Controls */}
                 {totalPages > 1 && (
                   <div className="flex items-center gap-2">
                     <button
@@ -645,7 +618,6 @@ export default function LeadsSistemaPage() {
                     <div className="flex items-center gap-1">
                       {[...Array(totalPages)].map((_, i) => {
                         const pageNum = i + 1;
-                        // Show first, last, current, and neighbors
                         if (
                           pageNum === 1 ||
                           pageNum === totalPages ||
@@ -683,7 +655,6 @@ export default function LeadsSistemaPage() {
                   </div>
                 )}
 
-                {/* Branding */}
                 <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
                   LeadCapture Pro · Zafalão Tech
                 </p>
