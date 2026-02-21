@@ -235,6 +235,7 @@ function ProspectModal({ prospect, onClose, onUpdate }) {
         )}
       </AnimatePresence>
     </AnimatePresence>
+  );
 }
 
 // ── Página principal ─────────────────────────────────────────
@@ -351,7 +352,6 @@ export default function LeadsSistemaPage() {
   const startIndex = (page - 1) * PAGE_SIZE + 1;
   const endIndex = Math.min(page * PAGE_SIZE, filtrados.length);
 
-  // KPIs
   const kpis = {
     total:      prospects.length,
     novo:       prospects.filter(p => p.status === 'novo').length,
@@ -429,7 +429,7 @@ export default function LeadsSistemaPage() {
               <div className="text-2xl font-black text-white">
                 {kpi.value}
               </div>
-              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}> 
+              <div className={`text-[9px] font-black uppercase tracking-wider mt-1 ${filtroStatus === kpi.id && kpi.id !== 'todos' ? 'text-white/70' : 'text-gray-500'}`}>
                 {kpi.label}
               </div>
             </motion.button>
@@ -440,7 +440,6 @@ export default function LeadsSistemaPage() {
       {/* FILTROS */}
       <div className="px-4 lg:px-10 mb-8">
         <div className="flex flex-col lg:flex-row gap-3">
-          {/* Search */}
           <div className="relative flex-1">
             <input
               type="text"
@@ -459,7 +458,6 @@ export default function LeadsSistemaPage() {
             )}
           </div>
 
-          {/* Status filter pills + Export */}
           <div className="flex gap-2 flex-wrap items-center">
             {['todos', ...STATUS_OPTS].map(s => (
               <button
@@ -479,17 +477,12 @@ export default function LeadsSistemaPage() {
               </button>
             ))}
 
-            {/* Botão Export Excel */}
             <button
               onClick={exportarParaExcel}
               disabled={filtrados.length === 0 || exportando}
               className="px-4 py-2 rounded-xl bg-green-700 hover:bg-green-600 text-white text-xs font-bold border border-green-600/50 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
             >
-              {exportando ? (
-                <>⏳ Exportando...</>
-              ) : (
-                <>📊 Excel ({filtrados.length})</>
-              )}
+              {exportando ? <>⏳ Exportando...</> : <>📊 Excel ({filtrados.length})</>}
             </button>
           </div>
         </div>
@@ -570,7 +563,7 @@ export default function LeadsSistemaPage() {
                         <span className={`
                           inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border
                           ${STATUS_STYLE[p.status] || STATUS_STYLE.novo}
-                        `}> 
+                        `}>
                           {STATUS_EMOJI[p.status] || '🆕'} {p.status || 'novo'}
                         </span>
                       </td>
