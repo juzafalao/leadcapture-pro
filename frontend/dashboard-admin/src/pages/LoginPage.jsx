@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
+import LogoIcon from '../components/LogoIcon';
 
 export default function LoginPage() {
   const { login, isAuthenticated, loading } = useAuth();
@@ -54,9 +55,7 @@ export default function LoginPage() {
         {/* Logo e Título */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
-            <div className="w-14 h-14 bg-[#ee7b4d] rounded-xl flex items-center justify-center font-black text-xl text-black">
-              LC
-            </div>
+            <LogoIcon size={64} />
           </div>
           <h1 className="text-3xl font-light text-white mb-2">
             Lead<span className="text-[#ee7b4d] font-bold">Capture</span> Pro

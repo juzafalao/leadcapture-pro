@@ -138,7 +138,7 @@ export default function MarcasPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+      <div className="flex items-center justify-center py-32">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -151,7 +151,7 @@ export default function MarcasPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+    <div className="text-white pb-32">
       
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
