@@ -35,11 +35,11 @@ export default function Tooltip({ children, text, position = 'top' }) {
           >
             <div className="
               bg-black/95
-              border border-[#ee7b4d]/30
+              border border-[#10B981]/30
               rounded-xl
               px-3 py-2
               shadow-2xl
-              shadow-[#ee7b4d]/20
+              shadow-[#10B981]/20
             ">
               <p className="text-xs text-gray-300 leading-relaxed max-w-xs whitespace-normal">
                 {text}
@@ -47,7 +47,7 @@ export default function Tooltip({ children, text, position = 'top' }) {
               
               {/* Arrow */}
               <div className={`
-                absolute w-2 h-2 bg-black/95 border-[#ee7b4d]/30 rotate-45
+                absolute w-2 h-2 bg-black/95 border-[#10B981]/30 rotate-45
                 ${position === 'top' ? 'bottom-[-4px] left-1/2 -translate-x-1/2 border-b border-r' : ''}
                 ${position === 'bottom' ? 'top-[-4px] left-1/2 -translate-x-1/2 border-t border-l' : ''}
                 ${position === 'left' ? 'right-[-4px] top-1/2 -translate-y-1/2 border-t border-r' : ''}

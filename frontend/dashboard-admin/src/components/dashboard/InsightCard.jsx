@@ -11,10 +11,10 @@ export default function InsightCard({ icon, title, description, action, priority
       text: 'text-red-500'
     },
     normal: {
-      border: 'border-[#ee7b4d]/20',
-      bg: 'bg-[#ee7b4d]/5',
-      iconBg: 'bg-[#ee7b4d]/10',
-      text: 'text-[#ee7b4d]'
+      border: 'border-[#10B981]/20',
+      bg: 'bg-[#10B981]/5',
+      iconBg: 'bg-[#10B981]/10',
+      text: 'text-[#10B981]'
     },
     low: {
       border: 'border-blue-500/20',

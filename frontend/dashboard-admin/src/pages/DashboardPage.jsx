@@ -57,23 +57,23 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="text-6xl">⏳</motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+    <div className="min-h-screen bg-[#0F172A] text-[#F8FAFC] pb-32">
 
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Olá, <span className="text-[#ee7b4d] font-bold">{usuario?.nome?.split(" ")[0]}</span> 👋
+            Olá, <span className="text-[#10B981] font-bold">{usuario?.nome?.split(" ")[0]}</span> 👋
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full"></div>
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">Dashboard de Gestão de Leads</p>
           </div>
         </motion.div>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
               placeholder="🔍 Buscar por nome, email, telefone ou cidade..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              className="w-full bg-[#12121a] border border-white/5 rounded-2xl px-5 py-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-[#ee7b4d]/50 focus:ring-2 focus:ring-[#ee7b4d]/20 transition-all"
+              className="w-full bg-[#1E293B] border border-white/5 rounded-2xl px-5 py-4 text-sm text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 focus:ring-2 focus:ring-[#10B981]/20 transition-all"
             />
             {busca && (
               <button onClick={() => setBusca("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">✕</button>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
           <motion.button
             whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
             onClick={() => setFiltroMeusLeads(!filtroMeusLeads)}
-            className={`flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all whitespace-nowrap ${filtroMeusLeads ? "bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black shadow-lg" : "bg-[#12121a] border border-white/5 text-white hover:bg-white/5"}`}
+            className={`flex items-center justify-center gap-2 px-6 py-4 rounded-2xl font-bold transition-all whitespace-nowrap ${filtroMeusLeads ? "bg-gradient-to-r from-[#10B981] to-[#059669] text-black shadow-lg" : "bg-[#1E293B] border border-white/5 text-[#F8FAFC] hover:bg-white/5"}`}
           >
             <span>{filtroMeusLeads ? "✓" : "👤"}</span>
             <span className="hidden lg:inline">Meus Leads</span>
@@ -118,11 +118,11 @@ export default function DashboardPage() {
             <p className="text-xl text-gray-400 mb-2">{busca || kpiAtivo !== "All" || filtroMeusLeads ? "Nenhum lead encontrado" : "Nenhum lead cadastrado"}</p>
             <p className="text-sm text-gray-600 mb-6">{busca || kpiAtivo !== "All" || filtroMeusLeads ? "Tente ajustar os filtros" : "Comece importando ou criando seus leads!"}</p>
             {(busca || kpiAtivo !== "All" || filtroMeusLeads) && (
-              <button onClick={() => { setBusca(""); setKpiAtivo("All"); setFiltroMeusLeads(false); }} className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all">Limpar Filtros</button>
+              <button onClick={() => { setBusca(""); setKpiAtivo("All"); setFiltroMeusLeads(false); }} className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all">Limpar Filtros</button>
             )}
           </motion.div>
         ) : (
-          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+          <div className="bg-[#1E293B] border border-white/5 rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
@@ -133,6 +133,7 @@ export default function DashboardPage() {
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Marca</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Score</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status Comercial</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">Atribuído</th>
                     <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
@@ -149,7 +150,7 @@ export default function DashboardPage() {
                       {/* Nome */}
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-white font-bold flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-white font-bold flex-shrink-0">
                             {lead.nome?.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -186,15 +187,7 @@ export default function DashboardPage() {
 
                       {/* Score */}
                       <td className="px-4 py-4 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-white/5 rounded-full h-2 overflow-hidden">
-                            <div
-                              className={`h-full transition-all ${lead.score >= 70 ? "bg-red-500" : lead.score >= 40 ? "bg-yellow-500" : "bg-blue-500"}`}
-                              style={{ width: `${lead.score || 0}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-bold text-gray-400 w-8 text-right">{lead.score || 0}</span>
-                        </div>
+                        <span className="text-sm font-bold text-gray-300">{lead.score || 0}</span>
                       </td>
 
                       {/* Status */}
@@ -209,6 +202,29 @@ export default function DashboardPage() {
                           {lead.categoria?.toLowerCase() === "cold" && "❄️"}
                           {lead.categoria || "Cold"}
                         </span>
+                      </td>
+
+                      {/* Status Comercial */}
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        {lead.status ? (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                            lead.status.toLowerCase().includes('vendido') || lead.status.toLowerCase().includes('convertido')
+                              ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                              : lead.status.toLowerCase().includes('negoc')
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                              : lead.status.toLowerCase().includes('perdido')
+                              ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                              : lead.status.toLowerCase().includes('agendado')
+                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                              : lead.status.toLowerCase().includes('contato')
+                              ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                              : 'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                          }`}>
+                            {lead.status}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-600 italic">—</span>
+                        )}
                       </td>
 
                       {/* Atribuído */}
@@ -258,7 +274,7 @@ export default function DashboardPage() {
             {totalCount > 0 && (
               <div className="px-4 py-4 flex items-center justify-between border-t border-white/5">
                 <button onClick={() => setPage(old => Math.max(old - 1, 1))} disabled={page === 1} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold text-gray-400">← Anterior</button>
-                <span className="text-xs lg:text-sm text-gray-500">Página <span className="text-white">{page}</span> de <span className="text-white">{totalPages}</span> · <span className="text-[#ee7b4d]">{totalCount}</span> leads</span>
+                <span className="text-xs lg:text-sm text-gray-500">Página <span className="text-[#F8FAFC]">{page}</span> de <span className="text-[#F8FAFC]">{totalPages}</span> · <span className="text-[#10B981]">{totalCount}</span> leads</span>
                 <button onClick={() => { if (!isPlaceholderData && page < totalPages) setPage(old => old + 1); }} disabled={isPlaceholderData || page >= totalPages} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold text-gray-400">Próximo →</button>
               </div>
             )}

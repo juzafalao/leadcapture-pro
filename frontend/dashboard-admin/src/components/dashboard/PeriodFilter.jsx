@@ -27,8 +27,8 @@ export default function PeriodFilter({ activePeriod, onChange }) {
             transition-all
             flex items-center gap-2
             ${activePeriod === period.value
-              ? 'bg-[#ee7b4d] text-black shadow-lg shadow-[#ee7b4d]/30'
-              : 'bg-[#12121a] text-gray-400 border border-white/5 hover:bg-white/5'
+              ? 'bg-[#10B981] text-black shadow-lg shadow-[#10B981]/30'
+              : 'bg-[#0F172A] text-gray-400 border border-white/5 hover:bg-white/5'
             }
           `}
         >

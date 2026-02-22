@@ -1,21 +1,74 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import LeadCaptureLogo from './LeadCaptureLogo';
+import LogoIcon from './LogoIcon';
 
+// ─── SVG Icon components ───────────────────────────────────────
 const IconLeads = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true">
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="12" cy="12" r="8"/>
     <circle cx="12" cy="12" r="3"/>
     <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
   </svg>
 );
 
-const IconSistema = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" width="22" height="22" aria-hidden="true">
-    <rect x="4" y="4" width="16" height="4" rx="2"/>
-    <rect x="4" y="10" width="16" height="4" rx="2"/>
-    <rect x="4" y="16" width="16" height="4" rx="2"/>
+const IconAnalytics = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="3" y="12" width="4" height="9"/>
+    <rect x="10" y="7" width="4" height="14"/>
+    <rect x="17" y="3" width="4" height="18"/>
+  </svg>
+);
+
+const IconRelatorios = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="4" y="2" width="16" height="20" rx="2"/>
+    <path d="M8 7h8M8 12h8M8 17h5"/>
+  </svg>
+);
+
+const IconAutomacao = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+  </svg>
+);
+
+const IconMarcas = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M3 21V7l9-4 9 4v14"/>
+    <path d="M9 21V12h6v9"/>
+    <path d="M3 10h18"/>
+  </svg>
+);
+
+const IconSegmentos = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 3v9l6.36 6.36"/>
+    <path d="M12 12L5.64 18.36"/>
+  </svg>
+);
+
+const IconTeam = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="9" cy="7" r="3"/>
+    <circle cx="17" cy="8" r="2.5"/>
+    <path d="M2 21c0-4 3-6 7-6s7 2 7 6"/>
+    <path d="M17 14c2.5 0 5 1.5 5 4"/>
+  </svg>
+);
+
+const IconLeadsSistema = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M12 2L8.5 8.5 2 9.27l5 4.87-1.18 6.88L12 17.77l6.18 3.25L17 14.14l5-4.87-6.5-.77L12 2z"/>
+  </svg>
+);
+
+const IconConfig = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.5-2.3.7A7 7 0 0 0 14.6 4l-.6-2h-4l-.6 2A7 7 0 0 0 7.5 6.1l-2.3-.7-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .5.1 1 .2 1.6l-2 1.5 2 3.5 2.3-.7A7 7 0 0 0 9.4 20l.6 2h4l.6-2a7 7 0 0 0 1.9-2.1l2.3.7 2-3.5-2-1.5c.1-.6.2-1.1.2-1.6z"/>
   </svg>
 );
 
@@ -30,29 +83,29 @@ const NAV_GROUPS = [
   {
     label: 'Inteligência',
     items: [
-      { path: '/analytics',  icon: '📊', label: 'Analytics',  show: (a) => a.isGestor() },
-      { path: '/relatorios', icon: '📋', label: 'Relatórios', show: (a) => a.isGestor() },
+      { path: '/analytics',  icon: <IconAnalytics />, label: 'Analytics',  show: (a) => a.isGestor() },
+      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatórios', show: (a) => a.isGestor() },
     ],
   },
   {
     label: 'Operação',
     items: [
-      { path: '/automacao',    icon: '🤖', label: 'Automação', show: (a) => a.isGestor() },
-      { path: '/marcas',       icon: '🏢', label: 'Marcas',    show: (a) => a.isGestor() },
-      { path: '/segmentos',    icon: '🟠', label: 'Segmentos', show: (a) => a.isGestor() },
-      { path: '/usuarios',     icon: '👥', label: 'Time',      show: (a) => a.isGestor() },
+      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.isGestor() },
+      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.isGestor() },
+      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.isGestor() },
+      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.isGestor() },
     ],
   },
   {
     label: 'Institucional',
     items: [
-      { path: '/leads-sistema', icon: <IconSistema />, label: 'Leads Sistema', show: (a) => a.isGestor() },
+      { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isGestor() },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { path: '/configuracoes', icon: '⚙️', label: 'Config', show: () => true },
+      { path: '/configuracoes', icon: <IconConfig />, label: 'Config', show: () => true },
     ],
   },
 ];
@@ -81,7 +134,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
       <aside
         className={`
           fixed left-0 top-0 h-full
-          bg-[#0a0a0b] border-r border-white/5
+          bg-[#0F172A] border-r border-white/5
           flex flex-col items-center py-8
           z-50 w-32
           transition-transform duration-300 ease-in-out
@@ -95,7 +148,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
           className="mb-10 hover:opacity-85 transition-opacity"
           title="LeadCapture Pro"
         >
-          <LeadCaptureLogo variant="icon" size={48} />
+          <LogoIcon size={44} />
         </Link>
 
         {/* Nav por grupos */}
@@ -120,12 +173,12 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
                       p-3 rounded-2xl mb-1
                       transition-all duration-150
                       ${isActive(item.path)
-                        ? 'bg-[#ee7b4d] text-black shadow-md shadow-[#ee7b4d]/20'
+                        ? 'bg-[#10B981] text-black shadow-md shadow-[#10B981]/20'
                         : 'text-gray-600 hover:bg-white/5 hover:text-gray-400'
                       }
                     `}
                   >
-                    <span className="text-lg leading-none flex items-center justify-center">{item.icon}</span>
+                    <span className="text-lg leading-none">{item.icon}</span>
                     <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
                       {item.label}
                     </span>
@@ -140,14 +193,14 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         <div className="lg:hidden mt-auto pt-4 border-t border-white/5 w-full px-4">
           <div className="text-center">
             <p className="text-xs text-white font-medium truncate">{auth.usuario?.nome}</p>
-            <p className="text-[8px] text-[#ee7b4d] font-bold uppercase mt-1">{auth.usuario?.role}</p>
+            <p className="text-[8px] text-[#10B981] font-bold uppercase mt-1">{auth.usuario?.role}</p>
           </div>
         </div>
 
         {/* Avatar usuário (Desktop) */}
         <div className="hidden lg:flex mt-auto pt-4 border-t border-white/5 w-full items-center justify-center">
           <div
-            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-black font-bold text-sm"
+            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-bold text-sm"
             title={`${auth.usuario?.nome} · ${auth.usuario?.role}`}
           >
             {auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}

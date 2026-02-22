@@ -44,7 +44,7 @@ export default function FunnelPage() {
 
   if (loading) {
     return (
-      <div className="p-6 lg:p-10 bg-[#0a0a0b]">
+      <div className="p-6 lg:p-10 bg-[#0B1220]">
         <div className="animate-pulse space-y-6">
           <div className="h-10 bg-white/5 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -99,7 +99,7 @@ export default function FunnelPage() {
   ];
 
   return (
-    <div className="p-6 lg:p-10 bg-[#0a0a0b] min-h-screen">
+    <div className="p-6 lg:p-10 bg-[#0B1220] min-h-screen">
       <div className="mb-8">
         <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-500 to-yellow-500 bg-clip-text text-transparent mb-2">
           Funil de Conversão

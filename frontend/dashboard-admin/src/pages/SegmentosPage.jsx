@@ -5,7 +5,6 @@ import { useAuth } from '../components/AuthContext';
 import SegmentoCard from '../components/dashboard/SegmentoCard';
 import FAB from '../components/dashboard/FAB';
 import SegmentoModal from '../components/segmentos/SegmentoModal';
-import LeadCaptureLogo from '../components/LeadCaptureLogo';
 
 const PAGE_SIZE = 20;
 
@@ -164,16 +163,20 @@ export default function SegmentosPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-        <div className="animate-pulse">
-          <LeadCaptureLogo variant="icon" size={64} />
-        </div>
+      <div className="flex items-center justify-center py-32">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="text-6xl"
+        >
+          ⏳
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+    <div className="text-white pb-32">
       
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
@@ -183,10 +186,10 @@ export default function SegmentosPage() {
           transition={{ duration: 0.5 }}
         >
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Gestão de <span className="text-[#ee7b4d] font-bold">Segmentos</span>
+            Gestão de <span className="text-[#10B981] font-bold">Segmentos</span>
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full"></div>
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               {segmentos.length} {segmentos.length === 1 ? 'segmento cadastrado' : 'segmentos cadastrados'}
             </p>
@@ -204,7 +207,7 @@ export default function SegmentosPage() {
             onChange={(e) => handleBuscaChange(e.target.value)}
             className="
               w-full
-              bg-[#12121a]
+              bg-[#0F172A]
               border border-white/5
               rounded-2xl
               px-5 py-4
@@ -213,9 +216,9 @@ export default function SegmentosPage() {
               text-white
               placeholder:text-gray-600
               focus:outline-none
-              focus:border-[#ee7b4d]/50
+              focus:border-[#10B981]/50
               focus:ring-2
-              focus:ring-[#ee7b4d]/20
+              focus:ring-[#10B981]/20
               transition-all
             "
           />
@@ -248,21 +251,21 @@ export default function SegmentosPage() {
             {busca ? (
               <button
                 onClick={() => { setBuscaInput(''); setBusca(''); }}
-                className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
+                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
               >
                 Limpar Busca
               </button>
             ) : (
               <button
                 onClick={() => handleOpenModal(null)}
-                className="px-6 py-3 bg-[#ee7b4d] text-black font-bold rounded-xl hover:bg-[#d4663a] transition-all"
+                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
               >
                 + Criar Primeiro Segmento
               </button>
             )}
           </motion.div>
         ) : (
-          <div className="bg-[#12121a] border border-white/5 rounded-3xl overflow-hidden">
+          <div className="bg-[#0F172A] border border-white/5 rounded-3xl overflow-hidden">
             <div className="p-4 lg:p-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
                 {paginatedSegmentos.map((segmento, index) => (
@@ -277,7 +280,7 @@ export default function SegmentosPage() {
             </div>
 
             {/* FOOTER COM PAGINAÇÃO */}
-            <div className="px-4 py-4 border-t border-white/5 bg-[#12121a] rounded-b-3xl">
+            <div className="px-4 py-4 border-t border-white/5 bg-[#0F172A] rounded-b-3xl">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                 {/* Info */}
                 <p className="text-xs text-gray-600">
@@ -312,7 +315,7 @@ export default function SegmentosPage() {
                               className={`
                                 w-8 h-8 rounded-lg text-xs font-bold transition-all
                                 ${page === pageNum
-                                  ? 'bg-[#ee7b4d] text-black'
+                                  ? 'bg-[#10B981] text-black'
                                   : 'bg-white/5 text-gray-400 hover:bg-white/10'
                                 }
                               `}

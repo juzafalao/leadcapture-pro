@@ -64,14 +64,14 @@ export default function UserModal({ usuario, onClose }) {
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-[#12121a] rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
+          className="relative w-full max-w-md bg-[#0F172A] rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
         >
           {/* Header */}
           <div className="px-6 py-5 border-b border-white/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {/* Avatar */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] flex items-center justify-center text-white font-bold text-lg">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-white font-bold text-lg">
                   {usuario?.nome?.charAt(0).toUpperCase() || '?'}
                 </div>
                 <div>
@@ -167,11 +167,11 @@ export default function UserModal({ usuario, onClose }) {
             </div>
 
             {/* Info sobre mudança */}
-            <div className="bg-[#ee7b4d]/10 border border-[#ee7b4d]/30 rounded-xl p-4">
+            <div className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl p-4">
               <div className="flex gap-3">
                 <span className="text-xl">ℹ️</span>
                 <div>
-                  <p className="text-xs font-bold text-[#ee7b4d] mb-1">
+                  <p className="text-xs font-bold text-[#10B981] mb-1">
                     Sobre a mudança de perfil
                   </p>
                   <p className="text-xs text-gray-400">
@@ -215,10 +215,10 @@ export default function UserModal({ usuario, onClose }) {
                 flex-1
                 px-6 py-3
                 rounded-xl
-                bg-gradient-to-r from-[#ee7b4d] to-[#f59e42]
+                bg-gradient-to-r from-[#10B981] to-[#059669]
                 text-black
                 font-bold
-                hover:shadow-lg hover:shadow-[#ee7b4d]/20
+                hover:shadow-lg hover:shadow-[#10B981]/20
                 transition-all
                 disabled:opacity-50
                 disabled:cursor-not-allowed
