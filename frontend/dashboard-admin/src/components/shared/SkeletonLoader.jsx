@@ -2,7 +2,7 @@ import React from 'react';
 
 export function SkeletonCard() {
   return (
-    <div className="bg-[#12121a] border border-white/5 rounded-2xl p-4 animate-pulse">
+    <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-4 animate-pulse">
       <div className="w-8 h-8 bg-white/5 rounded-xl mb-3" />
       <div className="w-12 h-7 bg-white/5 rounded-lg mb-2" />
       <div className="w-16 h-3 bg-white/5 rounded" />

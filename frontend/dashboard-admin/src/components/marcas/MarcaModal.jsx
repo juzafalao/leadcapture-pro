@@ -52,19 +52,19 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
 
       <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center p-0 lg:p-4">
         <div 
-          className="bg-[#12121a] border-t lg:border border-[#1f1f23] rounded-t-3xl lg:rounded-2xl w-full lg:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-[#0F172A] border-t lg:border border-[#1F2937] rounded-t-3xl lg:rounded-2xl w-full lg:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           
           {/* Header */}
-          <div className="flex-shrink-0 p-6 border-b border-[#1f1f23]">
-            <div className="w-12 h-1 bg-[#2a2a2f] rounded-full mx-auto mb-4 lg:hidden"></div>
+          <div className="flex-shrink-0 p-6 border-b border-[#1F2937]">
+            <div className="w-12 h-1 bg-[#1E293B] rounded-full mx-auto mb-4 lg:hidden"></div>
             
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">
                 {marca ? 'Editar Marca' : 'Nova Marca'}
               </h2>
-              <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-white">
+              <button onClick={onClose} className="w-10 h-10 rounded-xl bg-[#1F2937] border border-[#1E293B] flex items-center justify-center text-[#6a6a6f] hover:text-white">
                 ✕
               </button>
             </div>
@@ -81,7 +81,7 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Ex: Premium Wash"
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50"
+                className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
               />
             </div>
 
@@ -91,7 +91,7 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
               <select
                 value={formData.segmento_id}
                 onChange={(e) => setFormData({ ...formData, segmento_id: e.target.value })}
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ee7b4d]/50"
+                className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#10B981]/50"
               >
                 <option value="">Selecione um segmento</option>
                 {segmentos.map((seg) => (
@@ -113,7 +113,7 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
                       type="button"
                       onClick={() => setFormData({ ...formData, emoji })}
                       className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl transition-all ${
-                        formData.emoji === emoji ? 'bg-[#ee7b4d]/20 border-2 border-[#ee7b4d] scale-110' : 'bg-[#1f1f23] border border-[#2a2a2f]'
+                        formData.emoji === emoji ? 'bg-[#10B981]/20 border-2 border-[#10B981] scale-110' : 'bg-[#1F2937] border border-[#1E293B]'
                       }`}
                     >
                       {emoji}
@@ -149,7 +149,7 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
                   value={formData.investimento_minimo}
                   onChange={(e) => setFormData({ ...formData, investimento_minimo: e.target.value })}
                   placeholder="100000"
-                  className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50"
+                  className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
                 />
               </div>
               <div>
@@ -159,7 +159,7 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
                   value={formData.investimento_maximo}
                   onChange={(e) => setFormData({ ...formData, investimento_maximo: e.target.value })}
                   placeholder="200000"
-                  className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50"
+                  className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
                 />
               </div>
             </div>
@@ -172,23 +172,23 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
                 onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                 placeholder="Descreva a marca..."
                 rows={3}
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 resize-none"
+                className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50 resize-none"
               />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 p-6 border-t border-[#1f1f23] flex gap-3">
+          <div className="flex-shrink-0 p-6 border-t border-[#1F2937] flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold hover:bg-[#1f1f23]"
+              className="flex-1 py-3 rounded-xl border border-[#1E293B] text-[#6a6a6f] font-semibold hover:bg-[#1F2937]"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSaving}
-              className="flex-1 py-3 rounded-xl bg-[#ee7b4d] text-black font-semibold hover:bg-[#d4663a] disabled:opacity-50"
+              className="flex-1 py-3 rounded-xl bg-[#10B981] text-black font-semibold hover:bg-[#059669] disabled:opacity-50"
             >
               {isSaving ? 'Salvando...' : 'Salvar'}
             </button>

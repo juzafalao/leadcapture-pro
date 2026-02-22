@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 
 const Section = ({ title, children }) => (
-  <div className="bg-[#12121a] border border-white/5 rounded-3xl p-8 mb-6">
+  <div className="bg-[#0F172A] border border-white/5 rounded-3xl p-8 mb-6">
     <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-500 mb-6">{title}</h2>
     {children}
   </div>
@@ -17,10 +17,10 @@ const Field = ({ label, children }) => (
 )
 
 const inputClass = `
-  w-full bg-[#0a0a0b] border border-white/5 rounded-2xl
+  w-full bg-[#0B1220] border border-white/5 rounded-2xl
   px-5 py-3.5 text-sm text-white placeholder:text-gray-700
-  focus:outline-none focus:border-[#ee7b4d]/50
-  focus:ring-2 focus:ring-[#ee7b4d]/15 transition-all
+  focus:outline-none focus:border-[#10B981]/50
+  focus:ring-2 focus:ring-[#10B981]/15 transition-all
 `
 
 export default function SettingsPage() {
@@ -38,10 +38,10 @@ export default function SettingsPage() {
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Configurações <span className="text-[#ee7b4d] font-bold">do Sistema</span>
+            Configurações <span className="text-[#10B981] font-bold">do Sistema</span>
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Personalize sua conta e tenant
             </p>
@@ -85,7 +85,7 @@ export default function SettingsPage() {
                 <span className="text-sm text-gray-300">{label}</span>
                 <div className="relative">
                   <input type="checkbox" id={id} defaultChecked={def} className="sr-only peer" />
-                  <div className="w-10 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#ee7b4d] transition-colors" />
+                  <div className="w-10 h-5 bg-white/10 rounded-full peer peer-checked:bg-[#10B981] transition-colors" />
                   <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5" />
                 </div>
               </label>
@@ -100,7 +100,7 @@ export default function SettingsPage() {
                 { icon: '⚡', name: 'n8n Automação',  status: 'Não configurado', color: 'text-yellow-500' },
                 { icon: '📧', name: 'SMTP E-mail',    status: 'Simulado',        color: 'text-blue-400'   },
               ].map(({ icon, name, status, color }) => (
-                <div key={name} className="flex items-center gap-4 bg-[#0a0a0b] border border-white/5 rounded-2xl p-4">
+                <div key={name} className="flex items-center gap-4 bg-[#0B1220] border border-white/5 rounded-2xl p-4">
                   <span className="text-2xl">{icon}</span>
                   <div>
                     <p className="text-sm font-bold text-white">{name}</p>
@@ -119,7 +119,7 @@ export default function SettingsPage() {
               w-full py-4 rounded-2xl font-bold text-sm transition-all
               ${saved
                 ? 'bg-green-500 text-white'
-                : 'bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black'
+                : 'bg-gradient-to-r from-[#10B981] to-[#059669] text-black'
               }
             `}
           >

@@ -65,21 +65,21 @@ export default function LeadCard({ lead, index, onClick }) {
       whileHover={{ scale: 1.02, y: -4 }}
       onClick={onClick}
       className="
-        bg-[#12121a]
+        bg-[#0F172A]
         border border-white/5
         rounded-3xl
         p-6 lg:p-8
         cursor-pointer
         transition-all
-        hover:border-[#ee7b4d]/30
+        hover:border-[#10B981]/30
         hover:shadow-xl
-        hover:shadow-[#ee7b4d]/10
+        hover:shadow-[#10B981]/10
         relative
         overflow-hidden
       "
     >
       {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#ee7b4d]/5 to-transparent opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-[#10B981]/5 to-transparent opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-4 relative z-10">
