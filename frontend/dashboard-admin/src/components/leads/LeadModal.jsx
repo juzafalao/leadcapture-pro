@@ -27,7 +27,7 @@ export default function LeadModal({ lead, onClose }) {
     categoria:             lead?.categoria || 'Cold',
     score:                 lead?.score || 0,
     fonte:                 lead?.fonte || '',
-    id_marca:              lead?.id_marca || '',
+    id_marca:              lead?.id_marca || lead?.marca?.id || '',
     resumo_qualificacao:   lead?.resumo_qualificacao || '',
     mensagem_original:     lead?.mensagem_original || '',
     experiencia_anterior:  lead?.experiencia_anterior || false,
@@ -79,7 +79,7 @@ export default function LeadModal({ lead, onClose }) {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    if (!formData.id_marca) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Selecione uma Marca de Interesse!' }); return; }
+    if (isNovo && !formData.id_marca) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Selecione uma Marca de Interesse!' }); return; }
     if (isPerdido && !formData.id_motivo_desistencia) { showAlert({ type: 'warning', title: 'Campo Obrigatório', message: 'Informe o motivo da desistência!' }); return; }
     setIsSaving(true);
 

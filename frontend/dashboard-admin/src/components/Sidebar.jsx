@@ -77,35 +77,35 @@ const NAV_GROUPS = [
   {
     label: 'Principal',
     items: [
-      { path: '/dashboard',  icon: <IconLeads />, label: 'Leads',   show: () => true },
+      { path: '/dashboard',  icon: IconLeads, label: 'Leads',   show: () => true },
     ],
   },
   {
     label: 'Inteligência',
     items: [
-      { path: '/analytics',  icon: <IconAnalytics />, label: 'Analytics',  show: (a) => a.isGestor() },
-      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatórios', show: (a) => a.isGestor() },
+      { path: '/analytics',  icon: IconAnalytics, label: 'Analytics',  show: (a) => a.isGestor() },
+      { path: '/relatorios', icon: IconRelatorios, label: 'Relatórios', show: (a) => a.isGestor() },
     ],
   },
   {
     label: 'Operação',
     items: [
-      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.isGestor() },
-      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.isGestor() },
-      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.isGestor() },
-      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.isGestor() },
+      { path: '/automacao',    icon: IconAutomacao,    label: 'Automação', show: (a) => a.isGestor() },
+      { path: '/marcas',       icon: IconMarcas,       label: 'Marcas',    show: (a) => a.isGestor() },
+      { path: '/segmentos',    icon: IconSegmentos,    label: 'Segmentos', show: (a) => a.isGestor() },
+      { path: '/usuarios',     icon: IconTeam,         label: 'Time',      show: (a) => a.isGestor() },
     ],
   },
   {
     label: 'Institucional',
     items: [
-      { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isGestor() },
+      { path: '/leads-sistema', icon: IconLeadsSistema, label: 'Leads Sistema', show: (a) => a.isGestor() },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { path: '/configuracoes', icon: <IconConfig />, label: 'Config', show: () => true },
+      { path: '/configuracoes', icon: IconConfig, label: 'Config', show: () => true },
     ],
   },
 ];
@@ -178,7 +178,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
                       }
                     `}
                   >
-                    <span className="text-lg leading-none">{item.icon}</span>
+                    <span className="text-lg leading-none"><item.icon /></span>
                     <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
                       {item.label}
                     </span>
