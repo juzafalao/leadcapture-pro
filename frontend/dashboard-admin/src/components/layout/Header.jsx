@@ -1,18 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
+import ConfirmModal from '../shared/ConfirmModal';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
   const tenant = usuario?.tenant;
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
-  const handleLogout = async () => {
-    if (window.confirm('Tem certeza que deseja sair?')) {
-      await logout();
-      window.location.href = '/login';
-    }
+  const handleLogoutConfirm = async () => {
+    setConfirmLogout(false);
+    await logout();
+    window.location.href = '/login';
   };
 
   return (
+    <>
     <header className="sticky top-0 z-40 bg-[#0B1220]/95 backdrop-blur-xl border-b border-[#1F2937] w-full">
       <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
 
@@ -57,8 +59,8 @@ export default function Header({ onMenuClick }) {
           </div>
 
           <button
-            onClick={handleLogout}
-            className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-[#0F172A] border border-[#1F2937] flex items-center justify-center text-[#CBD5E1]/60 hover:text-red-400 hover:border-red-500/30 transition-all"
+            onClick={() => setConfirmLogout(true)}
+            className="group w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-[#0F172A] border border-[#1F2937] flex items-center justify-center text-[#CBD5E1]/60 hover:text-red-400 hover:border-red-500/30 transition-all"
             title="Sair"
           >
             <svg
@@ -69,7 +71,6 @@ export default function Header({ onMenuClick }) {
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-[#475569] group-hover:text-red-400 transition-colors"
             >
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
@@ -80,5 +81,14 @@ export default function Header({ onMenuClick }) {
 
       </div>
     </header>
+
+      <ConfirmModal
+        isOpen={confirmLogout}
+        onConfirm={handleLogoutConfirm}
+        onClose={() => setConfirmLogout(false)}
+        title="Sair do sistema"
+        message="Tem certeza que deseja sair?"
+      />
+    </>
   );
 }
