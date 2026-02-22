@@ -71,16 +71,16 @@ export default function AutomacaoPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#0a0a0b] text-white pb-32">
+    <div className="min-h-screen bg-[#0B1220] text-white pb-32">
 
       {/* Header */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Centro de <span className="text-[#ee7b4d] font-bold">Automação</span>
+            Centro de <span className="text-[#10B981] font-bold">Automação</span>
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#ee7b4d] rounded-full" />
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Workflows n8n · WhatsApp · IA
             </p>
@@ -114,7 +114,7 @@ export default function AutomacaoPage() {
               color: apiStatus?.services?.email?.configurado ? 'text-green-400' : 'text-blue-400',
             },
           ].map(({ icon, label, value, status, color }) => (
-            <div key={label} className="bg-[#12121a] border border-white/5 rounded-3xl p-6">
+            <div key={label} className="bg-[#0F172A] border border-white/5 rounded-3xl p-6">
               <div className="flex items-center gap-3 mb-3">
                 <span className="text-2xl">{icon}</span>
                 <span className="text-xs font-black uppercase tracking-wider text-gray-500">{label}</span>
@@ -140,11 +140,11 @@ export default function AutomacaoPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }}
-                className="bg-[#12121a] border border-white/5 rounded-3xl p-6 hover:border-white/10 transition-all"
+                className="bg-[#0F172A] border border-white/5 rounded-3xl p-6 hover:border-white/10 transition-all"
               >
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#ee7b4d]/08 rounded-2xl flex items-center justify-center text-2xl">
+                    <div className="w-12 h-12 bg-[#10B981]/08 rounded-2xl flex items-center justify-center text-2xl">
                       {wf.icon}
                     </div>
                     <div>
@@ -165,7 +165,7 @@ export default function AutomacaoPage() {
                 <div className="space-y-2 mb-5">
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] font-black uppercase tracking-wider text-gray-600 w-16">Gatilho</span>
-                    <span className="text-xs text-[#ee7b4d] bg-[#ee7b4d]/08 px-3 py-1 rounded-full">
+                    <span className="text-xs text-[#10B981] bg-[#10B981]/08 px-3 py-1 rounded-full">
                       {wf.gatilho}
                     </span>
                   </div>
@@ -205,19 +205,19 @@ export default function AutomacaoPage() {
         </div>
 
         {/* Call-to-action n8n */}
-        <div className="mt-8 bg-gradient-to-r from-[#ee7b4d]/08 to-[#f59e42]/05 border border-[#ee7b4d]/20 rounded-3xl p-8 text-center">
+        <div className="mt-8 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/05 border border-[#10B981]/20 rounded-3xl p-8 text-center">
           <p className="text-3xl mb-3">⚡</p>
           <h3 className="font-bold text-white mb-2">n8n ainda não configurado?</h3>
           <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
             Suba o Docker Compose e acesse <strong className="text-white">localhost:5678</strong> para configurar
-            seus workflows. Templates prontos estão disponíveis na pasta <code className="text-[#ee7b4d]">automacao/workflows/</code>.
+            seus workflows. Templates prontos estão disponíveis na pasta <code className="text-[#10B981]">automacao/workflows/</code>.
           </p>
           <div className="flex flex-wrap justify-center gap-3">
             <a
               href="http://localhost:5678"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-6 py-3 bg-[#ee7b4d] text-black font-bold text-sm rounded-xl hover:opacity-85 transition-all"
+              className="px-6 py-3 bg-[#10B981] text-black font-bold text-sm rounded-xl hover:opacity-85 transition-all"
             >
               Abrir n8n
             </a>

@@ -40,15 +40,15 @@ export default function UserCard({ user, index, onClick }) {
       whileHover={{ scale: 1.02, y: -4 }}
       onClick={onClick}
       className="
-        bg-[#12121a]
+        bg-[#0F172A]
         border border-white/5
         rounded-3xl
         p-6 lg:p-8
         cursor-pointer
         transition-all
-        hover:border-[#ee7b4d]/30
+        hover:border-[#10B981]/30
         hover:shadow-xl
-        hover:shadow-[#ee7b4d]/10
+        hover:shadow-[#10B981]/10
         relative
         overflow-hidden
       "
@@ -61,7 +61,7 @@ export default function UserCard({ user, index, onClick }) {
         <div className="
           w-16 h-16 lg:w-20 lg:h-20
           rounded-2xl
-          bg-gradient-to-br from-[#ee7b4d] to-[#d4663a]
+          bg-gradient-to-br from-[#10B981] to-[#059669]
           flex items-center justify-center
           text-xl lg:text-2xl
           font-black

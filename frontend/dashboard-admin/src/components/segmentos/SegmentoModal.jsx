@@ -52,13 +52,13 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
 
       <div className="fixed inset-0 z-50 flex items-end lg:items-center lg:justify-center p-0 lg:p-4">
         <div 
-          className="bg-[#12121a] border-t lg:border border-white/10 rounded-t-3xl lg:rounded-3xl w-full lg:max-w-xl max-h-[90vh] overflow-hidden flex flex-col"
+          className="bg-[#0F172A] border-t lg:border border-[#1F2937] rounded-t-3xl lg:rounded-2xl w-full lg:max-w-xl max-h-[90vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           
           {/* Header */}
-          <div className="flex-shrink-0 p-6 border-b border-[#1f1f23]">
-            <div className="w-12 h-1 bg-[#2a2a2f] rounded-full mx-auto mb-4 lg:hidden"></div>
+          <div className="flex-shrink-0 p-6 border-b border-[#1F2937]">
+            <div className="w-12 h-1 bg-[#1E293B] rounded-full mx-auto mb-4 lg:hidden"></div>
             
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-white">
@@ -66,7 +66,7 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
               </h2>
               <button 
                 onClick={onClose} 
-                className="w-10 h-10 rounded-xl bg-[#1f1f23] border border-[#2a2a2f] flex items-center justify-center text-[#6a6a6f] hover:text-white transition-colors"
+                className="w-10 h-10 rounded-xl bg-[#1F2937] border border-[#1E293B] flex items-center justify-center text-[#6a6a6f] hover:text-white transition-colors"
               >
                 ✕
               </button>
@@ -87,7 +87,7 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
                 placeholder="Ex: Lavanderias"
                 disabled={isSaving}
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 disabled:opacity-50"
+                className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50 disabled:opacity-50"
               />
             </div>
 
@@ -96,7 +96,7 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
               <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">
                 Escolha um Emoji
               </label>
-              <div className="bg-[#1f1f23] border border-[#2a2a2f] rounded-xl p-4 max-h-60 overflow-y-auto">
+              <div className="bg-[#1F2937] border border-[#1E293B] rounded-xl p-4 max-h-60 overflow-y-auto">
                 <div className="grid grid-cols-8 gap-2">
                   {EMOJI_OPTIONS.map((emoji) => (
                     <button
@@ -106,8 +106,8 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
                       disabled={isSaving}
                       className={`w-10 h-10 rounded-lg flex items-center justify-center text-2xl transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed ${
                         formData.emoji === emoji 
-                          ? 'bg-[#ee7b4d]/20 border-2 border-[#ee7b4d] scale-110' 
-                          : 'bg-[#0a0a0b] border border-[#2a2a2f] hover:bg-[#2a2a2f]'
+                          ? 'bg-[#10B981]/20 border-2 border-[#10B981] scale-110' 
+                          : 'bg-[#0B1220] border border-[#1E293B] hover:bg-[#1E293B]'
                       }`}
                     >
                       {emoji}
@@ -117,7 +117,7 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
               </div>
               
               {/* Preview */}
-              <div className="mt-3 flex items-center gap-3 p-3 bg-[#1f1f23] border border-[#2a2a2f] rounded-xl">
+              <div className="mt-3 flex items-center gap-3 p-3 bg-[#1F2937] border border-[#1E293B] rounded-xl">
                 <span className="text-4xl">{formData.emoji}</span>
                 <div>
                   <p className="text-xs text-[#6a6a6f]">Emoji selecionado</p>
@@ -137,24 +137,24 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
                 placeholder="Descreva o segmento de mercado..."
                 rows={3}
                 disabled={isSaving}
-                className="w-full bg-[#1f1f23] border border-[#2a2a2f] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#ee7b4d]/50 resize-none disabled:opacity-50"
+                className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50 resize-none disabled:opacity-50"
               />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex-shrink-0 p-6 border-t border-[#1f1f23] flex gap-3">
+          <div className="flex-shrink-0 p-6 border-t border-[#1F2937] flex gap-3">
             <button
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 py-3 rounded-xl border border-[#2a2a2f] text-[#6a6a6f] font-semibold hover:bg-[#1f1f23] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 rounded-xl border border-[#1E293B] text-[#6a6a6f] font-semibold hover:bg-[#1F2937] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               onClick={handleSubmit}
               disabled={isSaving}
-              className="flex-1 py-3 rounded-xl bg-[#ee7b4d] text-black font-semibold hover:bg-[#d4663a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 rounded-xl bg-[#10B981] text-black font-semibold hover:bg-[#059669] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Salvando...' : 'Salvar'}
             </button>

@@ -14,15 +14,15 @@ export default function SegmentoCard({ segmento, index, onClick }) {
       whileHover={{ scale: 1.02, y: -4 }}
       onClick={onClick}
       className="
-        bg-[#12121a]
+        bg-[#0F172A]
         border border-white/5
         rounded-3xl
         p-6 lg:p-8
         cursor-pointer
         transition-all
-        hover:border-[#ee7b4d]/30
+        hover:border-[#10B981]/30
         hover:shadow-xl
-        hover:shadow-[#ee7b4d]/10
+        hover:shadow-[#10B981]/10
         relative
         overflow-hidden
       "
@@ -74,7 +74,7 @@ export default function SegmentoCard({ segmento, index, onClick }) {
         </div>
         <div className="bg-white/5 rounded-xl p-3 border border-white/5">
           <div className="text-xs text-gray-500 font-semibold mb-1">Leads</div>
-          <div className="text-xl font-black text-[#ee7b4d]">{totalLeads}</div>
+          <div className="text-xl font-black text-[#10B981]">{totalLeads}</div>
         </div>
       </div>
 

@@ -17,18 +17,18 @@ export default function HeroMetric({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6 }}
       className="
-        bg-gradient-to-br from-[#ee7b4d]/10 via-[#12121a] to-[#12121a]
-        border border-[#ee7b4d]/20
+        bg-gradient-to-br from-[#10B981]/10 via-[#0F172A] to-[#0F172A]
+        border border-[#10B981]/20
         rounded-3xl lg:rounded-[3rem]
         p-8 lg:p-12
         relative
         overflow-hidden
         shadow-2xl
-        shadow-[#ee7b4d]/10
+        shadow-[#10B981]/10
       "
     >
       {/* Background glow */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-[#ee7b4d]/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-64 h-64 bg-[#10B981]/5 rounded-full blur-3xl pointer-events-none"></div>
       
       {/* Icon */}
       <motion.div
@@ -49,7 +49,7 @@ export default function HeroMetric({
         initial={{ scale: 0.9 }}
         animate={{ scale: 1 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="text-5xl lg:text-7xl font-black text-[#ee7b4d] mb-4 tracking-tighter"
+        className="text-5xl lg:text-7xl font-black text-[#10B981] mb-4 tracking-tighter"
       >
         {value}
       </motion.h2>
@@ -85,7 +85,7 @@ export default function HeroMetric({
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
-              className="h-full bg-gradient-to-r from-[#ee7b4d] to-[#d4663a] rounded-full relative"
+              className="h-full bg-gradient-to-r from-[#10B981] to-[#059669] rounded-full relative"
             >
               <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
             </motion.div>
