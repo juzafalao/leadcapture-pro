@@ -133,6 +133,7 @@ export default function DashboardPage() {
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Marca</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Score</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status Comercial</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">Atribuído</th>
                     <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
@@ -186,15 +187,7 @@ export default function DashboardPage() {
 
                       {/* Score */}
                       <td className="px-4 py-4 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-white/5 rounded-full h-2 overflow-hidden">
-                            <div
-                              className={`h-full transition-all ${lead.score >= 70 ? "bg-red-500" : lead.score >= 40 ? "bg-yellow-500" : "bg-blue-500"}`}
-                              style={{ width: `${lead.score || 0}%` }}
-                            />
-                          </div>
-                          <span className="text-sm font-bold text-gray-400 w-8 text-right">{lead.score || 0}</span>
-                        </div>
+                        <span className="text-sm font-bold text-gray-300">{lead.score || 0}</span>
                       </td>
 
                       {/* Status */}
@@ -209,6 +202,29 @@ export default function DashboardPage() {
                           {lead.categoria?.toLowerCase() === "cold" && "❄️"}
                           {lead.categoria || "Cold"}
                         </span>
+                      </td>
+
+                      {/* Status Comercial */}
+                      <td className="px-4 py-4 hidden lg:table-cell">
+                        {lead.status ? (
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                            lead.status.toLowerCase().includes('vendido') || lead.status.toLowerCase().includes('convertido')
+                              ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                              : lead.status.toLowerCase().includes('negoc')
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                              : lead.status.toLowerCase().includes('perdido')
+                              ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                              : lead.status.toLowerCase().includes('agendado')
+                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                              : lead.status.toLowerCase().includes('contato')
+                              ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                              : 'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                          }`}>
+                            {lead.status}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-600 italic">—</span>
+                        )}
                       </td>
 
                       {/* Atribuído */}

@@ -101,16 +101,9 @@ function AuthenticatedLayout({ children }) {
       <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-[#1F2937] py-6 text-center bg-[#0B1220]">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <svg width="28" height="28" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="10,20 90,20 55,50 90,80 10,80 45,50" fill="white"/>
-              <polygon points="30,55 70,55 90,80 10,80" fill="#10B981"/>
-            </svg>
-            <span className="text-[#F8FAFC] font-black text-sm tracking-wider">ZAFALÃO TECH</span>
-          </div>
-          <p className="text-[9px] text-[#CBD5E1]/40 font-bold uppercase tracking-[0.2em]">
-            © 2026 LeadCapture Pro · Powered by <span className="text-[#10B981]">Zafalão Tech</span>
+        <footer className="border-t border-[#1F2937] py-4 text-center bg-[#0B1220]">
+          <p className="text-[9px] text-[#CBD5E1]/30 font-bold uppercase tracking-[0.2em]">
+            Desenvolvido por — <span className="text-[#10B981]">Zafalão Tech</span>
           </p>
         </footer>
       </main>

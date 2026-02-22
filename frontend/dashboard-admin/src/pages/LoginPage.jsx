@@ -82,6 +82,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#060D1A] flex items-center justify-center p-6 relative overflow-hidden">
+      <style>{`.lc-input::placeholder{color:#475569}`}</style>
 
       {/* Glow superior direito */}
       <div className="absolute -top-32 -right-32 w-[700px] h-[700px] rounded-full pointer-events-none"
@@ -157,7 +158,7 @@ export default function LoginPage() {
                 placeholder="Seu e-mail"
                 disabled={isLogging}
                 autoComplete="email"
-                className="w-full rounded-xl pl-11 pr-5 py-3.5 text-[#F8FAFC] text-sm placeholder:text-[#475569] focus:outline-none transition-all disabled:opacity-50"
+                className="w-full rounded-xl pl-11 pr-5 py-3.5 text-[#F8FAFC] text-sm focus:outline-none transition-all disabled:opacity-50 lc-input"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
@@ -185,7 +186,7 @@ export default function LoginPage() {
                 placeholder="Sua senha"
                 disabled={isLogging}
                 autoComplete="current-password"
-                className="w-full rounded-xl pl-11 pr-12 py-3.5 text-[#F8FAFC] text-sm placeholder:text-[#475569] focus:outline-none transition-all disabled:opacity-50"
+                className="w-full rounded-xl pl-11 pr-12 py-3.5 text-[#F8FAFC] text-sm focus:outline-none transition-all disabled:opacity-50 lc-input"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
