@@ -82,6 +82,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#060D1A] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Placeholder color via CSS class — evita placeholder:text-[#hex] que causa esbuild regex error */}
+      <style>{`.lc-input::placeholder{color:#475569}`}</style>
 
       {/* Glow superior direito */}
       <div
@@ -266,6 +268,7 @@ export default function LoginPage() {
           </div>
 
         </div>
+      </div>
 
         {/* Footer externo */}
         <p className="text-center text-[9px] text-[#1E293B] mt-6 uppercase tracking-[0.35em]">
