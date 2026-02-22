@@ -99,7 +99,7 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
 
         <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-[#1a1a1f] rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+          className="relative w-full max-w-md bg-[#0F172A] rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
 
           {/* Header */}
           <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between">
@@ -131,7 +131,7 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
                       whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
                       onClick={() => setSelectedOperador(op.id)}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all ${isSelected ? roleColors[op.role] + ' shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}>
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${isSelected ? 'bg-gradient-to-br from-[#ee7b4d] to-[#f59e42] text-white' : 'bg-white/10 text-gray-400'}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${isSelected ? 'bg-gradient-to-br from-[#10B981] to-[#059669] text-white' : 'bg-white/10 text-gray-400'}`}>
                         {op.nome.charAt(0).toUpperCase()}
                       </div>
                       <div className="flex-1 text-left">
@@ -166,7 +166,7 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
               onClick={handleAtribuir}
               disabled={isSaving || !selectedOperador || selectedOperador === lead?.id_operador_responsavel}
-              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#ee7b4d] to-[#f59e42] text-black font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+              className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {isSaving ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>⏳</motion.div>Salvando...</> : '✓ Atribuir'}
             </motion.button>
           </div>

@@ -6,7 +6,7 @@ export function LeadCard({ lead, onClick, onWhatsApp }) {
 
   return (
     <div 
-      className="bg-[#12121a] border border-[#1f1f23] rounded-2xl p-4 active:scale-[0.98] transition-all shadow-md"
+      className="bg-[#0F172A] border border-[#1F2937] rounded-2xl p-4 active:scale-[0.98] transition-all shadow-md"
       onClick={onClick}
     >
       <div className="flex justify-between items-start mb-4">
@@ -17,7 +17,7 @@ export function LeadCard({ lead, onClick, onWhatsApp }) {
           </p>
         </div>
         <div className={`flex items-center justify-center px-3 py-1 rounded-xl text-[11px] font-black ${
-          lead.score >= 70 ? 'bg-[#ee7b4d]/20 text-[#ee7b4d] border border-[#ee7b4d]/30' : 'bg-gray-800 text-gray-500'
+          lead.score >= 70 ? 'bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30' : 'bg-gray-800 text-gray-500'
         }`}>
           {lead.score || 0}
         </div>

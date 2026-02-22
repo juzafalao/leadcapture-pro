@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const TOAST_STYLES = {
-  success: 'bg-[#ee7b4d] text-black',
+  success: 'bg-[#10B981] text-black',
   error:   'bg-red-600 text-white',
   warning: 'bg-yellow-500 text-black',
   info:    'bg-blue-600 text-white',

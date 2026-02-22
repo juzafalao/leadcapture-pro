@@ -15,31 +15,31 @@ export default function MetricCard({
   
   const colorStyles = {
     default: {
-      bg: active ? 'bg-[#ee7b4d]/10' : 'bg-[#12121a]',
-      border: active ? 'border-[#ee7b4d]/40 ring-1 ring-[#ee7b4d]' : 'border-white/5',
+      bg: active ? 'bg-[#10B981]/10' : 'bg-[#0F172A]',
+      border: active ? 'border-[#10B981]/40 ring-1 ring-[#10B981]' : 'border-white/5',
       text: 'text-white',
-      glow: 'shadow-[#ee7b4d]/20'
+      glow: 'shadow-[#10B981]/20'
     },
     hot: {
-      bg: active ? 'bg-red-500/10' : 'bg-[#12121a]',
+      bg: active ? 'bg-red-500/10' : 'bg-[#0F172A]',
       border: active ? 'border-red-500/40 ring-1 ring-red-500' : 'border-white/5',
       text: 'text-red-500',
       glow: 'shadow-red-500/20'
     },
     warm: {
-      bg: active ? 'bg-orange-500/10' : 'bg-[#12121a]',
+      bg: active ? 'bg-orange-500/10' : 'bg-[#0F172A]',
       border: active ? 'border-orange-500/40 ring-1 ring-orange-500' : 'border-white/5',
       text: 'text-orange-500',
       glow: 'shadow-orange-500/20'
     },
     cold: {
-      bg: active ? 'bg-blue-500/10' : 'bg-[#12121a]',
+      bg: active ? 'bg-blue-500/10' : 'bg-[#0F172A]',
       border: active ? 'border-blue-500/40 ring-1 ring-blue-500' : 'border-white/5',
       text: 'text-blue-400',
       glow: 'shadow-blue-500/20'
     },
     money: {
-      bg: active ? 'bg-green-500/10' : 'bg-[#12121a]',
+      bg: active ? 'bg-green-500/10' : 'bg-[#0F172A]',
       border: active ? 'border-green-500/40 ring-1 ring-green-500' : 'border-white/5',
       text: 'text-green-500',
       glow: 'shadow-green-500/20'
