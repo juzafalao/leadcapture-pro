@@ -71,7 +71,7 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
+      <div className="min-h-screen bg-[#060D1A] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
           <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
@@ -81,79 +81,198 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1220] flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Glow decorativo de fundo */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#10B981]/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen bg-[#060D1A] flex items-center justify-center p-6 relative overflow-hidden">
+      {/* Placeholder color via CSS class — evita placeholder:text-[#hex] que causa esbuild regex error */}
+      <style>{`.lc-input::placeholder{color:#475569}`}</style>
 
-      <div className="w-full max-w-md relative z-10">
+      {/* Glow superior direito */}
+      <div
+        className="absolute -top-32 -right-32 w-[700px] h-[700px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.09) 0%, transparent 70%)' }}
+      />
 
-        {/* Logo e Título */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
-            <LogoIcon size={72} />
-          </div>
-          <h1 className="text-3xl font-light text-[#F8FAFC] mb-2">
-            Lead<span className="text-[#10B981] font-bold">Capture</span> Pro
-          </h1>
-          <p className="text-xs text-[#CBD5E1]/50 tracking-wider">Acesse sua conta</p>
+      {/* Glow inferior esquerdo */}
+      <div
+        className="absolute -bottom-40 -left-40 w-[600px] h-[600px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(14,165,233,0.06) 0%, transparent 70%)' }}
+      />
+
+      {/* Grid de pontos */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.055) 1px, transparent 1px)',
+        backgroundSize: '36px 36px',
+      }} />
+
+      {/* Logo fantasma (watermark) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+        <div style={{ opacity: 0.05, transform: 'scale(1.1)' }}>
+          <LogoIcon size={520} />
         </div>
       </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-8">
-
-          {/* Email */}
-          <div>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              disabled={isLogging}
-              autoComplete="email"
-              className="w-full bg-transparent border-b-2 border-[#10B981]/50 px-0 py-3 text-[#F8FAFC] placeholder:text-[#CBD5E1]/40 focus:outline-none focus:border-[#10B981] transition-colors disabled:opacity-50"
-            />
-          </div>
-
-          {/* Senha */}
-          <div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Senha"
-              disabled={isLogging}
-              autoComplete="current-password"
-              className="w-full bg-transparent border-b-2 border-[#10B981]/50 px-0 py-3 text-[#F8FAFC] placeholder:text-[#CBD5E1]/40 focus:outline-none focus:border-[#10B981] transition-colors disabled:opacity-50"
-            />
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-              <p className="text-red-400 text-sm text-center">{error}</p>
+      {/* Card central */}
+      <div className="w-full max-w-[420px] relative z-10">
+        <div
+          className="rounded-3xl p-10 shadow-2xl"
+          style={{
+            background: 'rgba(15,23,42,0.82)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(16,185,129,0.05)',
+          }}
+        >
+          {/* Topo — logo + brand */}
+          <div className="text-center mb-9">
+            <div className="flex justify-center mb-6">
+              <div
+                className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.06) 100%)',
+                  border: '1px solid rgba(16,185,129,0.18)',
+                  boxShadow: '0 8px 32px rgba(16,185,129,0.1)',
+                }}
+              >
+                <LogoIcon size={48} />
+              </div>
             </div>
-          )}
 
-          {/* Botão */}
-          <button
-            type="submit"
-            disabled={isLogging}
-            className="w-full bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-[#10B981]/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-          >
-            {isLogging ? (
-              <>
-                <div className="w-4 h-4 border-2 border-black/40 border-t-black rounded-full animate-spin" />
-                Entrando...
-              </>
-            ) : 'Entrar'}
-          </button>
+            <h1 className="text-[22px] font-bold text-[#F8FAFC] tracking-tight leading-tight">
+              Bem-vindo de volta
+            </h1>
+            <p className="text-[13px] text-[#94A3B8] mt-1.5">
+              Acesse sua conta{' '}
+              <span className="text-[#10B981] font-medium">LeadCapture Pro</span>
+            </p>
+          </div>
 
-        </form>
+          {/* Formulário */}
+          <form onSubmit={handleSubmit} className="space-y-4">
 
-        {/* Footer */}
-        <p className="text-center text-[9px] text-[#CBD5E1]/30 mt-16 uppercase tracking-[0.3em]">
-          © 2026 LeadCapture Pro · Zafalão Tech
+            {/* Email */}
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none">
+                <EmailIcon />
+              </div>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Seu e-mail"
+                disabled={isLogging}
+                autoComplete="email"
+                className="lc-input w-full rounded-xl pl-11 pr-5 py-3.5 text-[#F8FAFC] text-sm focus:outline-none transition-all disabled:opacity-50"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+                onFocus={(e) => {
+                  e.target.style.border = '1px solid rgba(16,185,129,0.45)';
+                  e.target.style.background = 'rgba(16,185,129,0.05)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.border = '1px solid rgba(255,255,255,0.08)';
+                  e.target.style.background = 'rgba(255,255,255,0.04)';
+                }}
+              />
+            </div>
+
+            {/* Senha */}
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#475569] pointer-events-none">
+                <LockIcon />
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Sua senha"
+                disabled={isLogging}
+                autoComplete="current-password"
+                className="lc-input w-full rounded-xl pl-11 pr-12 py-3.5 text-[#F8FAFC] text-sm focus:outline-none transition-all disabled:opacity-50"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
+                onFocus={(e) => {
+                  e.target.style.border = '1px solid rgba(16,185,129,0.45)';
+                  e.target.style.background = 'rgba(16,185,129,0.05)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.border = '1px solid rgba(255,255,255,0.08)';
+                  e.target.style.background = 'rgba(255,255,255,0.04)';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                disabled={isLogging}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#94A3B8] transition-colors"
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+
+            {/* Erro */}
+            {error && (
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{
+                  background: 'rgba(239,68,68,0.08)',
+                  border: '1px solid rgba(239,68,68,0.22)',
+                }}
+              >
+                <p className="text-red-400 text-sm text-center">{error}</p>
+              </div>
+            )}
+
+            {/* Botão principal */}
+            <button
+              type="submit"
+              disabled={isLogging}
+              className="w-full font-bold py-3.5 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 mt-1"
+              style={{
+                background: isLogging
+                  ? 'linear-gradient(135deg, #059669, #047857)'
+                  : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: '#000',
+                boxShadow: isLogging ? 'none' : '0 8px 32px rgba(16,185,129,0.28)',
+              }}
+            >
+              {isLogging ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  Entrando...
+                </>
+              ) : (
+                'Entrar na plataforma'
+              )}
+            </button>
+
+          </form>
+
+          {/* Divisor */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+            <span className="text-[11px] text-[#334155] uppercase tracking-wider">LeadCapture Pro</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.06)' }} />
+          </div>
+
+          {/* Badge de segurança */}
+          <div className="flex items-center justify-center gap-2">
+            <div
+              className="w-1.5 h-1.5 rounded-full bg-[#10B981]"
+              style={{ boxShadow: '0 0 6px #10B981' }}
+            />
+            <p className="text-[10px] text-[#475569] tracking-wide">Conexão segura e criptografada</p>
+          </div>
+
+        </div>
+      </div>
+
+        {/* Footer externo */}
+        <p className="text-center text-[9px] text-[#1E293B] mt-6 uppercase tracking-[0.35em]">
+          © 2026 Zafalão Tech · Todos os direitos reservados
         </p>
       </div>
 
