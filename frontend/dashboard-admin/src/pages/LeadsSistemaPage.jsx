@@ -273,8 +273,8 @@ export default function LeadsSistemaPage() {
   }, []);
 
   useEffect(() => {
-    if (usuario?.tenant_id) fetchProspects();
-  }, [usuario?.tenant_id]);
+    fetchProspects();
+  }, []);
 
   useEffect(() => {
     if (!usuario?.tenant_id) return;
@@ -314,12 +314,10 @@ export default function LeadsSistemaPage() {
   }, [prospects, busca, filtroStatus]);
 
   const fetchProspects = async ({ silent = false } = {}) => {
-    if (!usuario?.tenant_id) return;
     if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from('leads_sistema')
       .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, observacao_original, motivo_desistencia_id, created_at')
-      .eq('tenant_id', usuario.tenant_id)
       .order('created_at', { ascending: false });
 
     if (!error && data) {

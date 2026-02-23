@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
-import logoHeader from '../../assets/logo-header.svg';
+import logoHeader from '../../assets/logo-header-text.jpg';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
@@ -45,12 +45,11 @@ export default function Header({ onMenuClick }) {
                 <img
                   src={logoHeader}
                   alt="LeadCapture Pro"
-                  className="transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(16,185,129,0.4)]"
                   style={{
-                    width: '200px',
+                    width: '180px',
                     height: 'auto',
                     display: 'block',
-                    objectFit: 'contain',
+                    mixBlendMode: 'lighten',
                   }}
                 />
               </div>
