@@ -124,13 +124,8 @@ export default function LoginPage() {
             <div className="flex justify-center mb-6">
               <div
                 className="w-[180px] h-[110px] rounded-2xl flex items-center justify-center overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.06) 100%)',
-                  border: '1px solid rgba(16,185,129,0.18)',
-                  boxShadow: '0 8px 32px rgba(16,185,129,0.1)',
-                }}
               >
-                <img src={logoLogin} alt="LeadCapture Pro" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'auto' }} />
+                <img src={logoLogin} alt="LeadCapture Pro" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'auto', mixBlendMode: 'lighten' }} />
               </div>
             </div>
 
