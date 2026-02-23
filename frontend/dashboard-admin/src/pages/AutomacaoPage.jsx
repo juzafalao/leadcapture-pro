@@ -1,69 +1,51 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../components/AuthContext'
 import { useAlertModal } from '../hooks/useAlertModal'
+import LoadingSpinner from '../components/shared/LoadingSpinner'
+import AutomacaoModal from '../components/automacao/AutomacaoModal'
+import ExecucoesDrawer from '../components/automacao/ExecucoesDrawer'
 
-const WORKFLOWS = [
-  {
-    id: 'boas_vindas',
-    icon: '👋',
-    title: 'Boas-vindas automáticas',
-    desc: 'Envia mensagem de WhatsApp imediatamente após a captura de um novo lead.',
-    status: 'ativo',
-    gatilho: 'Novo lead criado',
-    acoes: ['WhatsApp → Lead', 'E-mail → Admin'],
-    execucoes: 142,
-  },
-  {
-    id: 'followup_warm',
-    icon: '🌤',
-    title: 'Follow-up para leads Warm',
-    desc: 'Aguarda 48h e reenvia mensagem para leads Warm que não foram contatados.',
-    status: 'pausado',
-    gatilho: 'Lead Warm + 48h sem contato',
-    acoes: ['WhatsApp → Lead'],
-    execucoes: 38,
-  },
-  {
-    id: 'qualificacao_ia',
-    icon: '🤖',
-    title: 'Qualificação com IA',
-    desc: 'Analisa a mensagem do lead com GPT e recalcula score + categoria automaticamente.',
-    status: 'configurando',
-    gatilho: 'Lead com mensagem_original preenchida',
-    acoes: ['GPT → Score', 'GPT → Categoria', 'Notifica operador'],
-    execucoes: 0,
-  },
-  {
-    id: 'alerta_hot',
-    icon: '🔥',
-    title: 'Alerta de lead HOT',
-    desc: 'Notifica o gestor no Telegram instantaneamente quando um lead Hot é capturado.',
-    status: 'ativo',
-    gatilho: 'Lead com categoria = hot',
-    acoes: ['Telegram → Gestor', 'E-mail → Gestor'],
-    execucoes: 21,
-  },
-  {
-    id: 'crm_sync',
-    icon: '🔗',
-    title: 'Sincronização com CRM',
-    desc: 'Exporta leads convertidos automaticamente para o CRM configurado (Pipedrive, RD Station).',
-    status: 'configurando',
-    gatilho: 'Lead com status = convertido',
-    acoes: ['API → CRM externo'],
-    execucoes: 0,
-  },
-]
+const GATILHO_LABELS = {
+  lead_criado: 'Novo lead criado',
+  lead_hot: 'Lead categorizado como HOT',
+  lead_warm_sem_contato: 'Lead Warm sem contato',
+  lead_convertido: 'Lead convertido',
+  lead_mensagem_recebida: 'Mensagem do lead recebida',
+  agendamento_cron: 'Agendamento programado',
+  manual: 'Execução manual',
+}
+
+const ACAO_TIPO_LABELS = {
+  whatsapp: '💬 WhatsApp',
+  email: '📧 E-mail',
+  notificacao: '🔔 Notificação',
+  api: '🔗 API Externa',
+}
+
+const DESTINO_LABELS = {
+  lead: 'Lead',
+  admin: 'Admin',
+  gestor: 'Gestor',
+  consultor: 'Consultor',
+}
 
 const STATUS_CONFIG = {
-  ativo:        { label: 'Ativo',         bg: 'bg-green-500/10',  text: 'text-green-400',  border: 'border-green-500/30'  },
-  pausado:      { label: 'Pausado',        bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/30' },
-  configurando: { label: 'Configurando',   bg: 'bg-blue-500/10',   text: 'text-blue-400',   border: 'border-blue-500/30'   },
+  ativo:        { label: 'Ativo',       bg: 'bg-green-500/10',  text: 'text-green-400',  border: 'border-green-500/30'  },
+  pausado:      { label: 'Pausado',     bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/30' },
+  configurando: { label: 'Config.',     bg: 'bg-blue-500/10',   text: 'text-blue-400',   border: 'border-blue-500/30'   },
 }
 
 export default function AutomacaoPage() {
+  const { usuario } = useAuth()
   const { alertModal, showAlert } = useAlertModal()
+  const [workflows, setWorkflows] = useState([])
+  const [loading, setLoading] = useState(true)
   const [apiStatus, setApiStatus] = useState(null)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedWf, setSelectedWf] = useState(null)
+  const [drawerWf, setDrawerWf] = useState(null)
 
   useEffect(() => {
     fetch('/api/sistema/status')
@@ -71,6 +53,67 @@ export default function AutomacaoPage() {
       .then(setApiStatus)
       .catch(() => setApiStatus(null))
   }, [])
+
+  const fetchWorkflows = async () => {
+    if (!usuario?.tenant_id) return
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('automacoes')
+      .select('*')
+      .eq('tenant_id', usuario.tenant_id)
+      .order('created_at', { ascending: false })
+    if (!error && data) setWorkflows(data)
+    else if (error) showAlert({ type: 'error', title: 'Erro', message: error.message })
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchWorkflows()
+  }, [usuario])
+
+  const handleOpenModal = (wf = null) => {
+    setSelectedWf(wf)
+    setModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setModalOpen(false)
+    setSelectedWf(null)
+  }
+
+  const handleSave = (_saved) => {
+    handleCloseModal()
+    fetchWorkflows()
+  }
+
+  const handleToggleStatus = async (wf) => {
+    const newStatus = wf.status === 'ativo' ? 'pausado' : 'ativo'
+    const { error } = await supabase
+      .from('automacoes')
+      .update({ status: newStatus })
+      .eq('id', wf.id)
+    if (error) {
+      showAlert({ type: 'error', title: 'Erro', message: error.message })
+    } else {
+      setWorkflows(prev => prev.map(w => w.id === wf.id ? { ...w, status: newStatus } : w))
+    }
+  }
+
+  const handleDelete = async (wf) => {
+    showAlert({
+      type: 'confirm',
+      title: 'Excluir workflow',
+      message: `Deseja excluir "${wf.nome}"? Esta ação não pode ser desfeita.`,
+      onConfirm: async () => {
+        const { error } = await supabase.from('automacoes').delete().eq('id', wf.id)
+        if (error) {
+          showAlert({ type: 'error', title: 'Erro', message: error.message })
+        } else {
+          setWorkflows(prev => prev.filter(w => w.id !== wf.id))
+        }
+      },
+    })
+  }
 
   return (
     <div className="min-h-screen bg-[#0B1220] text-white pb-32">
@@ -131,80 +174,120 @@ export default function AutomacaoPage() {
       {/* Workflows */}
       <div className="px-4 lg:px-10">
         <p className="text-xs font-black text-gray-500 uppercase tracking-[0.2em] mb-5">
-          Workflows disponíveis
+          Meus Workflows
         </p>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {WORKFLOWS.map((wf, i) => {
-            const s = STATUS_CONFIG[wf.status]
-            return (
-              <motion.div
-                key={wf.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07 }}
-                className="bg-[#0F172A] border border-white/5 rounded-3xl p-6 hover:border-white/10 transition-all"
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-[#10B981]/08 rounded-2xl flex items-center justify-center text-2xl">
-                      {wf.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-white text-sm">{wf.title}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">{wf.execucoes} execuções</p>
-                    </div>
-                  </div>
-                  <span className={`
-                    text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full border
-                    ${s.bg} ${s.text} ${s.border} whitespace-nowrap
-                  `}>
-                    {s.label}
-                  </span>
-                </div>
 
-                <p className="text-sm text-gray-400 mb-5 leading-relaxed">{wf.desc}</p>
-
-                <div className="space-y-2 mb-5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-gray-600 w-16">Gatilho</span>
-                    <span className="text-xs text-[#10B981] bg-[#10B981]/08 px-3 py-1 rounded-full">
-                      {wf.gatilho}
+        {loading ? (
+          <LoadingSpinner fullScreen={false} />
+        ) : workflows.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <p className="text-5xl mb-4 opacity-30">⚡</p>
+            <p className="text-xl text-gray-400 mb-2">Nenhum workflow ainda.</p>
+            <p className="text-sm text-gray-600 mb-6">Crie o primeiro!</p>
+            <button
+              onClick={() => handleOpenModal(null)}
+              className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
+            >
+              + Criar Workflow
+            </button>
+          </motion.div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {workflows.map((wf, i) => {
+              const s = STATUS_CONFIG[wf.status] || STATUS_CONFIG.configurando
+              const acoes = Array.isArray(wf.acoes) ? wf.acoes : []
+              return (
+                <motion.div
+                  key={wf.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.07 }}
+                  className="bg-[#0F172A] border border-white/5 rounded-3xl p-6 hover:border-white/10 transition-all"
+                >
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-[#10B981]/10 rounded-2xl flex items-center justify-center text-2xl">
+                        {wf.emoji || '⚡'}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-white text-sm">{wf.nome}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">{wf.total_execucoes ?? 0} execuções</p>
+                      </div>
+                    </div>
+                    <span className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${s.bg} ${s.text} ${s.border} whitespace-nowrap`}>
+                      {s.label}
                     </span>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-gray-600 w-16 mt-1">Ações</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {wf.acoes.map(a => (
-                        <span key={a} className="text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                          {a}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex gap-2">
-                  <button
-                    className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 transition-all"
-                    onClick={() => showAlert({ type: 'info', title: 'n8n', message: 'Abra o painel do n8n para configurar este workflow.' })}
-                  >
-                    Configurar no n8n
-                  </button>
-                  {wf.status === 'ativo' && (
-                    <button className="py-2.5 px-4 text-xs font-bold rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20 transition-all">
-                      Pausar
-                    </button>
+                  {wf.descricao && (
+                    <p className="text-sm text-gray-400 mb-4 leading-relaxed">{wf.descricao}</p>
                   )}
-                  {wf.status === 'pausado' && (
-                    <button className="py-2.5 px-4 text-xs font-bold rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-all">
-                      Ativar
+
+                  <div className="space-y-2 mb-5">
+                    {wf.gatilho_tipo && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-gray-600 w-16">Gatilho</span>
+                        <span className="text-xs text-[#10B981] bg-[#10B981]/08 px-3 py-1 rounded-full">
+                          {GATILHO_LABELS[wf.gatilho_tipo] || wf.gatilho_tipo}
+                        </span>
+                      </div>
+                    )}
+                    {acoes.length > 0 && (
+                      <div className="flex items-start gap-2">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-gray-600 w-16 mt-1">Ações</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {acoes.map((a, idx) => (
+                            <span key={idx} className="text-xs text-gray-400 bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                              {ACAO_TIPO_LABELS[a.tipo] || a.tipo}
+                              {a.destino ? ` → ${DESTINO_LABELS[a.destino] || a.destino}` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleOpenModal(wf)}
+                      className="py-2 px-3 text-xs font-bold rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 transition-all"
+                    >
+                      Editar
                     </button>
-                  )}
-                </div>
-              </motion.div>
-            )
-          })}
-        </div>
+                    {wf.status !== 'configurando' && (
+                      <button
+                        onClick={() => handleToggleStatus(wf)}
+                        className={`py-2 px-3 text-xs font-bold rounded-xl border transition-all ${
+                          wf.status === 'ativo'
+                            ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20'
+                            : 'bg-green-500/10 border-green-500/20 text-green-400 hover:bg-green-500/20'
+                        }`}
+                      >
+                        {wf.status === 'ativo' ? 'Pausar' : 'Ativar'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setDrawerWf(wf)}
+                      className="py-2 px-3 text-xs font-bold rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 transition-all"
+                    >
+                      Histórico
+                    </button>
+                    <button
+                      onClick={() => handleDelete(wf)}
+                      className="py-2 px-3 text-xs font-bold rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all"
+                    >
+                      Excluir
+                    </button>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Call-to-action n8n */}
         <div className="mt-8 bg-gradient-to-r from-[#10B981]/10 to-[#059669]/05 border border-[#10B981]/20 rounded-3xl p-8 text-center">
@@ -232,7 +315,35 @@ export default function AutomacaoPage() {
           </div>
         </div>
       </div>
+
+      {/* FAB */}
+      <button
+        onClick={() => handleOpenModal(null)}
+        style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
+        className="w-14 h-14 bg-[#10B981] hover:bg-[#059669] text-black rounded-full shadow-2xl shadow-[#10B981]/50 flex items-center justify-center text-2xl font-bold transition-all z-40 hover:scale-110"
+      >
+        +
+      </button>
+
+      {/* Modal */}
+      {modalOpen && (
+        <AutomacaoModal
+          automacao={selectedWf}
+          onClose={handleCloseModal}
+          onSave={handleSave}
+        />
+      )}
+
+      {/* Drawer execuções */}
+      {drawerWf && (
+        <ExecucoesDrawer
+          automacao={drawerWf}
+          onClose={() => setDrawerWf(null)}
+        />
+      )}
+
       {alertModal}
     </div>
   )
 }
+
