@@ -96,9 +96,9 @@ function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesisten
       {/* Modal */}
       <motion.div
         className="relative z-10 w-full max-w-lg bg-[#1E293B] border border-white/10 rounded-3xl p-6 shadow-2xl"
-        initial={{ scale: 0.95, y: 20 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 20 }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -271,7 +271,9 @@ export default function LeadsSistemaPage() {
     debounceRef.current = setTimeout(() => setBusca(value), 300);
   }, []);
 
-  useEffect(() => { fetchProspects(); }, []);
+  useEffect(() => {
+    if (usuario?.tenant_id) fetchProspects();
+  }, [usuario?.tenant_id]);
 
   useEffect(() => {
     if (!usuario?.tenant_id) return;
@@ -311,10 +313,12 @@ export default function LeadsSistemaPage() {
   }, [prospects, busca, filtroStatus]);
 
   const fetchProspects = async ({ silent = false } = {}) => {
+    if (!usuario?.tenant_id) return;
     if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from('leads_sistema')
-      .select('*')
+      .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, observacao_original, motivo_desistencia_id, created_at')
+      .eq('tenant_id', usuario.tenant_id)
       .order('created_at', { ascending: false });
 
     if (!error && data) {

@@ -234,7 +234,7 @@ export default function RelatoriosPage() {
           <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Distribuição Visual do Funil</h4>
             <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={d.funil||[]} margin={{top:5,right:5,bottom:5,left:-10}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="etapa" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
@@ -263,7 +263,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Evolução de Conversões</h4>
               <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:-20}}>
                     <defs>
                       <linearGradient id="gVc" x1="0" y1="0" x2="0" y2="1">
@@ -283,7 +283,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Distribuição de Status</h4>
               <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie data={(d.funil||[]).filter(f=>f.count>0)} innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="etapa" stroke="none">
                       {(d.funil||[]).filter(f=>f.count>0).map((f,i) => <Cell key={i} fill={f.cor} />)}
@@ -320,7 +320,7 @@ export default function RelatoriosPage() {
           <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Comparativo de Performance</h4>
             <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={d.porConsultor||[]} margin={{top:5,right:5,bottom:20,left:-10}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="nome" stroke="#374151" fontSize={8} axisLine={false} tickLine={false} angle={-15} textAnchor="end" />
@@ -352,7 +352,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Leads por Marca</h4>
               <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie data={d.porMarca||[]} innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="total" nameKey="nome" stroke="none">
                       {(d.porMarca||[]).map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
@@ -366,7 +366,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Conversão por Marca</h4>
               <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={d.porMarca||[]} layout="vertical" margin={{top:5,right:20,bottom:5,left:5}}>
                     <XAxis type="number" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="nome" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} width={100} />
@@ -386,7 +386,7 @@ export default function RelatoriosPage() {
           <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Evolução de Leads no Período</h4>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:-10}}>
                   <defs>
                     <linearGradient id="gLt" x1="0" y1="0" x2="0" y2="1">
@@ -412,7 +412,7 @@ export default function RelatoriosPage() {
           <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Capital Convertido por Dia</h4>
             <div className="h-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:10}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
@@ -433,7 +433,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Leads por Fonte</h4>
               <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie data={d.porFonte||[]} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" nameKey="name" stroke="none">
                       {(d.porFonte||[]).map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
@@ -474,7 +474,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Principais Motivos de Perda</h4>
               <div className="h-[260px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={d.motivosPerda||[]} margin={{top:5,right:5,bottom:25,left:-10}}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                     <XAxis dataKey="motivo" stroke="#374151" fontSize={8} axisLine={false} tickLine={false} angle={-20} textAnchor="end" />
@@ -511,7 +511,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Leads por Estado</h4>
               <div className="h-[280px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <BarChart data={d.porRegiao||[]} layout="vertical" margin={{top:5,right:20,bottom:5,left:10}}>
                     <XAxis type="number" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
                     <YAxis type="category" dataKey="name" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} width={40} />
@@ -554,7 +554,7 @@ export default function RelatoriosPage() {
           <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
             <h4 className="text-sm font-bold text-white mb-4">Distribuição de Score</h4>
             <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <BarChart data={d.scoreDist||[]} margin={{top:5,right:5,bottom:5,left:-10}}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="faixa" stroke="#374151" fontSize={10} axisLine={false} tickLine={false} />
@@ -583,7 +583,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Distribuição de Capital</h4>
               <div className="h-[260px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie data={[
                       { name:'Convertido', value: d.capitalConvertido||0 },
@@ -603,7 +603,7 @@ export default function RelatoriosPage() {
             <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
               <h4 className="text-sm font-bold text-white mb-4">Capital Diário</h4>
               <div className="h-[260px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:10}}>
                     <defs>
                       <linearGradient id="gCap" x1="0" y1="0" x2="0" y2="1">
