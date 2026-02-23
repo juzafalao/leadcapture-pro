@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { useAlertModal } from '../hooks/useAlertModal'
 
 const WORKFLOWS = [
   {
@@ -61,6 +62,7 @@ const STATUS_CONFIG = {
 }
 
 export default function AutomacaoPage() {
+  const { alertModal, showAlert } = useAlertModal()
   const [apiStatus, setApiStatus] = useState(null)
 
   useEffect(() => {
@@ -184,7 +186,7 @@ export default function AutomacaoPage() {
                 <div className="flex gap-2">
                   <button
                     className="flex-1 py-2.5 text-xs font-bold rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:bg-white/10 transition-all"
-                    onClick={() => alert('Abra o painel do n8n para configurar este workflow.')}
+                    onClick={() => showAlert({ type: 'info', title: 'n8n', message: 'Abra o painel do n8n para configurar este workflow.' })}
                   >
                     Configurar no n8n
                   </button>
@@ -222,7 +224,7 @@ export default function AutomacaoPage() {
               Abrir n8n
             </a>
             <button
-              onClick={() => alert('Execute: docker compose -f docker/docker-compose.yml up -d')}
+              onClick={() => showAlert({ type: 'info', title: 'Comando Docker', message: 'docker compose -f docker/docker-compose.yml up -d' })}
               className="px-6 py-3 bg-white/5 border border-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/10 transition-all"
             >
               Ver comando Docker
@@ -230,6 +232,7 @@ export default function AutomacaoPage() {
           </div>
         </div>
       </div>
+      {alertModal}
     </div>
   )
 }

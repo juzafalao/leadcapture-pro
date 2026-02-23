@@ -117,13 +117,10 @@ export default function UsuariosPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="text-6xl"
-        >
-          ⏳
-        </motion.div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
+        </div>
       </div>
     );
   }

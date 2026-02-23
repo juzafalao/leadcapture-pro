@@ -10,7 +10,7 @@ export const exportUsuariosToExcel = (usuarios) => {
     console.log('📗 Iniciando export Excel...');
 
     if (!usuarios || usuarios.length === 0) {
-      alert('⚠️ Nenhum usuário para exportar!');
+      console.warn('Nenhum usuário para exportar!');
       return;
     }
 
@@ -46,7 +46,7 @@ export const exportUsuariosToExcel = (usuarios) => {
     
   } catch (error) {
     console.error('❌ Erro ao exportar Excel:', error);
-    alert('❌ Erro: ' + error.message);
+    console.error('Erro ao exportar:', error.message);
   }
 };
 
@@ -58,7 +58,7 @@ export const exportUsuariosToPDF = (usuarios) => {
     console.log('📕 Iniciando export PDF...');
 
     if (!usuarios || usuarios.length === 0) {
-      alert('⚠️ Nenhum usuário para exportar!');
+      console.warn('Nenhum usuário para exportar!');
       return;
     }
 
@@ -131,6 +131,6 @@ export const exportUsuariosToPDF = (usuarios) => {
     
   } catch (error) {
     console.error('❌ Erro ao exportar PDF:', error);
-    alert('❌ Erro: ' + error.message);
+    console.error('Erro ao exportar:', error.message);
   }
 };
