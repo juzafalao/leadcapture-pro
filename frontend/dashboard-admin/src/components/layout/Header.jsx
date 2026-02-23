@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
-import logoHeader from '../../assets/logo-header-text.jpg';
+import logoHeader from '../../assets/logo-header.svg';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
@@ -41,16 +41,19 @@ export default function Header({ onMenuClick }) {
 
             {/* Logo Header + Tenant */}
             <div className="flex flex-col">
-              <img
-                src={logoHeader}
-                alt="LeadCapture Pro"
-                style={{
-                  width: '180px',
-                  height: 'auto',
-                  display: 'block',
-                  mixBlendMode: 'lighten',
-                }}
-              />
+              <div className="group cursor-default">
+                <img
+                  src={logoHeader}
+                  alt="LeadCapture Pro"
+                  className="transition-all duration-300 group-hover:drop-shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                  style={{
+                    width: '200px',
+                    height: 'auto',
+                    display: 'block',
+                    objectFit: 'contain',
+                  }}
+                />
+              </div>
               {tenant?.nome && (
                 <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider mt-0.5">
                   {tenant.nome}

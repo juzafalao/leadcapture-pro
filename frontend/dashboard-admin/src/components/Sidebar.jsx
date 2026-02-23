@@ -91,7 +91,7 @@ const NAV_GROUPS = [
   {
     label: 'Operação',
     items: [
-      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
+      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.isDiretor() },
       { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
       { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
       { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },

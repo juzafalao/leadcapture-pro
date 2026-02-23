@@ -13,6 +13,7 @@ const PAGE_SIZE = 20;
 export default function MarcasPage() {
   const { usuario } = useAuth();
   const { alertModal, showAlert } = useAlertModal();
+  const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);
   const [marcas, setMarcas] = useState([]);
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -234,7 +235,7 @@ export default function MarcasPage() {
                     key={marca.id}
                     marca={marca}
                     index={index}
-                    onClick={() => handleOpenModal(marca)}
+                    onClick={canEdit ? () => handleOpenModal(marca) : undefined}
                   />
                 ))}
               </div>
@@ -312,10 +313,10 @@ export default function MarcasPage() {
       </div>
 
       {/* FAB */}
-      <FAB onClick={() => handleOpenModal(null)} />
+      {canEdit && <FAB onClick={() => handleOpenModal(null)} />}
 
       {/* MODAL */}
-      {isModalOpen && (
+      {isModalOpen && canEdit && (
         <MarcaModal
           marca={selectedMarca}
           segmentos={segmentos}

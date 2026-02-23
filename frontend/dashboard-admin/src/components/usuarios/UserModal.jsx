@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 
 export default function UserModal({ usuario, onClose }) {
   const [formData, setFormData] = useState({
-    role: usuario?.role || 'Operador'
+    role: usuario?.role || 'Consultor'
   });
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -14,7 +14,7 @@ export default function UserModal({ usuario, onClose }) {
     { value: 'Diretor', label: 'Diretor', icon: '🎯', color: 'blue' },
     { value: 'Gestor', label: 'Gestor', icon: '📊', color: 'green' },
     { value: 'Consultor', label: 'Consultor', icon: '💼', color: 'orange' },
-    { value: 'Operador', label: 'Operador', icon: '⚙️', color: 'gray' }
+    { value: 'Cliente', label: 'Cliente', icon: '👤', color: 'gray' }
   ];
 
   const roleColors = {

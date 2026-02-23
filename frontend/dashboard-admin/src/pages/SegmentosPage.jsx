@@ -13,6 +13,7 @@ const PAGE_SIZE = 20;
 export default function SegmentosPage() {
   const { usuario } = useAuth();
   const { alertModal, showAlert } = useAlertModal();
+  const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
@@ -266,7 +267,7 @@ export default function SegmentosPage() {
                     key={segmento.id}
                     segmento={segmento}
                     index={index}
-                    onClick={() => handleOpenModal(segmento)}
+                    onClick={canEdit ? () => handleOpenModal(segmento) : undefined}
                   />
                 ))}
               </div>
@@ -344,10 +345,10 @@ export default function SegmentosPage() {
       </div>
 
       {/* FAB */}
-      <FAB onClick={() => handleOpenModal(null)} />
+      {canEdit && <FAB onClick={() => handleOpenModal(null)} />}
 
       {/* MODAL */}
-      {isModalOpen && (
+      {isModalOpen && canEdit && (
         <SegmentoModal
           segmento={selectedSegmento}
           onClose={handleCloseModal}
