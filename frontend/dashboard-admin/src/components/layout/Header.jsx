@@ -58,7 +58,7 @@ export default function Header({ onMenuClick }) {
 
           <button
             onClick={handleLogout}
-            className="group w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-[#0F172A] border border-[#1F2937] flex items-center justify-center text-[#CBD5E1]/60 hover:text-red-400 hover:border-red-500/30 transition-all"
+            className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-[#0F172A] border border-[#1F2937] flex items-center justify-center text-[#CBD5E1]/60 hover:text-red-400 hover:border-red-500/30 transition-all"
             title="Sair"
           >
             <svg
