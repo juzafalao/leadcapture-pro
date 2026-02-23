@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { useRelatorios, useFiltrosRelatorio } from '../hooks/useRelatorios'
+import { useAlertModal } from '../hooks/useAlertModal'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, Legend, CartesianGrid
@@ -89,8 +90,11 @@ function RankingTable({ dados, colunas }) {
   )
 }
 
-function exportCSV(dados, nome) {
-  if (!dados?.length) return alert('Sem dados para exportar.')
+function exportCSV(dados, nome, showAlertFn) {
+  if (!dados?.length) {
+    if (showAlertFn) showAlertFn({ type: 'warning', title: 'Atenção', message: 'Sem dados para exportar.' })
+    return
+  }
   const keys = Object.keys(dados[0])
   const rows = dados.map(r => keys.map(k => {
     const v = r[k]
@@ -162,7 +166,12 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
             {(filtrosData?.operadores||[]).map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
           </select>
 
-          {isLoading && <span className="text-[10px] text-[#10B981] animate-pulse font-black">⏳ Carregando...</span>}
+          {isLoading && (
+            <span className="flex items-center gap-1.5 text-[10px] text-[#10B981] font-black">
+              <span className="w-3 h-3 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin inline-block" />
+              Carregando...
+            </span>
+          )}
 
           {/* KPIs rápidos */}
           <div className="ml-auto flex items-center gap-6">
@@ -187,6 +196,7 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
 
 export default function RelatoriosPage() {
   const { usuario } = useAuth()
+  const { alertModal, showAlert } = useAlertModal()
   const [tipoAtivo, setTipoAtivo] = useState(null)
   const [filtros, setFiltros]     = useState({ periodo:'30', marca:'todas', operador:'todos' })
 
@@ -196,7 +206,7 @@ export default function RelatoriosPage() {
   const tipoInfo = TIPOS.find(t => t.id === tipoAtivo)
 
   const handleVoltar = () => setTipoAtivo(null)
-  const handleExportCSV = () => exportCSV(d.leads||[], tipoInfo?.label||'relatorio')
+  const handleExportCSV = () => exportCSV(d.leads||[], tipoInfo?.label||'relatorio', showAlert)
 
   // ════════════════════════════════════════════
   // RENDER DE CADA RELATÓRIO
@@ -687,14 +697,16 @@ export default function RelatoriosPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <motion.div animate={{ rotate:360 }} transition={{ duration:1.5, repeat:Infinity, ease:'linear' }} className="text-5xl">⏳</motion.div>
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
               </div>
             ) : renderRelatorio()}
           </motion.div>
         )}
 
       </AnimatePresence>
+      {alertModal}
     </div>
   )
 }

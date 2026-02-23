@@ -335,7 +335,7 @@ export default function LeadModal({ lead, onClose }) {
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={handleSubmit} disabled={isSaving} type="button"
               className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:shadow-lg hover:shadow-[#10B981]/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
               {isSaving
-                ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>⏳</motion.div>Salvando...</>
+                ? <><span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />Salvando...</>
                 : <>✓ {isNovo ? 'Criar Lead' : 'Salvar Alterações'}</>}
             </motion.button>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
+import { useAlertModal } from '../hooks/useAlertModal'
 import { useAnalytics, useRealtimeLeads } from '../hooks/useAnalytics'
 import {
   AreaChart, Area, LineChart, Line,
@@ -90,6 +91,7 @@ const PERIODOS = [
 
 export default function AnalyticsPage() {
   const { usuario } = useAuth()
+  const { alertModal, showAlert } = useAlertModal()
   const [periodo, setPeriodo] = useState('30')
   const [activeTab, setActiveTab] = useState('overview')
   const [newLeads, setNewLeads] = useState([])
@@ -117,7 +119,10 @@ export default function AnalyticsPage() {
   }, [data])
 
   const exportCSV = () => {
-    if (!data?.ultimosLeads?.length) return alert('Sem dados para exportar.')
+    if (!data?.ultimosLeads?.length) {
+      showAlert({ type: 'warning', title: 'Atenção', message: 'Sem dados para exportar.' })
+      return
+    }
     const rows = data.ultimosLeads.map(l => [
       l.nome, l.capital_disponivel || 0,
       l.marca?.nome || '', l.status_comercial?.label || '',
@@ -132,7 +137,10 @@ export default function AnalyticsPage() {
 
   if (isLoading) return (
     <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }} className="text-6xl">⏳</motion.div>
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+        <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
+      </div>
     </div>
   )
 
@@ -383,7 +391,7 @@ export default function AnalyticsPage() {
                     {(d.porMarca || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
                   <ChartTooltip contentStyle={{ backgroundColor:'#0B1220', border:'1px solid rgba(16,185,129,0.2)', borderRadius:'12px' }} />
-                  <Legend verticalAlign="bottom" height={36} formatter={v => <span style={{ color:'#6a6a6f', fontSize:'11px' }}>{v}</span>} />
+                  <Legend verticalAlign="bottom" height={36} formatter={v => <span style={{ color:'#CBD5E1', fontSize:'11px' }}>{v}</span>} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -413,7 +421,7 @@ export default function AnalyticsPage() {
           )}
         </motion.div>
       </div>
-
+      {alertModal}
     </div>
   )
 }

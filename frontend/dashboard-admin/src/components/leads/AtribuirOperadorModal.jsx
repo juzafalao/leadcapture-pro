@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../AuthContext';
+import AlertModal from '../shared/AlertModal';
+import ConfirmModal from '../shared/ConfirmModal';
 
 export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
   const { usuario } = useAuth();
@@ -11,6 +13,12 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
   const [selectedOperador, setSelectedOperador] = useState(lead?.id_operador_responsavel || null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [alertState, setAlertState] = useState({ isOpen: false, type: 'info', title: '', message: '' });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const showAlert = (type, title, message) => {
+    setAlertState({ isOpen: true, type, title, message });
+  };
 
   useEffect(() => {
     fetchOperadores();
@@ -45,7 +53,10 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
   };
 
   const handleAtribuir = async () => {
-    if (!selectedOperador) { alert('⚠️ Selecione um operador'); return; }
+    if (!selectedOperador) {
+      showAlert('warning', 'Atenção', 'Selecione um operador antes de continuar.');
+      return;
+    }
     setIsSaving(true);
     try {
       const { error } = await supabase
@@ -57,14 +68,13 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
       onSuccess?.();
       onClose();
     } catch (error) {
-      alert('❌ Erro ao atribuir: ' + error.message);
+      showAlert('error', 'Erro ao atribuir', error.message);
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleRemover = async () => {
-    if (!confirm('Deseja remover a atribuição?')) return;
     setIsSaving(true);
     try {
       const { error } = await supabase
@@ -76,7 +86,7 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
       onSuccess?.();
       onClose();
     } catch (error) {
-      alert('❌ Erro: ' + error.message);
+      showAlert('error', 'Erro ao remover', error.message);
     } finally {
       setIsSaving(false);
     }
@@ -113,8 +123,9 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
           {/* Body */}
           <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="text-4xl">⏳</motion.div>
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <div className="w-8 h-8 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+                <span className="text-[#10B981] text-xs font-black uppercase tracking-widest">Carregando...</span>
               </div>
             ) : operadores.length === 0 ? (
               <div className="text-center py-12">
@@ -153,7 +164,7 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
           <div className="px-6 py-4 border-t border-white/5 flex gap-3">
             {lead?.id_operador_responsavel && (
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                onClick={handleRemover} disabled={isSaving}
+                onClick={() => setConfirmOpen(true)} disabled={isSaving}
                 className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold hover:bg-red-500/20 transition-all disabled:opacity-50">
                 Remover
               </motion.button>
@@ -167,11 +178,32 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
               onClick={handleAtribuir}
               disabled={isSaving || !selectedOperador || selectedOperador === lead?.id_operador_responsavel}
               className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-              {isSaving ? <><motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>⏳</motion.div>Salvando...</> : '✓ Atribuir'}
+              {isSaving ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  Salvando...
+                </>
+              ) : '✓ Atribuir'}
             </motion.button>
           </div>
         </motion.div>
       </div>
+
+      <AlertModal
+        isOpen={alertState.isOpen}
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+        onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Remover atribuição"
+        message="Deseja remover a atribuição do operador deste lead?"
+        onConfirm={handleRemover}
+        onClose={() => setConfirmOpen(false)}
+      />
     </AnimatePresence>
   );
 }

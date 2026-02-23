@@ -7,6 +7,7 @@ export default function UserModal({ usuario, onClose }) {
     role: usuario?.role || 'Operador'
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
   const roles = [
     { value: 'Administrador', label: 'Administrador', icon: '👑', color: 'purple' },
@@ -37,11 +38,11 @@ export default function UserModal({ usuario, onClose }) {
 
       if (error) throw error;
 
-      alert('✅ Perfil atualizado com sucesso!');
-      onClose();
+      setFeedback({ type: 'success', message: 'Perfil atualizado com sucesso!' });
+      setTimeout(() => onClose(), 1000);
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
-      alert('❌ Erro ao atualizar perfil: ' + error.message);
+      setFeedback({ type: 'error', message: 'Erro ao atualizar perfil: ' + error.message });
     } finally {
       setIsSaving(false);
     }
@@ -182,6 +183,13 @@ export default function UserModal({ usuario, onClose }) {
             </div>
           </div>
 
+          {/* Feedback */}
+          {feedback && (
+            <div className={`px-6 py-2 border-t ${feedback.type === 'success' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
+              <p className={`text-xs font-bold ${feedback.type === 'success' ? 'text-green-400' : 'text-red-400'}`}>{feedback.message}</p>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="px-6 py-4 border-t border-white/5 flex gap-3">
             <motion.button
@@ -227,19 +235,10 @@ export default function UserModal({ usuario, onClose }) {
             >
               {isSaving ? (
                 <>
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  >
-                    ⏳
-                  </motion.div>
+                  <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
                   Salvando...
                 </>
-              ) : (
-                <>
-                  ✓ Salvar Alterações
-                </>
-              )}
+              ) : '✓ Salvar Alterações'}
             </motion.button>
           </div>
         </motion.div>

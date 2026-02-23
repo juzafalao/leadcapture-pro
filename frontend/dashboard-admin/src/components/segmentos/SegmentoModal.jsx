@@ -8,6 +8,7 @@ const EMOJI_OPTIONS = [
 ];
 
 export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
     nome: '',
     emoji: '🏢',
@@ -26,23 +27,21 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
 
   const handleSubmit = async () => {
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      setFormError('O nome do segmento é obrigatório.');
       return;
     }
+    setFormError('');
 
     try {
-      // ✅ Chamar onSave (que já vem do SegmentosPage)
       await onSave({
         ...(segmento?.id && { id: segmento.id }),
         nome: formData.nome.trim(),
         emoji: formData.emoji,
         descricao: formData.descricao.trim()
       });
-      
-      // ✅ Fechar modal só se der certo (onSuccess do mutation já fecha)
     } catch (error) {
       console.error('Erro ao salvar segmento:', error);
-      alert('Erro ao salvar: ' + error.message);
+      setFormError('Erro ao salvar: ' + error.message);
     }
   };
 
@@ -143,6 +142,11 @@ export default function SegmentoModal({ segmento, onClose, onSave, isSaving }) {
           </div>
 
           {/* Footer */}
+          {formError && (
+            <div className="px-6 py-2 bg-red-500/10 border-t border-red-500/20">
+              <p className="text-red-400 text-xs font-bold">{formError}</p>
+            </div>
+          )}
           <div className="flex-shrink-0 p-6 border-t border-[#1F2937] flex gap-3">
             <button
               onClick={onClose}

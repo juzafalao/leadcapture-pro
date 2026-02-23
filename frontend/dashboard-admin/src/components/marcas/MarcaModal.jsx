@@ -4,6 +4,7 @@ const EMOJI_OPTIONS = ['🏢', '🧺', '☕', '🍔', '📚', '🏥', '🏋️',
 const COLOR_OPTIONS = ['#60a5fa', '#f472b6', '#a78bfa', '#34d399', '#fbbf24', '#ef4444', '#06b6d4', '#84cc16'];
 
 export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving }) {
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
     nome: '',
     emoji: '🏢',
@@ -30,9 +31,10 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
 
   const handleSubmit = () => {
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      setFormError('O nome da marca é obrigatório.');
       return;
     }
+    setFormError('');
 
     onSave({
       ...(marca?.id && { id: marca.id }),
@@ -178,6 +180,11 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
           </div>
 
           {/* Footer */}
+          {formError && (
+            <div className="px-6 py-2 bg-red-500/10 border-t border-red-500/20">
+              <p className="text-red-400 text-xs font-bold">{formError}</p>
+            </div>
+          )}
           <div className="flex-shrink-0 p-6 border-t border-[#1F2937] flex gap-3">
             <button
               onClick={onClose}

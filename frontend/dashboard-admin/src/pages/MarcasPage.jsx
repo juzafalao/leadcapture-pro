@@ -5,11 +5,13 @@ import { useAuth } from '../components/AuthContext';
 import MarcaCard from '../components/dashboard/MarcaCard';
 import FAB from '../components/dashboard/FAB';
 import MarcaModal from '../components/marcas/MarcaModal';
+import { useAlertModal } from '../hooks/useAlertModal';
 
 const PAGE_SIZE = 20;
 
 export default function MarcasPage() {
   const { usuario } = useAuth();
+  const { alertModal, showAlert } = useAlertModal();
   const [marcas, setMarcas] = useState([]);
   const [segmentos, setSegmentos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +42,7 @@ export default function MarcasPage() {
     if (!error && data) {
       setMarcas(data);
     } else if (error) {
-      alert('Erro ao buscar marcas: ' + error.message);
+      showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
     }
     setLoading(false);
   };
@@ -130,7 +132,7 @@ export default function MarcasPage() {
       handleCloseModal();
     } catch (error) {
       console.error('Erro ao salvar marca:', error);
-      alert('Erro ao salvar marca: ' + error.message);
+      showAlert({ type: 'error', title: 'Erro ao salvar', message: error.message });
     } finally {
       setIsSaving(false);
     }
@@ -139,13 +141,10 @@ export default function MarcasPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-          className="text-6xl"
-        >
-          ⏳
-        </motion.div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+          <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
+        </div>
       </div>
     );
   }
@@ -331,6 +330,7 @@ export default function MarcasPage() {
           isSaving={isSaving}
         />
       )}
+      {alertModal}
     </div>
   );
 }

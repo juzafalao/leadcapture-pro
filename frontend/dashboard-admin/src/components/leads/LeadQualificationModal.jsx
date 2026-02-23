@@ -5,19 +5,21 @@ export function LeadQualificationModal({ lead, onClose, onUpdate, statusConfig, 
   const [status, setStatus] = useState(lead.status)
   const [categoria, setCategoria] = useState(lead.categoria)
   const [isSaving, setIsSaving] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
   const handleSave = async () => {
     setIsSaving(true)
+    setErrorMsg('')
     const { error } = await supabase
       .from('leads')
       .update({ status, categoria })
       .eq('id', lead.id)
 
     if (!error) {
-      onUpdate() // Atualiza a lista de leads no dashboard
+      onUpdate()
       onClose()
     } else {
-      alert('Erro ao atualizar lead: ' + error.message)
+      setErrorMsg('Erro ao atualizar lead: ' + error.message)
     }
     setIsSaving(false)
   }
@@ -78,6 +80,13 @@ export function LeadQualificationModal({ lead, onClose, onUpdate, statusConfig, 
             </div>
           </div>
         </div>
+
+        {/* Error message */}
+        {errorMsg && (
+          <div className="mx-6 mb-2 px-4 py-2 bg-red-500/10 border border-red-500/30 rounded-xl">
+            <p className="text-red-400 text-xs font-bold">{errorMsg}</p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="p-6 bg-slate-800/30 border-t border-slate-800 flex gap-3">
