@@ -254,6 +254,7 @@ router.post('/sistema', async (req, res) => {
         fonte:     req.body.fonte || 'captacao-landing',
         typeOrch:  'sistema',
         status:    'novo',
+        tenant_id: '81cac3a4-caa3-43b2-be4d-d16557d7ef88', // ID fixo do LeadCapture Pro (Admin)
       }])
       .select()
 
