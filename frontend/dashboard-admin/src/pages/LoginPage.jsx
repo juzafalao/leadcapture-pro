@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
-import LogoIcon from '../components/LogoIcon';
+import logoLogin from '../assets/logo-login.jpg';
 
 const EmailIcon = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -103,7 +103,7 @@ export default function LoginPage() {
       {/* Logo fantasma (watermark) */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
         <div style={{ opacity: 0.05, transform: 'scale(1.1)' }}>
-          <LogoIcon size={520} />
+          <img src={logoLogin} alt="" style={{ width: 520 }} />
         </div>
       </div>
 
@@ -123,14 +123,14 @@ export default function LoginPage() {
           <div className="text-center mb-9">
             <div className="flex justify-center mb-6">
               <div
-                className="w-[72px] h-[72px] rounded-2xl flex items-center justify-center"
+                className="w-[160px] h-[100px] rounded-2xl flex items-center justify-center overflow-hidden"
                 style={{
                   background: 'linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(5,150,105,0.06) 100%)',
                   border: '1px solid rgba(16,185,129,0.18)',
                   boxShadow: '0 8px 32px rgba(16,185,129,0.1)',
                 }}
               >
-                <LogoIcon size={48} />
+                <img src={logoLogin} alt="LeadCapture Pro" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
             </div>
 

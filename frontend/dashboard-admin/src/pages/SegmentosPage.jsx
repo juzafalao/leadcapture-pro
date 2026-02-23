@@ -6,6 +6,7 @@ import SegmentoCard from '../components/dashboard/SegmentoCard';
 import FAB from '../components/dashboard/FAB';
 import SegmentoModal from '../components/segmentos/SegmentoModal';
 import { useAlertModal } from '../hooks/useAlertModal';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 const PAGE_SIZE = 20;
 
@@ -164,11 +165,7 @@ export default function SegmentosPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen={false} />;
   }
 
   return (

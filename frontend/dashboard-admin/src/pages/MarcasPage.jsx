@@ -6,6 +6,7 @@ import MarcaCard from '../components/dashboard/MarcaCard';
 import FAB from '../components/dashboard/FAB';
 import MarcaModal from '../components/marcas/MarcaModal';
 import { useAlertModal } from '../hooks/useAlertModal';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 const PAGE_SIZE = 20;
 
@@ -139,11 +140,7 @@ export default function MarcasPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner fullScreen={false} />;
   }
 
   return (

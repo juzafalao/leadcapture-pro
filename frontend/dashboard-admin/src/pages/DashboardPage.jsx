@@ -7,6 +7,7 @@ import KPIFilter from '../components/dashboard/KPIFilter';
 import LeadModal from '../components/leads/LeadModal';
 import AtribuirOperadorModal from '../components/leads/AtribuirOperadorModal';
 import FAB from '../components/dashboard/FAB';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
 const ROLES_CONSULTOR = ['Consultor'];
@@ -56,11 +57,7 @@ export default function DashboardPage() {
   const isConsultor = ROLES_CONSULTOR.includes(usuario?.role);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (

@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, Tooltip as ChartTooltip,
   ResponsiveContainer, Legend, CartesianGrid
 } from 'recharts'
+import LoadingSpinner from '../components/shared/LoadingSpinner'
 
 const COLORS = ['#10B981','#3b82f6','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
 
@@ -135,11 +136,7 @@ export default function AnalyticsPage() {
     a.click()
   }
 
-  if (isLoading) return (
-    <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-      <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
+  if (isLoading) return <LoadingSpinner />
 
   const d = data || {}
 
