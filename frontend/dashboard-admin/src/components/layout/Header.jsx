@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../shared/ConfirmModal';
+import LogoIcon from '../LogoIcon';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
-  const navigate = useNavigate();
   const tenant = usuario?.tenant;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -16,7 +15,7 @@ export default function Header({ onMenuClick }) {
   const handleLogoutConfirm = async () => {
     setConfirmOpen(false);
     await logout();
-    navigate('/login', { replace: true });
+    // Redirect handled automatically by PrivateRoute when usuario becomes null
   };
 
   return (
@@ -38,13 +37,11 @@ export default function Header({ onMenuClick }) {
               </svg>
             </button>
 
-            {/* Título do Sistema */}
-            <div>
-              <h1 className="text-base lg:text-xl font-light text-[#F8FAFC]">
-                Lead<span className="text-[#10B981] font-semibold">Capture</span> Pro
-              </h1>
+            {/* Logo + Tenant */}
+            <div className="flex flex-col">
+              <LogoIcon size={80} />
               {tenant?.nome && (
-                <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider">
+                <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider mt-0.5">
                   {tenant.nome}
                 </p>
               )}

@@ -145,10 +145,10 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         <Link
           to="/dashboard"
           onClick={handleNavClick}
-          className="mb-10 hover:opacity-85 transition-opacity"
+          className="mb-10 hover:opacity-85 transition-opacity px-3"
           title="LeadCapture Pro"
         >
-          <LogoIcon size={44} />
+          <LogoIcon size={104} />
         </Link>
 
         {/* Nav por grupos */}
