@@ -13,6 +13,15 @@ import * as XLSX from 'xlsx';
 
 const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
 
+// Status fixos da tabela leads_sistema (prospects do próprio sistema)
+const LEADS_SISTEMA_STATUS = [
+  { slug: 'novo',       label: 'Novo' },
+  { slug: 'contato',    label: 'Em Contato' },
+  { slug: 'negociacao', label: 'Negociação' },
+  { slug: 'fechado',    label: 'Fechado' },
+  { slug: 'perdido',    label: 'Perdido' },
+];
+
 const STATUS_STYLE = {
   novo:        'bg-blue-500/10 text-blue-400 border-blue-500/30',
   contato:     'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
@@ -253,7 +262,6 @@ export default function LeadsSistemaPage() {
   const [selected, setSelected]   = useState(null);
   const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
   const [exportando, setExportando] = useState(false);
-  const [statusOpts, setStatusOpts] = useState([]);
   const [motivosDesistencia, setMotivosDesistencia] = useState([]);
   const debounceRef = useRef(null);
 
@@ -268,15 +276,6 @@ export default function LeadsSistemaPage() {
   useEffect(() => {
     if (!usuario?.tenant_id) return;
     const tenantId = usuario.tenant_id;
-
-    supabase
-      .from('status_comercial')
-      .select('id, slug, label, cor')
-      .eq('tenant_id', tenantId)
-      .then(({ data, error }) => {
-        if (error) console.error('Erro ao buscar status_comercial:', error);
-        else if (data) setStatusOpts(data);
-      });
 
     supabase
       .from('motivos_desistencia')
@@ -491,23 +490,23 @@ export default function LeadsSistemaPage() {
 
           {/* Status filter pills + Export */}
           <div className="flex gap-2 flex-wrap items-center">
-            {['todos', ...statusOpts.map(s => s.slug)].map(s => (
+            {[{ slug: 'todos', label: 'Todos' }, ...LEADS_SISTEMA_STATUS].map(s => (
               <button
-                key={s}
-                onClick={() => setFiltroStatus(s)}
+                key={s.slug}
+                onClick={() => setFiltroStatus(s.slug)}
                 className={`
                   px-4 py-2 rounded-xl text-xs font-bold border transition-all whitespace-nowrap
-                  ${filtroStatus === s
-                    ? s === 'todos'
+                  ${filtroStatus === s.slug
+                    ? s.slug === 'todos'
                       ? 'bg-[#10B981] text-black border-[#10B981]'
-                      : STATUS_STYLE[s] + ' shadow-md'
+                      : STATUS_STYLE[s.slug] + ' shadow-md'
                     : 'bg-[#1E293B] border-white/5 text-gray-500 hover:bg-white/5'
                   }
                 `}
               >
-                {s === 'todos'
+                {s.slug === 'todos'
                   ? '📋 Todos'
-                  : `${STATUS_EMOJI[s] || '🔵'} ${statusOpts.find(o => o.slug === s)?.label || s.charAt(0).toUpperCase() + s.slice(1)}`
+                  : `${STATUS_EMOJI[s.slug] || '🔵'} ${s.label}`
                 }
               </button>
             ))}
@@ -723,7 +722,7 @@ export default function LeadsSistemaPage() {
             prospect={selected}
             onClose={() => setSelected(null)}
             onSaved={handleSaved}
-            statusOpts={statusOpts}
+            statusOpts={LEADS_SISTEMA_STATUS}
             motivosDesistencia={motivosDesistencia}
           />
         )}

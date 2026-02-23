@@ -75,7 +75,11 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        if (event === 'SIGNED_OUT') {
+          setUsuario(null);
+          return;
+        }
+        if (event === 'TOKEN_REFRESHED' && !session) {
           await supabase.auth.signOut();
           setUsuario(null);
           return;
