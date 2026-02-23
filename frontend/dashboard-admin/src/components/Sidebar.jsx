@@ -84,29 +84,29 @@ const NAV_GROUPS = [
   {
     label: 'Inteligência',
     items: [
-      { path: '/analytics',  icon: <IconAnalytics />, label: 'Analytics',  show: (a) => a.isGestor() },
-      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatórios', show: (a) => a.isGestor() },
+      { path: '/analytics',  icon: <IconAnalytics />, label: 'Analytics',  show: (a) => a.isDiretor() },
+      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatórios', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor']) },
     ],
   },
   {
     label: 'Operação',
     items: [
-      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.isGestor() },
-      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.isGestor() },
-      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.isGestor() },
-      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.isGestor() },
+      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
+      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
+      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
+      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
     ],
   },
   {
     label: 'Institucional',
     items: [
-      { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isGestor() },
+      { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isAdmin() },
     ],
   },
   {
     label: 'Sistema',
     items: [
-      { path: '/configuracoes', icon: <IconConfig />, label: 'Config', show: () => true },
+      { path: '/configuracoes', icon: <IconConfig />, label: 'Config', show: (a) => a.isDiretor() },
     ],
   },
 ];

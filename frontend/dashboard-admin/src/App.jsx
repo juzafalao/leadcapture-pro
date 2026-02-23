@@ -75,14 +75,14 @@ function AppRoutes() {
         <Route path="/landing/:slug" element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/dashboard"     element={<PrivateRoute><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/relatorios"    element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/analytics"     element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
+        <Route path="/relatorios"    element={<PrivateRoute allowedRoles={ROLES_CONSULTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
+        <Route path="/analytics"     element={<PrivateRoute allowedRoles={ROLES_DIRETOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/automacao"     element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/marcas"        element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MarcasPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/segmentos"     element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SegmentosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/usuarios"      element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/leads-sistema" element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/configuracoes" element={<PrivateRoute><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
+        <Route path="/leads-sistema" element={<PrivateRoute allowedRoles={ROLES_ADMIN}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
+        <Route path="/configuracoes" element={<PrivateRoute allowedRoles={ROLES_DIRETOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="*"              element={<Navigate to="/login" replace />} />
       </Routes>
     </AnimatePresence>
@@ -107,8 +107,10 @@ function AuthenticatedLayout({ children }) {
   );
 }
 
-const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
-const ROLES_ADMIN  = ['Administrador', 'admin'];
+const ROLES_CONSULTOR = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
+const ROLES_GESTOR    = ['Administrador', 'admin', 'Diretor', 'Gestor'];
+const ROLES_DIRETOR   = ['Administrador', 'admin', 'Diretor'];
+const ROLES_ADMIN     = ['Administrador', 'admin'];
 
 export default function App() {
   return (

@@ -94,15 +94,18 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Roles válidos
-  const ROLES_ADMIN    = ['Administrador', 'admin'];
-  const ROLES_GESTOR   = ['Administrador', 'admin', 'Diretor', 'Gestor'];
-  const ROLES_DIRETOR  = ['Administrador', 'admin', 'Diretor'];
+  const ROLES_ADMIN      = ['Administrador', 'admin'];
+  const ROLES_GESTOR     = ['Administrador', 'admin', 'Diretor', 'Gestor'];
+  const ROLES_DIRETOR    = ['Administrador', 'admin', 'Diretor'];
+  const ROLES_CONSULTOR  = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
 
   const isAuthenticated = !!usuario;
-  const isAdmin   = () => ROLES_ADMIN.includes(usuario?.role);
-  const isGestor  = () => ROLES_GESTOR.includes(usuario?.role);
-  const isDiretor = () => ROLES_DIRETOR.includes(usuario?.role);
-  const hasRole   = (roles) => {
+  const isAdmin    = () => ROLES_ADMIN.includes(usuario?.role);
+  const isGestor   = () => ROLES_GESTOR.includes(usuario?.role);
+  const isDiretor  = () => ROLES_DIRETOR.includes(usuario?.role);
+  const isConsultor = () => ROLES_CONSULTOR.includes(usuario?.role);
+  const isCliente  = () => usuario?.role === 'Cliente';
+  const hasRole    = (roles) => {
     if (!usuario) return false;
     if (isAdmin()) return true;
     if (Array.isArray(roles)) return roles.includes(usuario.role);
@@ -112,7 +115,7 @@ export const AuthProvider = ({ children }) => {
   const value = { 
     usuario, loading, isAuthenticated, 
     login, logout, 
-    isAdmin, isGestor, isDiretor, hasRole 
+    isAdmin, isGestor, isDiretor, isConsultor, isCliente, hasRole 
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -13,6 +13,7 @@ export default function LogoIcon({ size = 48, className = '' }) {
         height: 'auto',
         imageRendering: 'auto',
         borderRadius: '12px',
+        mixBlendMode: 'lighten',
       }}
     />
   );

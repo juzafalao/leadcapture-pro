@@ -68,14 +68,17 @@ export const ROLES = {
       'usuarios.ver',
       'leads.ver_todos',
       'leads.criar',
-      'leads.editar_todos',
-      'leads.excluir',
+      'leads.editar_status',
+      'leads.editar_motivo',
+      'leads.editar_observacao',
       'leads.atribuir',
       'leads.exportar',
       'marcas.ver',
       'segmentos.ver',
-      'bi.dashboard',
-      'bi.relatorios_avancados'
+      'bi.relatorios',
+      'automacao.ver',
+      'automacao.criar',
+      'automacao.editar'
     ]
   },
   
@@ -89,10 +92,25 @@ export const ROLES = {
     isSuperAdmin: false,
     permissoes: [
       'leads.ver_atribuidos',
-      'leads.criar',
-      'leads.editar_atribuidos',
-      'marcas.ver',
-      'bi.dashboard_proprio'
+      'leads.editar_status',
+      'leads.editar_motivo',
+      'leads.editar_observacao',
+      'bi.relatorios_proprio',
+      'marcas.ver'
+    ]
+  },
+
+  Cliente: {
+    key: 'Cliente',
+    label: 'Cliente',
+    emoji: '👤',
+    nivel: 1,
+    color: '#6b7280',
+    descricao: 'Acesso somente visualização - casos especiais',
+    isSuperAdmin: false,
+    permissoes: [
+      'leads.ver_atribuidos',
+      'marcas.ver'
     ]
   }
 };
@@ -173,7 +191,11 @@ export const canAccessPage = (user, page) => {
     'usuarios': ['usuarios.ver'],
     'marcas': ['marcas.ver'],
     'segmentos': ['segmentos.ver'],
-    'inteligencia': ['bi.dashboard'],
+    'analytics': ['bi.dashboard'],
+    'relatorios': ['bi.relatorios', 'bi.relatorios_proprio'],
+    'automacao': ['automacao.ver'],
+    'leads-sistema': ['*'],  // Apenas Administrador
+    'configuracoes': ['configuracoes.tenant'],
     'leads': ['leads.ver_atribuidos', 'leads.ver_todos']
   };
   
