@@ -81,15 +81,17 @@ app.get('/landing/:slug', async (req, res) => {
     const templatePath = path.join(__dirname, 'templates', 'landing.html')
     let html = fs.readFileSync(templatePath, 'utf-8')
 
+    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
+
     html = html
-      .replace(/{{MARCA_EMOJI}}/g,    marca.emoji       || '🏢')
-      .replace(/{{MARCA_NOME}}/g,     marca.nome)
-      .replace(/{{MARCA_ID}}/g,       marca.id)
-      .replace(/{{TENANT_ID}}/g,      marca.tenant_id)
+      .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || '🏢'))
+      .replace(/{{MARCA_NOME}}/g,     escapeHtml(marca.nome))
+      .replace(/{{MARCA_ID}}/g,       escapeHtml(marca.id))
+      .replace(/{{TENANT_ID}}/g,      escapeHtml(marca.tenant_id))
       .replace(/{{INVEST_MIN}}/g,     (marca.invest_min || 0).toLocaleString('pt-BR'))
       .replace(/{{INVEST_MAX}}/g,     (marca.invest_max || 0).toLocaleString('pt-BR'))
-      .replace(/{{COR_PRIMARIA}}/g,   marca.cor_primaria  || '#ee7b4d')
-      .replace(/{{COR_SECUNDARIA}}/g, marca.cor_secundaria || '#f59e42')
+      .replace(/{{COR_PRIMARIA}}/g,   escapeHtml(marca.cor_primaria || '#ee7b4d'))
+      .replace(/{{COR_SECUNDARIA}}/g, escapeHtml(marca.cor_secundaria || '#f59e42'))
 
     res.send(html)
   } catch (err) {
@@ -140,7 +142,7 @@ function _pagina404(slug) {
   <div class="box">
     <h1>🔍</h1>
     <h2>Landing page não encontrada</h2>
-    <p>O slug <strong>"${slug}"</strong> não existe no sistema.</p>
+    <p>A página solicitada não existe no sistema.</p>
     <p><a href="/captacao">Conheça o LeadCapture Pro →</a></p>
   </div>
 </body>
