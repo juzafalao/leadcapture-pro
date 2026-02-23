@@ -7,6 +7,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, Legend, CartesianGrid
 } from 'recharts'
+import LoadingSpinner from '../components/shared/LoadingSpinner'
 
 const COLORS = ['#10B981','#3b82f6','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
 const fmtK   = v => v >= 1000000 ? `R$ ${(v/1000000).toFixed(1)}mi` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : `R$ ${Math.round(v)}`
@@ -694,9 +695,7 @@ export default function RelatoriosPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-              </div>
+              <LoadingSpinner fullScreen={false} />
             ) : renderRelatorio()}
           </motion.div>
         )}

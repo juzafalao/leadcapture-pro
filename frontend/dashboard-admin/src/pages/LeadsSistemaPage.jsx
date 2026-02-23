@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
 import { useAlertModal } from '../hooks/useAlertModal';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 import * as XLSX from 'xlsx';
 
 const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
@@ -291,30 +292,6 @@ export default function LeadsSistemaPage() {
   }, [usuario?.tenant_id]);
 
   useEffect(() => {
-    if (!usuario?.tenant_id) return;
-    const tenantId = usuario.tenant_id;
-
-    supabase
-      .from('status_comercial')
-      .select('id, slug, label, cor')
-      .eq('tenant_id', tenantId)
-      .then(({ data, error }) => {
-        if (error) console.error('Erro ao buscar status_comercial:', error);
-        else if (data) setStatusOpts(data);
-      });
-
-    supabase
-      .from('motivos_desistencia')
-      .select('id, nome')
-      .eq('tenant_id', tenantId)
-      .eq('ativo', true)
-      .then(({ data, error }) => {
-        if (error) console.error('Erro ao buscar motivos_desistencia:', error);
-        else if (data) setMotivosDesistencia(data);
-      });
-  }, [usuario?.tenant_id]);
-
-  useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
@@ -425,11 +402,7 @@ export default function LeadsSistemaPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
