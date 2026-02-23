@@ -13,7 +13,7 @@ export default function Header({ onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[#0B1220]/95 backdrop-blur-xl border-b border-[#1F2937] w-full">
+    <header className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-xl border-b border-[#1F2937] w-full">
       <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
 
         {/* Left: Menu Mobile + Title */}

@@ -18,7 +18,6 @@ const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
 
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { DebugInfo } from './components/DebugInfo.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,13 +94,12 @@ function AppRoutes() {
 function AuthenticatedLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
-    <div className="flex bg-[#0B1220] min-h-screen font-sans text-[#F8FAFC]">
-      {import.meta.env.DEV && <DebugInfo />}
+    <div className="flex bg-[#0F172A] min-h-screen font-sans text-[#F8FAFC]">
       <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
       <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
         <div className="flex-1">{children}</div>
-        <footer className="border-t border-[#1F2937] py-4 text-center bg-[#0B1220]">
+        <footer className="border-t border-[#1F2937] py-4 text-center bg-[#0F172A]">
           <p className="text-[9px] text-[#CBD5E1]/30 font-bold uppercase tracking-[0.2em]">
             Desenvolvido por — <span className="text-[#10B981]">Zafalão Tech</span>
           </p>

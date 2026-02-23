@@ -68,6 +68,7 @@ export function useMetrics(tenantId) {
       }
     },
     enabled: !!tenantId,
+    staleTime: 1000 * 60 * 2,
   })
 }
 
