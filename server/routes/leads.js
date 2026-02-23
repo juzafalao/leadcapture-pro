@@ -64,7 +64,7 @@ router.post('/', async (req, res) => {
     leadData.telefone  = normalizarTelefone(dados.telefone)
     leadData.fonte     = dados.fonte     || 'landing-page'
     leadData.status    = dados.status    || 'novo'
-    leadData.typeOrch  = dados.typeOrch  || 'produto'   // 'produto' = franquia/cliente | 'sistema' = LeadCapture Pro
+    // 'produto' = franquia/cliente | 'sistema' = LeadCapture Pro
 
     const { data, error } = await supabase.from('leads').insert([leadData]).select()
     if (error) throw error
@@ -156,7 +156,6 @@ router.post('/google-forms', async (req, res) => {
       categoria,
       status:             'novo',
       fonte:              'google-forms',
-      typeOrch:           form.typeOrch || 'produto',
       mensagem_original:  sanitizarTexto(mensagem, 1000),
       observacao:         sanitizarTexto(observacao, 500),
       ...(docInfo?.valido && {
@@ -252,7 +251,6 @@ router.post('/sistema', async (req, res) => {
         estado:    sanitizarTexto(estado    || ''),
         observacao: sanitizarTexto(observacao || ''),
         fonte:     req.body.fonte || 'captacao-landing',
-        typeOrch:  'sistema',
         status:    'novo',
         tenant_id: '81cac3a4-caa3-43b2-be4d-d16557d7ef88', // ID fixo do LeadCapture Pro (Admin)
       }])

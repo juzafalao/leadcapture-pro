@@ -7,15 +7,12 @@ echo "=========================================="
 echo ""
 
 # Validar antes
-./scripts/validate.sh
+if [ -f "./scripts/validate.sh" ]; then
+    ./scripts/validate.sh
+fi
 
-# Build
-echo ""
-echo "🏗️ Gerando build..."
-cd frontend/dashboard-admin
-npm run build
-cd ../..
+# Build usando o script unificado (gera dashboard-build/)
+./scripts/build.sh
 
 echo ""
-echo "✅ BUILD PRONTO!"
-echo "📦 Arquivos em: frontend/dashboard-admin/dist/"
+echo "✅ DEPLOY PRONTO! (Artefatos sincronizados em dashboard-build/)"
