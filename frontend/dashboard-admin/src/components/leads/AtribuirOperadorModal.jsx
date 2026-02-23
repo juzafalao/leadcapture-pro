@@ -123,9 +123,8 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
           {/* Body */}
           <div className="px-6 py-6 max-h-[60vh] overflow-y-auto">
             {loading ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <div className="flex items-center justify-center py-12">
                 <div className="w-8 h-8 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[#10B981] text-xs font-black uppercase tracking-widest">Carregando...</span>
               </div>
             ) : operadores.length === 0 ? (
               <div className="text-center py-12">

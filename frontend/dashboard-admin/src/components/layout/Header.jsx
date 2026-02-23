@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
-import LogoIcon from '../LogoIcon';
+import logoHeader from '../../assets/logo-header.svg';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
@@ -37,9 +37,13 @@ export default function Header({ onMenuClick }) {
               </svg>
             </button>
 
-            {/* Logo + Tenant */}
+            {/* Logo Header + Tenant */}
             <div className="flex flex-col">
-              <LogoIcon size={80} />
+              <img
+                src={logoHeader}
+                alt="LeadCapture Pro"
+                style={{ width: '180px', height: 'auto', display: 'block' }}
+              />
               {tenant?.nome && (
                 <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider mt-0.5">
                   {tenant.nome}

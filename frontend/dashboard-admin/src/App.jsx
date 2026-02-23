@@ -32,10 +32,7 @@ const queryClient = new QueryClient({
 
 const PageFallback = () => (
   <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-    <div className="flex flex-col items-center gap-4">
-      <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-      <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
-    </div>
+    <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
   </div>
 );
 

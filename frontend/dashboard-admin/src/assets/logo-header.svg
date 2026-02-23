@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 72">
+  <defs>
+    <filter id="glow" x="-30%" y="-80%" width="160%" height="260%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- "LeadCapture" — white bold -->
+  <text
+    x="152"
+    y="32"
+    font-family="'Segoe UI', 'Inter', 'Arial', sans-serif"
+    font-size="26"
+    font-weight="700"
+    fill="#F8FAFC"
+    text-anchor="middle"
+    letter-spacing="0.5">LeadCapture</text>
+
+  <!-- Left dashes -->
+  <text
+    x="56"
+    y="56"
+    font-family="'Segoe UI', 'Inter', 'Arial', sans-serif"
+    font-size="12"
+    fill="#00ff7a"
+    text-anchor="middle"
+    letter-spacing="-2"
+    filter="url(#glow)">── </text>
+
+  <!-- PRO -->
+  <text
+    x="152"
+    y="58"
+    font-family="'Segoe UI', 'Inter', 'Arial', sans-serif"
+    font-size="15"
+    font-weight="900"
+    fill="#00ff7a"
+    text-anchor="middle"
+    letter-spacing="6"
+    filter="url(#glow)">PRO</text>
+
+  <!-- Right dashes -->
+  <text
+    x="248"
+    y="56"
+    font-family="'Segoe UI', 'Inter', 'Arial', sans-serif"
+    font-size="12"
+    fill="#00ff7a"
+    text-anchor="middle"
+    letter-spacing="-2"
+    filter="url(#glow)"> ──</text>
+
+  <!-- Right vertical accent lines -->
+  <line x1="316" y1="10" x2="316" y2="62" stroke="#00ff7a" stroke-width="2.5" opacity="0.65" filter="url(#glow)"/>
+  <line x1="326" y1="20" x2="326" y2="52" stroke="#00ff7a" stroke-width="1.5" opacity="0.35"/>
+</svg>

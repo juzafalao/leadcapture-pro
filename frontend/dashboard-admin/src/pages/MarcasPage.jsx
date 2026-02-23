@@ -141,10 +141,7 @@ export default function MarcasPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-          <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
-        </div>
+        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
