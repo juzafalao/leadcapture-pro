@@ -11,7 +11,6 @@ import { useAuth } from '../components/AuthContext';
 import { useAlertModal } from '../hooks/useAlertModal';
 import * as XLSX from 'xlsx';
 
-const STATUS_OPTS = ['novo', 'contato', 'negociacao', 'fechado', 'perdido'];
 const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
 
 const STATUS_STYLE = {
@@ -34,164 +33,200 @@ function formatDate(dt) {
 }
 
 // ── Modal de detalhes ────────────────────────────────────────
-function ProspectModal({ prospect, onClose, onUpdate }) {
+function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesistencia }) {
   const [status, setStatus] = useState(prospect?.status || 'novo');
+  const [motivoDesistenciaId, setMotivoDesistenciaId] = useState(prospect?.motivo_desistencia_id || '');
   const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
-  const { alertModal, showAlert } = useAlertModal();
+  const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', message: string }
 
   if (!prospect) return null;
 
+  const isPerdido = status === 'perdido';
+
   const handleSave = async () => {
     setSaving(true);
+    setFeedback(null);
     const { error } = await supabase
       .from('leads_sistema')
-      .update({ status, observacao_interna: observacaoInterna })
-      .eq('id', prospect.id)
-      .select();
+      .update({
+        status,
+        observacao_interna: observacaoInterna,
+        motivo_desistencia_id: isPerdido && motivoDesistenciaId ? motivoDesistenciaId : null,
+      })
+      .eq('id', prospect.id);
     setSaving(false);
     if (error) {
-      showAlert({ type: 'error', title: 'Erro ao Salvar', message: error.message });
+      setFeedback({ type: 'error', message: error.message });
       return;
     }
-    showAlert({ type: 'success', title: 'Sucesso', message: 'Lead atualizado com sucesso!' });
-    onUpdate();
+    setFeedback({ type: 'success', message: 'Lead atualizado com sucesso!' });
+    setTimeout(() => {
+      onSaved();
+    }, 1000);
   };
 
   return (
-    <AnimatePresence>
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      {/* Modal */}
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        className="relative z-10 w-full max-w-lg bg-[#1E293B] border border-white/10 rounded-3xl p-6 shadow-2xl"
+        initial={{ scale: 0.95, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.95, y: 20 }}
       >
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-          onClick={onClose}
-        />
-
-        {/* Modal */}
-        <motion.div
-          className="relative z-10 w-full max-w-lg bg-[#1E293B] border border-white/10 rounded-3xl p-6 shadow-2xl"
-          initial={{ scale: 0.95, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.95, y: 20 }}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-black text-xl">
-                {prospect.nome?.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">{prospect.nome}</h2>
-                <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">
-                  🚀 Prospect LeadCapture Pro
-                </p>
-              </div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-black text-xl">
+              {prospect.nome?.charAt(0).toUpperCase()}
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 transition-all"
-            >
-              ✕
-            </button>
+            <div>
+              <h2 className="text-lg font-bold text-white">{prospect.nome}</h2>
+              <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">
+                🚀 Prospect LeadCapture Pro
+              </p>
+            </div>
           </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 transition-all"
+          >
+            ✕
+          </button>
+        </div>
 
-          {/* Info grid */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            {[
-              { label: 'E-mail', value: prospect.email, icon: '📧' },
-              { label: 'WhatsApp', value: prospect.telefone, icon: '📱' },
-              { label: 'Empresa', value: prospect.companhia || '—', icon: '🏢' },
-              { label: 'Cidade', value: prospect.cidade ? `${prospect.cidade}${prospect.estado ? ' — ' + prospect.estado : ''}` : '—', icon: '📍' },
-              { label: 'Fonte', value: prospect.fonte || '—', icon: '🔗' },
-              { label: 'Captado em', value: formatDate(prospect.created_at), icon: '📅' },
-            ].map(({ label, value, icon }) => (
-              <div key={label} className="bg-white/5 rounded-xl p-3">
-                <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">{icon} {label}</p>
-                <p className="text-sm text-white font-medium truncate" title={value}>{value}</p>
-              </div>
+        {/* Info grid */}
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          {[
+            { label: 'E-mail', value: prospect.email, icon: '📧' },
+            { label: 'WhatsApp', value: prospect.telefone, icon: '📱' },
+            { label: 'Empresa', value: prospect.companhia || '—', icon: '🏢' },
+            { label: 'Cidade', value: prospect.cidade ? `${prospect.cidade}${prospect.estado ? ' — ' + prospect.estado : ''}` : '—', icon: '📍' },
+            { label: 'Fonte', value: prospect.fonte || '—', icon: '🔗' },
+            { label: 'Captado em', value: formatDate(prospect.created_at), icon: '📅' },
+          ].map(({ label, value, icon }) => (
+            <div key={label} className="bg-white/5 rounded-xl p-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">{icon} {label}</p>
+              <p className="text-sm text-white font-medium truncate" title={value}>{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Observação original */}
+        {prospect.observacao && (
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4">
+            <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">📩 Mensagem do Prospect (Original)</p>
+            <p className="text-sm text-white leading-relaxed">{prospect.observacao}</p>
+          </div>
+        )}
+        {prospect.observacao_original && !prospect.observacao && (
+          <div className="bg-white/5 rounded-xl p-3 mb-4">
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem</p>
+            <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao_original}</p>
+          </div>
+        )}
+
+        {/* Status */}
+        <div className="mb-4">
+          <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
+            Status
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {statusOpts.map(s => (
+              <button
+                key={s.slug}
+                onClick={() => setStatus(s.slug)}
+                className={`
+                  px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
+                  ${status === s.slug
+                    ? (STATUS_STYLE[s.slug] || 'bg-white/10 text-white border-white/30') + ' shadow-md'
+                    : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
+                  }
+                `}
+              >
+                {STATUS_EMOJI[s.slug] || '🔵'} {s.label}
+              </button>
             ))}
           </div>
+        </div>
 
-          {/* Observação original */}
-          {prospect.observacao && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">📩 Mensagem do Prospect (Original)</p>
-              <p className="text-sm text-white leading-relaxed">{prospect.observacao}</p>
-            </div>
-          )}
-          {prospect.observacao_original && !prospect.observacao && (
-            <div className="bg-white/5 rounded-xl p-3 mb-4">
-              <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem</p>
-              <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao_original}</p>
-            </div>
-          )}
-
-          {/* Status */}
+        {/* Motivo de desistência — exibido somente quando status = perdido */}
+        {isPerdido && motivosDesistencia.length > 0 && (
           <div className="mb-4">
             <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
-              Status
+              ❌ Motivo de Desistência
             </label>
-            <div className="flex flex-wrap gap-2">
-              {STATUS_OPTS.map(s => (
-                <button
-                  key={s}
-                  onClick={() => setStatus(s)}
-                  className={`
-                    px-3 py-1.5 rounded-xl text-xs font-bold border transition-all
-                    ${status === s
-                      ? STATUS_STYLE[s] + ' shadow-md'
-                      : 'bg-white/5 border-white/10 text-gray-500 hover:bg-white/10'
-                    }
-                  `}
-                >
-                  {STATUS_EMOJI[s]} {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
+            <select
+              value={motivoDesistenciaId}
+              onChange={e => setMotivoDesistenciaId(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#F8FAFC] focus:outline-none focus:border-[#10B981]/50 transition-all"
+            >
+              <option value="">— Selecione o motivo —</option>
+              {motivosDesistencia.map(m => (
+                <option key={m.id} value={m.id}>{m.nome}</option>
               ))}
-            </div>
+            </select>
           </div>
+        )}
 
-          {/* Observação interna */}
-          <div className="mb-5">
-            <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
-              📝 Observações Internas (CRM)
-            </label>
-            <textarea
-              value={observacaoInterna}
-              onChange={e => setObservacaoInterna(e.target.value)}
-              rows={3}
-              placeholder="Notas internas sobre este prospect..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 resize-none transition-all"
-            />
-            <p className="text-xs text-white/30 mt-1">
-              Nota: Essas observações são internas e não sobrescrevem a mensagem original do prospect
-            </p>
-          </div>
+        {/* Observação interna */}
+        <div className="mb-5">
+          <label className="block text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">
+            📝 Observações Internas (CRM)
+          </label>
+          <textarea
+            value={observacaoInterna}
+            onChange={e => setObservacaoInterna(e.target.value)}
+            rows={3}
+            placeholder="Notas internas sobre este prospect..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-[#F8FAFC] placeholder:text-gray-600 focus:outline-none focus:border-[#10B981]/50 resize-none transition-all"
+          />
+          <p className="text-xs text-white/30 mt-1">
+            Nota: Essas observações são internas e não sobrescrevem a mensagem original do prospect
+          </p>
+        </div>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 text-sm font-bold hover:bg-white/5 transition-all"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-sm hover:opacity-90 disabled:opacity-50 transition-all"
-            >
-              {saving ? '⏳ Salvando...' : '✅ Salvar'}
-            </button>
+        {/* Feedback inline */}
+        {feedback && (
+          <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-bold ${
+            feedback.type === 'success'
+              ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+              : 'bg-red-500/10 border border-red-500/30 text-red-400'
+          }`}>
+            {feedback.type === 'success' ? '✅ ' : '❌ '}{feedback.message}
           </div>
-        </motion.div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-400 text-sm font-bold hover:bg-white/5 transition-all"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-sm hover:opacity-90 disabled:opacity-50 transition-all"
+          >
+            {saving ? '⏳ Salvando...' : '✅ Salvar'}
+          </button>
+        </div>
       </motion.div>
-      {alertModal}
-    </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -208,6 +243,8 @@ export default function LeadsSistemaPage() {
   const [selected, setSelected]   = useState(null);
   const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
   const [exportando, setExportando] = useState(false);
+  const [statusOpts, setStatusOpts] = useState([]);
+  const [motivosDesistencia, setMotivosDesistencia] = useState([]);
   const debounceRef = useRef(null);
 
   const handleBuscaChange = useCallback((value) => {
@@ -217,6 +254,30 @@ export default function LeadsSistemaPage() {
   }, []);
 
   useEffect(() => { fetchProspects(); }, []);
+
+  useEffect(() => {
+    if (!usuario?.tenant_id) return;
+    const tenantId = usuario.tenant_id;
+
+    supabase
+      .from('status_comercial')
+      .select('id, slug, label, cor')
+      .eq('tenant_id', tenantId)
+      .then(({ data, error }) => {
+        if (error) console.error('Erro ao buscar status_comercial:', error);
+        else if (data) setStatusOpts(data);
+      });
+
+    supabase
+      .from('motivos_desistencia')
+      .select('id, nome')
+      .eq('tenant_id', tenantId)
+      .eq('ativo', true)
+      .then(({ data, error }) => {
+        if (error) console.error('Erro ao buscar motivos_desistencia:', error);
+        else if (data) setMotivosDesistencia(data);
+      });
+  }, [usuario?.tenant_id]);
 
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -254,7 +315,7 @@ export default function LeadsSistemaPage() {
     setLoading(false);
   };
 
-  const handleUpdate = () => {
+  const handleSaved = () => {
     setSelected(null);
     fetchProspects();
   };
@@ -417,7 +478,7 @@ export default function LeadsSistemaPage() {
 
           {/* Status filter pills + Export */}
           <div className="flex gap-2 flex-wrap items-center">
-            {['todos', ...STATUS_OPTS].map(s => (
+            {['todos', ...statusOpts.map(s => s.slug)].map(s => (
               <button
                 key={s}
                 onClick={() => setFiltroStatus(s)}
@@ -431,7 +492,10 @@ export default function LeadsSistemaPage() {
                   }
                 `}
               >
-                {s === 'todos' ? '📋 Todos' : `${STATUS_EMOJI[s]} ${s.charAt(0).toUpperCase() + s.slice(1)}`}
+                {s === 'todos'
+                  ? '📋 Todos'
+                  : `${STATUS_EMOJI[s] || '🔵'} ${statusOpts.find(o => o.slug === s)?.label || s.charAt(0).toUpperCase() + s.slice(1)}`
+                }
               </button>
             ))}
 
@@ -636,13 +700,18 @@ export default function LeadsSistemaPage() {
       </div>
 
       {/* MODAL */}
-      {selected && (
-        <ProspectModal
-          prospect={selected}
-          onClose={() => setSelected(null)}
-          onUpdate={handleUpdate}
-        />
-      )}
+      <AnimatePresence>
+        {selected && (
+          <ProspectModal
+            key={selected.id}
+            prospect={selected}
+            onClose={() => setSelected(null)}
+            onSaved={handleSaved}
+            statusOpts={statusOpts}
+            motivosDesistencia={motivosDesistencia}
+          />
+        )}
+      </AnimatePresence>
       {alertModal}
     </div>
   );
