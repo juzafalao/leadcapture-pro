@@ -1,4 +1,4 @@
-import logoIcon from '../assets/logo-icon.svg';
+import logoImg from '../assets/logo-leadcapture.png';
 
 export default function LogoIcon({ size = 48, className = '' }) {
   return (
