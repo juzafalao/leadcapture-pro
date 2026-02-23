@@ -291,6 +291,30 @@ export default function LeadsSistemaPage() {
   }, [usuario?.tenant_id]);
 
   useEffect(() => {
+    if (!usuario?.tenant_id) return;
+    const tenantId = usuario.tenant_id;
+
+    supabase
+      .from('status_comercial')
+      .select('id, slug, label, cor')
+      .eq('tenant_id', tenantId)
+      .then(({ data, error }) => {
+        if (error) console.error('Erro ao buscar status_comercial:', error);
+        else if (data) setStatusOpts(data);
+      });
+
+    supabase
+      .from('motivos_desistencia')
+      .select('id, nome')
+      .eq('tenant_id', tenantId)
+      .eq('ativo', true)
+      .then(({ data, error }) => {
+        if (error) console.error('Erro ao buscar motivos_desistencia:', error);
+        else if (data) setMotivosDesistencia(data);
+      });
+  }, [usuario?.tenant_id]);
+
+  useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
