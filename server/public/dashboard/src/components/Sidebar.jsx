@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import logoSidebar from '../assets/logo-sidebar.jpg';
 
 export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const { usuario, isAdministrador, isDiretor, isGestor } = useAuth();
@@ -72,8 +73,17 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         `}
       >
         {/* Logo */}
-        <div className="mb-12 w-12 h-12 bg-[#ee7b4d] flex items-center justify-center font-black text-black rounded-2xl shadow-lg">
-          LC
+        <div className="mb-12 w-16 h-16 flex items-center justify-center overflow-hidden">
+          <img
+            src={logoSidebar}
+            alt="LeadCapture Pro logo"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              mixBlendMode: 'lighten',
+            }}
+          />
         </div>
 
         {/* Menu Items */}
