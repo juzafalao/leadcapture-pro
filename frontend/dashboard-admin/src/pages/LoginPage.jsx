@@ -268,6 +268,7 @@ export default function LoginPage() {
           </div>
 
         </div>
+      </div>
 
         {/* Footer externo */}
         <p className="text-center text-[9px] text-[#1E293B] mt-6 uppercase tracking-[0.35em]">
