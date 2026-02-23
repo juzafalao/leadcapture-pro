@@ -30,7 +30,10 @@ const CATEGORIA_THRESHOLDS = {
  * @returns {number} Score de 50 a 95
  */
 export function calcularScore(capital = 0) {
-  const entrada = SCORING_TABLE.find(item => capital >= item.min)
+  // Ordenar decrescentemente por min para garantir que o maior patamar atingido seja selecionado
+  const entrada = [...SCORING_TABLE]
+    .sort((a, b) => b.min - a.min)
+    .find(item => capital >= item.min)
   return entrada ? entrada.score : 50
 }
 
