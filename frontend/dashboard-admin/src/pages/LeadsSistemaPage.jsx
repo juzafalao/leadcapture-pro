@@ -570,12 +570,12 @@ export default function LeadsSistemaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedLeads.map((p, i) => ( /* 🆕 USANDO paginatedLeads */
+                  {paginatedLeads.map((p, i) => (
                     <motion.tr
                       key={p.id}
-                      initial={{ opacity: 0, y: 20 }}
+                      initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.04 }}
+                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
                       {/* Prospect */}

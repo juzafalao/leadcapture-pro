@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
 import logoHeader from '../../assets/logo-header.svg';
 
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
+  const navigate = useNavigate();
   const tenant = usuario?.tenant;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -15,7 +17,7 @@ export default function Header({ onMenuClick }) {
   const handleLogoutConfirm = async () => {
     setConfirmOpen(false);
     await logout();
-    // Redirect handled automatically by PrivateRoute when usuario becomes null
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -83,7 +85,7 @@ export default function Header({ onMenuClick }) {
                 <polyline points="16 17 21 12 16 7"/>
                 <line x1="21" y1="12" x2="9" y2="12"/>
               </svg>
-            </button>ou
+            </button>
           </div>
 
         </div>

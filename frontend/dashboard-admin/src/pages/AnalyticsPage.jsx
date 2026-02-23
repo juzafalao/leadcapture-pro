@@ -100,9 +100,9 @@ export default function AnalyticsPage() {
   const [clock, setClock] = useState(new Date())
   const prevIdsRef = useRef(new Set())
 
-  // Clock ao vivo
+  // Clock ao vivo (atualiza a cada 10s para reduzir re-renders)
   useEffect(() => {
-    const t = setInterval(() => setClock(new Date()), 1000)
+    const t = setInterval(() => setClock(new Date()), 10000)
     return () => clearInterval(t)
   }, [])
 
@@ -184,9 +184,9 @@ export default function AnalyticsPage() {
 
       {/* ── KPI CARDS (topo, estilo imagem) ── */}
       <div className="px-4 lg:px-10 mb-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard label="Leads Captados"   value={d.total || 0}         sub={`${d.mediadiaria}/dia em média`}     icon="🎯" />
+        <KPICard label="Leads Captados"   value={d.total || 0}         sub={`${d.mediadiaria || '0.0'}/dia em média`}     icon="🎯" />
         <KPICard label="Capital em Leads" value={fmtK(d.capitalFechado || 0)} sub={`${d.vendidos || 0} conversões`}   icon="💰" highlight />
-        <KPICard label="Taxa Conversão"   value={`${d.txConversao || 0}%`}    sub={`Meta: 20%`}                      icon="📈" />
+        <KPICard label="Taxa Conversão"   value={`${d.txConversao || '0.0'}%`}    sub={`Meta: 20%`}                      icon="📈" />
         <KPICard label="Capital Pipeline" value={fmtK(d.capitalPipeline || 0)} sub={`${d.pipeline || 0} em negociação`} icon="🤝" />
       </div>
 
@@ -210,8 +210,8 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Tabs período gráfico */}
-          <div className="h-[280px] mt-4">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <div className="h-[280px] mt-4" style={{ minHeight: 280, minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
               <AreaChart data={d.evolucao || []} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
                 <defs>
                   <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
@@ -237,7 +237,7 @@ export default function AnalyticsPage() {
           <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-4">
             <div>
               <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Pace {periodo}D</p>
-              <p className="text-lg font-black text-white">{d.mediadiaria}/dia</p>
+              <p className="text-lg font-black text-white">{d.mediadiaria || '0.0'}/dia</p>
             </div>
             <div>
               <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Forecast 30D</p>
@@ -245,7 +245,7 @@ export default function AnalyticsPage() {
             </div>
             <div>
               <p className="text-[9px] text-gray-500 uppercase tracking-wider mb-1">Taxa Perca</p>
-              <p className="text-lg font-black text-red-400">{d.txDesistencia || 0}%</p>
+              <p className="text-lg font-black text-red-400">{d.txDesistencia || '0.0'}%</p>
             </div>
           </div>
         </motion.div>
@@ -298,7 +298,7 @@ export default function AnalyticsPage() {
           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Fechamento Estimado</p>
           <p className="text-3xl lg:text-4xl font-black text-white mb-1">{fmtK(d.previsaoIA || 0)}</p>
           <p className="text-[10px] text-gray-500">
-            {d.forecast || 0} leads previstos × {d.txConversao || 0}% conversão
+            {d.forecast || 0} leads previstos × {d.txConversao || '0.0'}% conversão
           </p>
           <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2">
             <span className="text-green-400 text-sm">📈</span>
@@ -318,7 +318,7 @@ export default function AnalyticsPage() {
           </div>
           <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">Projeção 90 dias</p>
           <p className="text-3xl lg:text-4xl font-black text-white mb-1">{Math.round(d.pace90 || 0)} leads</p>
-          <p className="text-[10px] text-gray-500">Média diária: {d.mediadiaria}/dia</p>
+          <p className="text-[10px] text-gray-500">Média diária: {d.mediadiaria || '0.0'}/dia</p>
           <div className="mt-4">
             <div className="flex justify-between text-[9px] text-gray-600 mb-1">
               <span>Progresso</span>
@@ -342,24 +342,24 @@ export default function AnalyticsPage() {
 
           {[
             {
-              icon: d.txConversao >= 20 ? '🎯' : d.txConversao >= 10 ? '📊' : '📉',
-              text: `Conversão ${d.txConversao}% — ${d.txConversao >= 20 ? 'Acima da média!' : d.txConversao >= 10 ? 'Na média' : 'Abaixo da média'}`,
-              color: d.txConversao >= 20 ? 'text-green-400' : d.txConversao >= 10 ? 'text-yellow-400' : 'text-red-400'
+              icon: (parseFloat(d.txConversao) || 0) >= 20 ? '🎯' : (parseFloat(d.txConversao) || 0) >= 10 ? '📊' : '📉',
+              text: `Conversão ${d.txConversao || '0.0'}% — ${(parseFloat(d.txConversao) || 0) >= 20 ? 'Acima da média!' : (parseFloat(d.txConversao) || 0) >= 10 ? 'Na média' : 'Abaixo da média'}`,
+              color: (parseFloat(d.txConversao) || 0) >= 20 ? 'text-green-400' : (parseFloat(d.txConversao) || 0) >= 10 ? 'text-yellow-400' : 'text-red-400'
             },
             {
-              icon: d.perdidos > 0 ? '⚠️' : '✅',
-              text: `${d.perdidos} leads perdidos (${d.txDesistencia}% desistência)`,
-              color: d.perdidos > 5 ? 'text-red-400' : 'text-gray-400'
+              icon: (d.perdidos || 0) > 0 ? '⚠️' : '✅',
+              text: `${d.perdidos || 0} leads perdidos (${d.txDesistencia || '0.0'}% desistência)`,
+              color: (d.perdidos || 0) > 5 ? 'text-red-400' : 'text-gray-400'
             },
             {
               icon: '⏱️',
-              text: `Ciclo médio: ${d.cicloMedio} dias até conversão`,
+              text: `Ciclo médio: ${d.cicloMedio || '0'} dias até conversão`,
               color: 'text-blue-400'
             },
             {
               icon: '💸',
               text: `Capital perdido: ${fmtK(d.capitalPerdido || 0)}`,
-              color: d.capitalPerdido > 50000 ? 'text-red-400' : 'text-gray-400'
+              color: (d.capitalPerdido || 0) > 50000 ? 'text-red-400' : 'text-gray-400'
             },
           ].map((ins, i) => (
             <div key={i} className="flex items-start gap-2 bg-white/3 rounded-xl px-3 py-2">
@@ -378,13 +378,13 @@ export default function AnalyticsPage() {
           className="bg-[#0F172A] border border-white/5 rounded-3xl p-6">
           <h3 className="text-sm font-bold text-white mb-6">🏢 Leads por Marca</h3>
           {(d.porMarca || []).length > 0 ? (
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <div className="h-[260px]" style={{ minHeight: 260, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={260}>
                 <PieChart>
-                  <Pie data={d.porMarca} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
+                  <Pie data={d.porMarca} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                     {(d.porMarca || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <ChartTooltip contentStyle={{ backgroundColor:'#0B1220', border:'1px solid rgba(16,185,129,0.2)', borderRadius:'12px' }} />
+                  <ChartTooltip contentStyle={{ backgroundColor:'#0B1220', border:'1px solid rgba(16,185,129,0.2)', borderRadius:'12px', color:'#F8FAFC', padding:'8px 14px' }} itemStyle={{ color:'#F8FAFC', fontSize:'13px', fontWeight:'bold' }} labelStyle={{ color:'#94A3B8', fontSize:'11px' }} />
                   <Legend verticalAlign="bottom" height={36} formatter={v => <span style={{ color:'#CBD5E1', fontSize:'11px' }}>{v}</span>} />
                 </PieChart>
               </ResponsiveContainer>
@@ -399,8 +399,8 @@ export default function AnalyticsPage() {
           className="bg-[#0F172A] border border-white/5 rounded-3xl p-6">
           <h3 className="text-sm font-bold text-white mb-6">📉 Motivos de Perda</h3>
           {(d.motivosPerda || []).length > 0 ? (
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <div className="h-[260px]" style={{ minHeight: 260, minWidth: 0 }}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={260}>
                 <BarChart data={d.motivosPerda} margin={{ top: 5, right: 5, bottom: 20, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="motivo" stroke="#374151" fontSize={8} axisLine={false} tickLine={false} angle={-20} textAnchor="end" />

@@ -548,6 +548,7 @@ ALTER VIEW "public"."leads_por_fonte" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."leads_sistema" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "tenant_id" "uuid" NOT NULL,
     "nome" "text" NOT NULL,
     "email" "text" NOT NULL,
     "telefone" "text" NOT NULL,
@@ -555,6 +556,7 @@ CREATE TABLE IF NOT EXISTS "public"."leads_sistema" (
     "cidade" "text",
     "estado" "text",
     "observacao" "text",
+    "observacao_original" "text",
     "fonte" "text" DEFAULT 'website'::"text",
     "status" "text" DEFAULT 'novo'::"text",
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -829,7 +831,7 @@ CREATE TABLE IF NOT EXISTS "public"."usuarios" (
     "telefone" "text",
     "password_hash" "text",
     "role" "text" DEFAULT 'vendedor'::"text",
-    "active" boolean DEFAULT true,
+    "ativo" boolean DEFAULT true,
     "created_at" timestamp with time zone DEFAULT "now"(),
     "auth_id" "uuid",
     "deleted_at" timestamp with time zone,
@@ -848,7 +850,7 @@ CREATE OR REPLACE VIEW "public"."usuarios_ativos" AS
     "telefone",
     "password_hash",
     "role",
-    "active",
+    "ativo",
     "created_at",
     "auth_id",
     "deleted_at",
@@ -1104,6 +1106,10 @@ CREATE INDEX "idx_leads_sistema_status" ON "public"."leads_sistema" USING "btree
 
 
 
+CREATE INDEX "idx_leads_sistema_tenant" ON "public"."leads_sistema" USING "btree" ("tenant_id");
+
+
+
 CREATE INDEX "idx_leads_status" ON "public"."leads" USING "btree" ("status");
 
 
@@ -1209,6 +1215,11 @@ ALTER TABLE ONLY "public"."leads_sistema"
 
 
 
+ALTER TABLE ONLY "public"."leads_sistema"
+    ADD CONSTRAINT "leads_sistema_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE CASCADE;
+
+
+
 ALTER TABLE ONLY "public"."leads"
     ADD CONSTRAINT "leads_tenant_id_fkey" FOREIGN KEY ("tenant_id") REFERENCES "public"."tenants"("id") ON DELETE CASCADE;
 
@@ -1258,6 +1269,13 @@ CREATE POLICY "Inserção pública leads_sistema" ON "public"."leads_sistema" FO
 
 
 CREATE POLICY "Leitura pública leads_sistema" ON "public"."leads_sistema" FOR SELECT USING (true);
+
+
+
+CREATE POLICY "leads_sistema_update_tenant" ON "public"."leads_sistema" FOR UPDATE TO "authenticated" USING (("tenant_id" = ( SELECT "usuarios"."tenant_id"
+   FROM "public"."usuarios"
+  WHERE ("usuarios"."auth_id" = "auth"."uid"())
+ LIMIT 1)));
 
 
 
