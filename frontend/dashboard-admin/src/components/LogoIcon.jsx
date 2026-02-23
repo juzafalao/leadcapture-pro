@@ -3,7 +3,7 @@ import logoImg from '../assets/logo-leadcapture.png';
 export default function LogoIcon({ size = 48, className = '' }) {
   return (
     <img
-      src={logoImg}
+      src={logoIcon}
       alt="LeadCapture Pro"
       width={size}
       className={className}

@@ -167,10 +167,7 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
           </select>
 
           {isLoading && (
-            <span className="flex items-center gap-1.5 text-[10px] text-[#10B981] font-black">
-              <span className="w-3 h-3 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin inline-block" />
-              Carregando...
-            </span>
+            <span className="w-3 h-3 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin inline-block" />
           )}
 
           {/* KPIs rápidos */}
@@ -697,9 +694,8 @@ export default function RelatoriosPage() {
             </div>
 
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <div className="flex items-center justify-center py-20">
                 <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-                <span className="text-[#10B981] font-black tracking-widest text-xs uppercase">Carregando...</span>
               </div>
             ) : renderRelatorio()}
           </motion.div>

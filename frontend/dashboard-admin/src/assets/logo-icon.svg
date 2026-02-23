@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 140">
+  <defs>
+    <filter id="neon" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="neon2" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Bottom line — brightest -->
+  <path d="M10 118 L62 118 L162 32 L210 32"
+    stroke="#00ff7a" stroke-width="11" fill="none"
+    stroke-linecap="round" stroke-linejoin="round"
+    filter="url(#neon2)" opacity="0.85"/>
+  <path d="M10 118 L62 118 L162 32 L210 32"
+    stroke="#00ff7a" stroke-width="5" fill="none"
+    stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Middle line -->
+  <path d="M28 92 L76 92 L165 16 L210 16"
+    stroke="#00ff7a" stroke-width="9" fill="none"
+    stroke-linecap="round" stroke-linejoin="round"
+    filter="url(#neon2)" opacity="0.55"/>
+  <path d="M28 92 L76 92 L165 16 L210 16"
+    stroke="#00ff7a" stroke-width="3.5" fill="none"
+    stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+
+  <!-- Top line — faintest -->
+  <path d="M46 66 L90 66 L168 2 L210 2"
+    stroke="#00ff7a" stroke-width="7" fill="none"
+    stroke-linecap="round" stroke-linejoin="round"
+    filter="url(#neon2)" opacity="0.28"/>
+  <path d="M46 66 L90 66 L168 2 L210 2"
+    stroke="#00ff7a" stroke-width="2" fill="none"
+    stroke-linecap="round" stroke-linejoin="round" opacity="0.38"/>
+
+  <!-- Sparkle particles right side -->
+  <circle cx="206" cy="48" r="5" fill="#00ff7a" filter="url(#neon)" opacity="0.95"/>
+  <circle cx="214" cy="28" r="3.5" fill="#00ff7a" filter="url(#neon)" opacity="0.75"/>
+  <circle cx="200" cy="62" r="2.5" fill="#00ff7a" filter="url(#neon)" opacity="0.55"/>
+  <circle cx="212" cy="15" r="2" fill="#00ff7a" opacity="0.45"/>
+  <circle cx="218" cy="72" r="1.5" fill="#00ff7a" opacity="0.35"/>
+</svg>
