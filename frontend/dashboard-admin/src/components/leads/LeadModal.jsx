@@ -35,7 +35,11 @@ export default function LeadModal({ lead, onClose }) {
   });
 
   const [marcas, setMarcas]           = useState([]);
-  const [statusList, setStatusList]   = useState([]);
+  const [statusList, setStatusList]   = useState(
+    lead?.status_comercial
+      ? [{ id: lead.status_comercial.id, label: lead.status_comercial.label, slug: lead.status_comercial.slug }]
+      : []
+  );
   const [motivosList, setMotivosList] = useState([]);
   const [isSaving, setIsSaving]       = useState(false);
 
@@ -69,12 +73,19 @@ export default function LeadModal({ lead, onClose }) {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-      ...(name === 'id_status' && statusList.find(s => s.id === value)?.slug !== 'perdido'
-        ? { id_motivo_desistencia: '' } : {})
-    }));
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      };
+      if (name === 'id_status') {
+        const newStatus = statusList.find(s => s.id === value);
+        if (newStatus && newStatus.slug !== 'perdido') {
+          updated.id_motivo_desistencia = '';
+        }
+      }
+      return updated;
+    });
   };
 
   const handleSubmit = async (e) => {

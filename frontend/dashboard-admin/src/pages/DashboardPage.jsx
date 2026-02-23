@@ -206,25 +206,29 @@ export default function DashboardPage() {
 
                       {/* Status Comercial */}
                       <td className="px-4 py-4 hidden lg:table-cell">
-                        {lead.status ? (
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
-                            lead.status.toLowerCase().includes('vendido') || lead.status.toLowerCase().includes('convertido')
-                              ? 'bg-green-500/10 text-green-400 border-green-500/30'
-                              : lead.status.toLowerCase().includes('negoc')
-                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                              : lead.status.toLowerCase().includes('perdido')
-                              ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                              : lead.status.toLowerCase().includes('agendado')
-                              ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
-                              : lead.status.toLowerCase().includes('contato')
-                              ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
-                              : 'bg-gray-500/10 text-gray-400 border-gray-500/30'
-                          }`}>
-                            {lead.status}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-600 italic">—</span>
-                        )}
+                        {(() => {
+                          const statusLabel = lead.status_comercial?.label || lead.status;
+                          const statusSlug  = lead.status_comercial?.slug  || lead.status || '';
+                          return statusLabel ? (
+                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border ${
+                              statusSlug.toLowerCase().includes('vendido') || statusSlug.toLowerCase().includes('convertido')
+                                ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                                : statusSlug.toLowerCase().includes('negoc')
+                                ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                                : statusSlug.toLowerCase().includes('perdido')
+                                ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                                : statusSlug.toLowerCase().includes('agendado')
+                                ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                                : statusSlug.toLowerCase().includes('contato')
+                                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30'
+                                : 'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                            }`}>
+                              {statusLabel}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-600 italic">—</span>
+                          );
+                        })()}
                       </td>
 
                       {/* Atribuído */}
