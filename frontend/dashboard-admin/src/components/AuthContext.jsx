@@ -66,8 +66,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    setUsuario(null);
     await supabase.auth.signOut();
-    // setUsuario(null) is handled by onAuthStateChange SIGNED_OUT event
   };
 
   useEffect(() => {

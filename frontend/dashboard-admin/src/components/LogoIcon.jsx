@@ -1,4 +1,4 @@
-import logoIcon from '../assets/logo-icon.svg';
+import logoIcon from '../assets/logo-login.jpg';
 
 export default function LogoIcon({ size = 48, className = '' }) {
   return (
@@ -7,7 +7,13 @@ export default function LogoIcon({ size = 48, className = '' }) {
       alt="LeadCapture Pro"
       width={size}
       className={className}
-      style={{ objectFit: 'contain', display: 'block', height: 'auto' }}
+      style={{
+        objectFit: 'contain',
+        display: 'block',
+        height: 'auto',
+        imageRendering: 'auto',
+        borderRadius: '12px',
+      }}
     />
   );
 }

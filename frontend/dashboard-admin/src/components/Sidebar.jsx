@@ -1,7 +1,8 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import LogoIcon from './LogoIcon';
+import ConfirmModal from './shared/ConfirmModal';
 
 // ─── SVG Icon components ───────────────────────────────────────
 const IconLeads = () => (
@@ -110,12 +111,28 @@ const NAV_GROUPS = [
   },
 ];
 
+const IconLogoff = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+);
+
 export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const auth     = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [confirmLogoff, setConfirmLogoff] = useState(false);
 
   const handleNavClick = () => {
     if (mobileOpen) setMobileOpen(false);
+  };
+
+  const handleLogoffConfirm = async () => {
+    setConfirmLogoff(false);
+    await auth.logout();
+    navigate('/login', { replace: true });
   };
 
   const isActive = (path) => location.pathname === path;
@@ -189,24 +206,38 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
           })}
         </nav>
 
-        {/* Usuário (Mobile) */}
-        <div className="lg:hidden mt-auto pt-4 border-t border-white/5 w-full px-4">
-          <div className="text-center">
-            <p className="text-xs text-white font-medium truncate">{auth.usuario?.nome}</p>
-            <p className="text-[8px] text-[#10B981] font-bold uppercase mt-1">{auth.usuario?.role}</p>
-          </div>
-        </div>
-
-        {/* Avatar usuário (Desktop) */}
-        <div className="hidden lg:flex mt-auto pt-4 border-t border-white/5 w-full items-center justify-center">
-          <div
-            className="w-9 h-9 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-bold text-sm"
-            title={`${auth.usuario?.nome} · ${auth.usuario?.role}`}
+        {/* Logoff */}
+        <div className="mt-auto pt-4 border-t border-white/5 w-full px-3">
+          <button
+            onClick={() => setConfirmLogoff(true)}
+            title="Sair do sistema"
+            className="flex flex-col items-center gap-1.5 p-3 rounded-2xl mb-2 w-full transition-all duration-150 text-gray-600 hover:bg-red-500/10 hover:text-red-400"
           >
-            {auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}
+            <span className="text-lg leading-none"><IconLogoff /></span>
+            <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
+              Logoff
+            </span>
+          </button>
+
+          {/* Avatar usuário */}
+          <div className="flex items-center justify-center pb-2">
+            <div
+              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-bold text-sm"
+              title={`${auth.usuario?.nome} · ${auth.usuario?.role}`}
+            >
+              {auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}
+            </div>
           </div>
         </div>
       </aside>
+
+      <ConfirmModal
+        isOpen={confirmLogoff}
+        title="Sair do sistema"
+        message="Tem certeza que deseja encerrar sua sessão?"
+        onConfirm={handleLogoffConfirm}
+        onClose={() => setConfirmLogoff(false)}
+      />
     </>
   );
 }
