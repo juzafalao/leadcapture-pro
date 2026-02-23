@@ -72,7 +72,7 @@ function AppRoutes() {
       <Routes location={location} key={location.pathname}>
         <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
         <Route path="/landing/:slug" element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
-        <Route path="/" element={<PrivateRoute><Navigate to="/dashboard" replace /></PrivateRoute>} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/dashboard"     element={<PrivateRoute><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/relatorios"    element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/analytics"     element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
@@ -82,7 +82,7 @@ function AppRoutes() {
         <Route path="/usuarios"      element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/leads-sistema" element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
         <Route path="/configuracoes" element={<PrivateRoute><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="*"              element={<Navigate to="/dashboard" replace />} />
+        <Route path="*"              element={<Navigate to="/login" replace />} />
       </Routes>
     </AnimatePresence>
   );
