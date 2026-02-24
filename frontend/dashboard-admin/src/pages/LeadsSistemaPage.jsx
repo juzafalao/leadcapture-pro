@@ -250,7 +250,13 @@ function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesisten
   );
 }
 
-// ── Página principal ─────────────────────────────────────────
+/**
+ * Render the LeadsSistema dashboard: a prospects listing UI with search and status filters, pagination, Excel export, and a modal for viewing/editing prospect details.
+ *
+ * Fetches prospects and active "motivos de desistência" from Supabase, shows KPIs, supports client-side filtering and debounced search, and provides optimistic updates after edits.
+ *
+ * @returns {JSX.Element} The React element for the LeadsSistema page.
+ */
 export default function LeadsSistemaPage() {
   const { usuario } = useAuth();
   const { alertModal, showAlert } = useAlertModal();

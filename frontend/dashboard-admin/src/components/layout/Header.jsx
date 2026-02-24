@@ -4,6 +4,12 @@ import { useAuth } from '../AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
 import logoHeader from '../../assets/logo-header.svg';
 
+/**
+ * Render the application header with logo, tenant and user information, a mobile menu button, and a logout confirmation flow.
+ * @param {Object} props
+ * @param {Function} props.onMenuClick - Callback invoked when the mobile menu button is clicked.
+ * @returns {JSX.Element} The header element containing the logo and tenant label, user info, logout button, and a confirm modal for logout.
+ */
 export default function Header({ onMenuClick }) {
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
