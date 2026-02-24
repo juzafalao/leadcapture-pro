@@ -322,7 +322,7 @@ export default function LeadsSistemaPage() {
     try {
       const { data, error } = await supabase
         .from('leads_sistema')
-        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, motivo_desistencia_id, created_at')
+        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, observacao_original, motivo_desistencia_id, created_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 

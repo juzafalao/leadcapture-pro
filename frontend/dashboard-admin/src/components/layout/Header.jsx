@@ -46,19 +46,16 @@ export default function Header({ onMenuClick }) {
 
             {/* Logo Header (texto) + Tenant */}
             <div className="flex flex-col">
-              <div className="group cursor-default flex items-baseline gap-0">
-                <span
-                  className="text-xl lg:text-2xl font-bold text-[#F8FAFC] tracking-tight"
-                  style={{ fontFamily: "'Segoe UI', 'Inter', 'Arial', sans-serif" }}
-                >
-                  LeadCapture
-                </span>
-                <span
-                  className="text-[10px] lg:text-xs font-black text-[#10B981] uppercase tracking-[0.25em] ml-2"
-                  style={{ fontFamily: "'Segoe UI', 'Inter', 'Arial', sans-serif" }}
-                >
-                  PRO
-                </span>
+              <div className="group cursor-default">
+                <img
+                  src={logoHeader}
+                  alt="LeadCapture Pro"
+                  style={{
+                    width: '200px',
+                    height: 'auto',
+                    display: 'block',
+                  }}
+                />
               </div>
               {tenant?.nome && (
                 <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider mt-0.5">
