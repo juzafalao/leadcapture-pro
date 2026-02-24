@@ -53,6 +53,12 @@ function PrivateRoute({ children, allowedRoles }) {
   return children;
 }
 
+/**
+ * Wraps children in a container that applies a short fade-in animation.
+ * @param {Object} props
+ * @param {import('react').ReactNode} props.children - The content to render inside the animated container.
+ * @returns {JSX.Element} A React element that renders the given children with a short fade-in effect.
+ */
 function AnimatedPage({ children }) {
   return (
     <motion.div
@@ -65,6 +71,11 @@ function AnimatedPage({ children }) {
   );
 }
 
+/**
+ * Defines the application's route hierarchy and wraps routed pages with animated transitions and lazy-loading fallbacks.
+ *
+ * @returns {JSX.Element} The route tree (Routes wrapped with AnimatePresence) that renders public routes, landing pages, and protected authenticated routes with role-based access.
+ */
 function AppRoutes() {
   const location = useLocation();
   return (
