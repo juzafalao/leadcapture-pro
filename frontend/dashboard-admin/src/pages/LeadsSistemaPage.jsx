@@ -257,11 +257,12 @@ export default function LeadsSistemaPage() {
   const [prospects, setProspects] = useState([]);
   const [filtrados, setFiltrados] = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [erro, setErro]           = useState(null);
   const [busca, setBusca]         = useState('');
   const [buscaInput, setBuscaInput] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [selected, setSelected]   = useState(null);
-  const [page, setPage] = useState(1); // 🆕 ESTADO DE PAGINAÇÃO
+  const [page, setPage] = useState(1);
   const [exportando, setExportando] = useState(false);
   const [motivosDesistencia, setMotivosDesistencia] = useState([]);
   const debounceRef = useRef(null);
@@ -277,19 +278,15 @@ export default function LeadsSistemaPage() {
   }, []);
 
   useEffect(() => {
-    if (!usuario?.tenant_id) return;
-    const tenantId = usuario.tenant_id;
-
     supabase
       .from('motivos_desistencia')
       .select('id, nome')
-      .eq('tenant_id', tenantId)
       .eq('ativo', true)
       .then(({ data, error }) => {
         if (error) console.error('Erro ao buscar motivos_desistencia:', error);
         else if (data) setMotivosDesistencia(data);
       });
-  }, [usuario?.tenant_id]);
+  }, []);
 
   useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
@@ -315,15 +312,26 @@ export default function LeadsSistemaPage() {
 
   const fetchProspects = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
-    const { data, error } = await supabase
-      .from('leads_sistema')
-      .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, observacao_original, motivo_desistencia_id, created_at')
-      .order('created_at', { ascending: false });
+    setErro(null);
+    try {
+      const { data, error } = await supabase
+        .from('leads_sistema')
+        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, observacao_original, motivo_desistencia_id, created_at')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false });
 
-    if (!error && data) {
-      setProspects(data);
+      if (error) {
+        console.error('Erro ao buscar leads_sistema:', error);
+        if (!silent) setErro(`Erro ao carregar prospects: ${error.message}`);
+        return;
+      }
+      setProspects(data || []);
+    } catch (err) {
+      console.error('Erro inesperado ao buscar leads_sistema:', err);
+      if (!silent) setErro('Erro de conexao ao carregar prospects. Verifique sua rede.');
+    } finally {
+      if (!silent) setLoading(false);
     }
-    if (!silent) setLoading(false);
   };
 
   const handleSaved = (updatedData) => {
@@ -401,6 +409,24 @@ export default function LeadsSistemaPage() {
 
   if (loading) {
     return <LoadingSpinner />;
+  }
+
+  if (erro) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
+        <div className="bg-[#1E293B] border border-red-500/30 rounded-3xl p-8 max-w-md text-center">
+          <div className="text-5xl mb-4">&#x26A0;</div>
+          <h2 className="text-xl font-bold text-white mb-2">Erro ao carregar</h2>
+          <p className="text-sm text-gray-400 mb-6">{erro}</p>
+          <button
+            onClick={() => fetchProspects()}
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-bold hover:opacity-90 transition-all"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -568,12 +594,9 @@ export default function LeadsSistemaPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedLeads.map((p, i) => (
-                    <motion.tr
+                  {paginatedLeads.map((p) => (
+                    <tr
                       key={p.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(i * 0.03, 0.3) }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
                       {/* Prospect */}
@@ -620,16 +643,14 @@ export default function LeadsSistemaPage() {
 
                       {/* Ações */}
                       <td className="px-4 py-4 text-right">
-                        <motion.button
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
+                        <button
                           onClick={() => setSelected(p)}
-                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all"
+                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 hover:scale-105 active:scale-95 transition-all"
                         >
                           Ver detalhes
-                        </motion.button>
+                        </button>
                       </td>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>
