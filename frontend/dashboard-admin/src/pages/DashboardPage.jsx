@@ -136,12 +136,9 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.map((lead, index) => (
-                    <motion.tr
+                  {leads.map((lead) => (
+                    <tr
                       key={lead.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: Math.min(index * 0.03, 0.3) }}
                       className="border-b border-white/5 hover:bg-white/5 transition-colors"
                     >
                       {/* Nome */}
@@ -265,7 +262,7 @@ export default function DashboardPage() {
                           </button>
                         </div>
                       </td>
-                    </motion.tr>
+                    </tr>
                   ))}
                 </tbody>
               </table>

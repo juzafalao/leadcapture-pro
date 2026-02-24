@@ -21,7 +21,6 @@ export const getSupabase = () => {
         schema: 'public'
       }
     });
-    console.log('✅ Supabase Client criado (singleton)');
   }
   return supabaseInstance;
 };

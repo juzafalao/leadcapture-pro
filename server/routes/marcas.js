@@ -56,7 +56,7 @@ router.get('/:slug', async (req, res) => {
     res.json({ success: true, marca: data })
   } catch (err) {
     console.error('[Marcas] Erro ao buscar por nome:', err.message)
-    res.status(500).json({ success: false, error: err.message })
+    res.status(500).json({ success: false, error: 'Erro interno ao buscar marca' })
   }
 })
 

@@ -89,7 +89,7 @@ router.post('/', async (req, res) => {
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id })
   } catch (err) {
     console.error('[Leads] Erro:', err.message)
-    res.status(500).json({ success: false, error: err.message })
+    res.status(500).json({ success: false, error: 'Erro interno ao processar lead' })
   }
 })
 
@@ -202,7 +202,7 @@ router.post('/google-forms', async (req, res) => {
     })
   } catch (err) {
     console.error('[Leads/GoogleForms] Erro:', err.message)
-    res.status(500).json({ success: false, error: err.message })
+    res.status(500).json({ success: false, error: 'Erro interno ao processar lead do Google Forms' })
   }
 })
 
@@ -269,7 +269,7 @@ router.post('/sistema', async (req, res) => {
     res.json({ success: true, message: 'Recebemos seu contato! Em breve nossa equipe entrará em contato.', leadId: lead.id })
   } catch (err) {
     console.error('[Leads/Sistema] Erro:', err.message)
-    res.status(500).json({ success: false, error: err.message })
+    res.status(500).json({ success: false, error: 'Erro interno ao processar prospect' })
   }
 })
 
