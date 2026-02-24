@@ -12,6 +12,13 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
 const ROLES_CONSULTOR = ['Consultor'];
 
+/**
+ * Render the leads management dashboard with KPI filters, search and filter controls, leads table, pagination, FAB and modals.
+ *
+ * Displays KPIs, a debounced search, "Meus Leads" toggle, a responsive table of leads with status and assignment actions, pagination controls, and modals for viewing/creating leads and assigning operators.
+ *
+ * @returns {JSX.Element} The DashboardPage React element containing the leads dashboard UI.
+ */
 export default function DashboardPage() {
   const { usuario } = useAuth();
 
