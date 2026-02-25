@@ -146,12 +146,6 @@ function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesisten
             <p className="text-sm text-white leading-relaxed">{prospect.observacao}</p>
           </div>
         )}
-        {prospect.observacao_original && !prospect.observacao && (
-          <div className="bg-white/5 rounded-xl p-3 mb-4">
-            <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-1">💬 Mensagem</p>
-            <p className="text-sm text-gray-300 leading-relaxed">{prospect.observacao_original}</p>
-          </div>
-        )}
 
         {/* Status */}
         <div className="mb-4">
@@ -322,7 +316,7 @@ export default function LeadsSistemaPage() {
     try {
       const { data, error } = await supabase
         .from('leads_sistema')
-        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, observacao_original, motivo_desistencia_id, created_at')
+        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, motivo_desistencia_id, created_at, deleted_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
