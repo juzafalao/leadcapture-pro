@@ -47,19 +47,19 @@ export default function Header({ onMenuClick }) {
             {/* Logo Header (texto) + Tenant */}
             <div className="flex flex-col">
               <div className="group cursor-default">
-                <img
-                  src={logoHeader}
-                  alt="LeadCapture Pro"
-                  style={{
-                    width: '200px',
-                    height: 'auto',
-                    display: 'block',
-                  }}
-                />
+                <span style={{ fontWeight: 300, fontSize: 'clamp(18px, 2.5vw, 24px)', lineHeight: 1 }}>
+                  <span style={{ color: '#F8FAFC' }}>Lead</span>
+                  <span style={{ color: '#10B981' }}>Capture</span>
+                  <span style={{ color: '#F8FAFC' }}> Pro</span>
+                </span>
               </div>
-              {tenant?.nome && (
+              {tenant?.nome ? (
                 <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider mt-0.5">
                   {tenant.nome}
+                </p>
+              ) : usuario?.role && (
+                <p style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>
+                  {usuario.role}
                 </p>
               )}
             </div>

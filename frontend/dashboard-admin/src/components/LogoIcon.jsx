@@ -1,4 +1,4 @@
-import logoIcon from '../assets/logo-icon.svg';
+import logoIcon from '../assets/logo-login.jpg';
 
 /**
  * Renders the application's logo as an image element.
@@ -21,6 +21,7 @@ export default function LogoIcon({ size = 48, className = '' }) {
         objectFit: 'contain',
         display: 'block',
         height: 'auto',
+        mixBlendMode: 'lighten',
       }}
     />
   );

@@ -37,9 +37,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
-        if (error.message?.includes('Refresh Token')) {
-          await supabase.auth.signOut();
-        }
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('sb-')) localStorage.removeItem(key);
+        });
+        await supabase.auth.signOut({ scope: 'local' });
         setUsuario(null);
       } else if (session?.user) {
         await loadUserData(session.user.id);
@@ -67,7 +68,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     setUsuario(null);
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
   };
 
   useEffect(() => {
@@ -75,17 +76,21 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          setUsuario(null);
-          return;
-        }
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          await supabase.auth.signOut();
-          setUsuario(null);
-          return;
-        }
-        if (event === 'SIGNED_IN' && session?.user) {
-          await loadUserData(session.user.id);
+        try {
+          if (event === 'SIGNED_OUT') {
+            setUsuario(null);
+            return;
+          }
+          if (event === 'TOKEN_REFRESHED' && !session) {
+            await supabase.auth.signOut({ scope: 'local' });
+            setUsuario(null);
+            return;
+          }
+          if (event === 'SIGNED_IN' && session?.user) {
+            await loadUserData(session.user.id);
+          }
+        } catch {
+          // silently ignore auth state change errors
         }
       }
     );
