@@ -44,7 +44,7 @@ export default function SegmentoCard({ segmento, index, onClick }) {
               {segmento.nome}
             </h3>
             <p className="text-xs text-gray-600 font-mono truncate">
-              ID: {segmento.id.substring(0, 8)}...
+              {segmento.tenant_name || 'Sem tenant'}
             </p>
           </div>
         </div>

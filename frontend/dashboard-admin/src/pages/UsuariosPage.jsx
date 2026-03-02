@@ -11,7 +11,7 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 const PAGE_SIZE = 20;
 
 export default function UsuariosPage() {
-  const { usuario } = useAuth();
+  const { usuario, isPlatformAdmin } = useAuth();
   const [usuarios, setUsuarios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
@@ -30,29 +30,34 @@ export default function UsuariosPage() {
   }, []);
 
   const fetchUsuarios = useCallback(async () => {
-    if (!usuario?.tenant_id) {
-      console.log('❌ Sem tenant_id');
+    if (!usuario?.tenant_id && !isPlatformAdmin()) {
+      console.log('Sem tenant_id');
       return;
     }
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('usuarios')
         .select('id, nome, email, role, active, tenant_id, created_at')
-        .eq('tenant_id', usuario.tenant_id)
         .order('created_at', { ascending: false })
         .limit(500);
 
+      if (!isPlatformAdmin()) {
+        query = query.eq('tenant_id', usuario.tenant_id);
+      }
+
+      const { data, error } = await query;
+
       if (error) {
-        console.error('❌ Erro ao carregar usuários:', error);
+        console.error('Erro ao carregar usuarios:', error);
         setUsuarios([]);
       } else {
-        console.log('✅ Usuários carregados:', data?.length);
+        console.log('Usuarios carregados:', data?.length);
         setUsuarios(data || []);
       }
     } catch (err) {
-      console.error('❌ Erro inesperado:', err);
+      console.error('Erro inesperado:', err);
       setUsuarios([]);
     } finally {
       setLoading(false);

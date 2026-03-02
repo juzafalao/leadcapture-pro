@@ -91,7 +91,7 @@ const PERIODOS = [
 ]
 
 export default function AnalyticsPage() {
-  const { usuario } = useAuth()
+  const { usuario, isPlatformAdmin } = useAuth()
   const { alertModal, showAlert } = useAlertModal()
   const [periodo, setPeriodo] = useState('30')
   const [activeTab, setActiveTab] = useState('overview')
@@ -106,10 +106,10 @@ export default function AnalyticsPage() {
     return () => clearInterval(t)
   }, [])
 
-  const { data, isLoading } = useAnalytics(usuario?.tenant_id, periodo)
+  const { data, isLoading } = useAnalytics(isPlatformAdmin() ? null : usuario?.tenant_id, periodo)
 
   // Realtime
-  useRealtimeLeads(usuario?.tenant_id, (novo) => {
+  useRealtimeLeads(isPlatformAdmin() ? null : usuario?.tenant_id, (novo) => {
     setNewLeads(ids => [novo.id, ...ids].slice(0, 5))
     setLiveLeads(list => [novo, ...list].slice(0, 20))
   })

@@ -51,7 +51,7 @@ export default function MarcaCard({ marca, index, onClick }) {
               {marca.nome}
             </h3>
             <p className="text-xs text-gray-600 font-mono truncate">
-              ID: {marca.id.substring(0, 8)}...
+              {marca.tenant_name || 'Sem tenant'}
             </p>
           </div>
         </div>

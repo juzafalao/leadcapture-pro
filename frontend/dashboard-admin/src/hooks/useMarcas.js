@@ -5,16 +5,19 @@ export function useMarcas(tenantId) {
   return useQuery({
     queryKey: ['marcas', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('marcas')
         .select('*')
-        .eq('tenant_id', tenantId)
         .eq('ativo', true)
         .order('nome', { ascending: true })
+
+      if (tenantId) query = query.eq('tenant_id', tenantId)
+
+      const { data, error } = await query
       if (error) throw error
       return data ?? []
     },
-    enabled: !!tenantId
+    enabled: !!tenantId || tenantId === null
   })
 }
 

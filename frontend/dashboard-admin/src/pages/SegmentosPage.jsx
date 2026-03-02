@@ -11,7 +11,7 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 const PAGE_SIZE = 20;
 
 export default function SegmentosPage() {
-  const { usuario } = useAuth();
+  const { usuario, isPlatformAdmin } = useAuth();
   const { alertModal, showAlert } = useAlertModal();
   const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);
   const [segmentos, setSegmentos] = useState([]);
@@ -31,21 +31,24 @@ export default function SegmentosPage() {
   }, []);
 
   const fetchSegmentos = async () => {
-    if (!usuario?.tenant_id) return;
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
     setLoading(true);
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('segmentos')
-        .select('id, nome, emoji, created_at, tenant_id')
-        .eq('tenant_id', usuario.tenant_id)
+        .select('id, nome, emoji, created_at, tenant_id, tenant:tenant_id(name)')
         .order('created_at', { ascending: false })
         .limit(100);
 
+      if (!isPlatformAdmin()) {
+        query = query.eq('tenant_id', usuario.tenant_id);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // Fetch all related marcas in a single query
         const segmentoIds = data.map(s => s.id);
         const { data: todasMarcas } = await supabase
           .from('marcas')
@@ -58,7 +61,6 @@ export default function SegmentosPage() {
           marcasMap[m.id_segmento].push(m);
         });
 
-        // Fetch lead counts per marca in a single query
         const todasMarcasIds = (todasMarcas || []).map(m => m.id);
         let leadsCountMap = {};
         if (todasMarcasIds.length > 0) {
@@ -74,11 +76,7 @@ export default function SegmentosPage() {
         const segmentosCompletos = data.map(segmento => {
           const marcas = marcasMap[segmento.id] || [];
           const leadsCount = marcas.reduce((acc, m) => acc + (leadsCountMap[m.id] || 0), 0);
-          return {
-            ...segmento,
-            marcas_relacionadas: marcas,
-            leadsCount
-          };
+          return { ...segmento, tenant_name: segmento.tenant?.name, marcas_relacionadas: marcas, leadsCount };
         });
 
         setSegmentos(segmentosCompletos);

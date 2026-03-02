@@ -11,7 +11,7 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 const PAGE_SIZE = 20;
 
 export default function MarcasPage() {
-  const { usuario } = useAuth();
+  const { usuario, isPlatformAdmin } = useAuth();
   const { alertModal, showAlert } = useAlertModal();
   const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);
   const [marcas, setMarcas] = useState([]);
@@ -32,35 +32,22 @@ export default function MarcasPage() {
   }, []);
 
   const fetchMarcas = async () => {
-    if (!usuario?.tenant_id) return;
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
     setLoading(true);
-
-    const { data, error } = await supabase
-      .from('marcas')
-      .select('*')
-      .eq('tenant_id', usuario.tenant_id)
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      setMarcas(data);
-    } else if (error) {
-      showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
-    }
+    let query = supabase.from('marcas').select('*, tenant:tenant_id(name)').order('created_at', { ascending: false });
+    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
+    const { data, error } = await query;
+    if (!error && data) setMarcas(data);
+    else if (error) showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
     setLoading(false);
   };
 
   const fetchSegmentos = async () => {
-    if (!usuario?.tenant_id) return;
-
-    const { data, error } = await supabase
-      .from('segmentos')
-      .select('id, nome, emoji')
-      .eq('tenant_id', usuario.tenant_id)
-      .order('nome');
-
-    if (!error && data) {
-      setSegmentos(data);
-    }
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
+    let query = supabase.from('segmentos').select('id, nome, emoji').order('nome');
+    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
+    const { data, error } = await query;
+    if (!error && data) setSegmentos(data);
   };
 
   useEffect(() => {

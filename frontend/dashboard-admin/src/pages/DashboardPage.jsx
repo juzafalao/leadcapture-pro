@@ -20,7 +20,7 @@ const ROLES_CONSULTOR = ['Consultor'];
  * @returns {JSX.Element} The DashboardPage React element containing the leads dashboard UI.
  */
 export default function DashboardPage() {
-  const { usuario } = useAuth();
+  const { usuario, isPlatformAdmin } = useAuth();
 
   const [page, setPage] = useState(1);
   const [perPage] = useState(20);
@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const debouncedBusca = useDebounce(busca, 500);
 
   const { data: leadsData, isLoading: loading, isPlaceholderData } = useLeads({
-    tenantId: usuario?.tenant_id,
+    tenantId: isPlatformAdmin() ? null : usuario?.tenant_id,
     page,
     perPage,
     filters: {
@@ -44,7 +44,7 @@ export default function DashboardPage() {
   const leads = leadsData?.data || [];
   const totalCount = leadsData?.count || 0;
   const totalPages = Math.ceil(totalCount / perPage);
-  const { data: metrics } = useMetrics(usuario?.tenant_id);
+  const { data: metrics } = useMetrics(isPlatformAdmin() ? null : usuario?.tenant_id);
 
   const [selectedLead, setSelectedLead] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);

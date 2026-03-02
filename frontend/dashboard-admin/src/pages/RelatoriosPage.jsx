@@ -193,13 +193,13 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
 }
 
 export default function RelatoriosPage() {
-  const { usuario } = useAuth()
+  const { usuario, isPlatformAdmin } = useAuth()
   const { alertModal, showAlert } = useAlertModal()
   const [tipoAtivo, setTipoAtivo] = useState(null)
   const [filtros, setFiltros]     = useState({ periodo:'30', marca:'todas', operador:'todos' })
 
-  const { data: filtrosData }      = useFiltrosRelatorio(usuario?.tenant_id)
-  const { data, isLoading }        = useRelatorios(usuario?.tenant_id, filtros)
+  const { data: filtrosData }      = useFiltrosRelatorio(isPlatformAdmin() ? null : usuario?.tenant_id)
+  const { data, isLoading }        = useRelatorios(isPlatformAdmin() ? null : usuario?.tenant_id, filtros)
   const d = data || {}
   const tipoInfo = TIPOS.find(t => t.id === tipoAtivo)
 

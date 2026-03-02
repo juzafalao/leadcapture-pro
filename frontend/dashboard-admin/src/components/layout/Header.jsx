@@ -10,9 +10,8 @@ import ConfirmModal from '../shared/ConfirmModal';
  * @returns {JSX.Element} The header element containing the logo and tenant label, user info, logout button, and a confirm modal for logout.
  */
 export default function Header({ onMenuClick }) {
-  const { usuario, logout } = useAuth();
+  const { usuario, tenant, logout } = useAuth();
   const navigate = useNavigate();
-  const tenant = usuario?.tenant;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleLogoutClick = () => {
@@ -53,9 +52,9 @@ export default function Header({ onMenuClick }) {
                   <span style={{ color: '#F8FAFC' }}> Pro</span>
                 </span>
               </div>
-              {tenant?.nome ? (
-                <p className="text-[8px] lg:text-[9px] text-[#CBD5E1]/50 uppercase tracking-wider mt-0.5">
-                  {tenant.nome}
+              {tenant?.name ? (
+                <p className="text-[9px] lg:text-[10px] text-[#10B981] font-bold uppercase tracking-wider mt-0.5">
+                  {tenant.name}
                 </p>
               ) : usuario?.role && (
                 <p style={{ fontSize: '11px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>
