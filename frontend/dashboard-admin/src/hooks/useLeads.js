@@ -1,9 +1,19 @@
+// ============================================================
+// useLeads.js — Leads + Metrics (OTIMIZADO)
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3 (2.5.3):
+// 1. useLeads: staleTime 30s (evita refetch ao navegar entre páginas)
+// 2. useMetrics: staleTime 3min (antes era 2min, agora alinhado com realtime)
+// ============================================================
+
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
   return useQuery({
     queryKey: ['leads', tenantId, page, perPage, filters],
+    staleTime: 1000 * 30,           // ✅ 30s — evita refetch ao voltar para dashboard
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -53,6 +63,7 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
 export function useMetrics(tenantId) {
   return useQuery({
     queryKey: ['metrics', tenantId],
+    staleTime: 1000 * 60 * 3,       // ✅ 3min (alinhado com realtime que invalida)
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -76,7 +87,6 @@ export function useMetrics(tenantId) {
       }
     },
     enabled: !!tenantId || tenantId === null,
-    staleTime: 1000 * 60 * 2,
   })
 }
 

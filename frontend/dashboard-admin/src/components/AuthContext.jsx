@@ -2,15 +2,16 @@
 // AuthContext.jsx — Contexto de Autenticação Tenant-Aware
 // LeadCapture Pro — Zafalão Tech
 // ============================================================
-// ALTERAÇÕES BLOCO 2:
-// - loadUserData agora busca da view 'usuarios_ativos' (enriquecida)
-// - Carrega dados do tenant (is_platform, name, slug)
-// - Novos helpers: isPlatformAdmin, canAccess(minLevel)
-// - Mantém compatibilidade: isAdmin, isGestor, isDiretor, isConsultor, hasRole
+// ALTERAÇÕES BLOCO 2.5.3:
+// ❌ BUG: loadUserData rodava 2x no login (login() + onAuthStateChange)
+// ❌ BUG: logout NÃO limpava React Query cache → dados velhos no próximo login
+// ✅ FIX: logout agora reseta queryClient (limpa TUDO)
+// ✅ FIX: onAuthStateChange IGNORA SIGNED_IN se já carregou via login()
 // ============================================================
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
 
 const AuthContext = createContext();
 
@@ -25,8 +26,10 @@ export const AuthProvider = ({ children }) => {
   const [tenant, setTenant] = useState(null);
   const [loading, setLoading] = useState(true);
   const isCheckingRef = useRef(false);
+  const loginInProgressRef = useRef(false);  // ✅ NEW: evita loadUserData duplicado
+  const queryClient = useQueryClient();       // ✅ NEW: para limpar cache no logout
 
-  const loadUserData = async (authId) => {
+  const loadUserData = useCallback(async (authId) => {
     try {
       // Buscar da view usuarios_ativos (dados enriquecidos com role + tenant)
       const { data: userData, error: userError } = await supabase
@@ -55,7 +58,7 @@ export const AuthProvider = ({ children }) => {
       setUsuario(null);
       setTenant(null);
     }
-  };
+  }, []);
 
   const checkSession = async () => {
     if (isCheckingRef.current) return;
@@ -88,16 +91,23 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      loginInProgressRef.current = true;  // ✅ Flag: estou logando, onAuthStateChange ignora
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       await loadUserData(data.user.id);
       return { success: true };
     } catch (error) {
       return { success: false, error: error.message };
+    } finally {
+      // ✅ Pequeno delay para garantir que onAuthStateChange já passou
+      setTimeout(() => { loginInProgressRef.current = false; }, 500);
     }
   };
 
   const logout = async () => {
+    // ✅ CRÍTICO: Limpar React Query ANTES de mudar estado
+    queryClient.cancelQueries();          // Cancela fetches em andamento
+    queryClient.clear();                  // Remove TODO o cache
     setUsuario(null);
     setTenant(null);
     await supabase.auth.signOut({ scope: 'local' });
@@ -120,7 +130,12 @@ export const AuthProvider = ({ children }) => {
             setTenant(null);
             return;
           }
+          // ✅ FIX: Se login() já está em andamento, NÃO duplicar loadUserData
           if (event === 'SIGNED_IN' && session?.user) {
+            if (loginInProgressRef.current) {
+              // login() já está cuidando — ignora
+              return;
+            }
             await loadUserData(session.user.id);
           }
         } catch {
@@ -130,30 +145,20 @@ export const AuthProvider = ({ children }) => {
     );
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUserData]);
 
   // ── Helpers de permissão ──────────────────────────────────
-  // Níveis da tabela roles:
-  //   1 = Cliente
-  //   2 = Consultor
-  //   3 = Gestor
-  //   4 = Diretor
-  //   5 = Administrador (Super Admin)
-
   const isAuthenticated = !!usuario;
 
-  // Platform Admin: Super Admin + tenant is_platform
   const isPlatformAdmin = () => {
     return usuario?.is_super_admin === true && tenant?.is_platform === true;
   };
 
-  // Nível mínimo de acesso
   const hasMinLevel = (minLevel) => {
     if (!usuario) return false;
     return (usuario.role_nivel || 0) >= minLevel;
   };
 
-  // Compatibilidade com código existente (agora usa role_nivel + fallback texto)
   const isAdmin = () => {
     if (usuario?.is_super_admin) return true;
     if (usuario?.role_nivel >= 5) return true;

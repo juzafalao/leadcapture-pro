@@ -1,3 +1,14 @@
+// ============================================================
+// useAnalytics.js — Analytics + Realtime (OTIMIZADO)
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3 (2.5.3):
+// 1. REMOVIDO refetchInterval (realtime já invalida)
+// 2. ADICIONADO staleTime: 5min (dados analytics não precisam ser instantâneos)
+// 3. Realtime agora invalida metrics também (evita dashboard desatualizado)
+// 4. Realtime NÃO invalida leads genérico (evita refetch de todas as páginas)
+// ============================================================
+
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useEffect } from 'react'
@@ -6,7 +17,8 @@ export function useAnalytics(tenantId, periodo = '30') {
   return useQuery({
     queryKey: ['analytics', tenantId, periodo],
     enabled: !!tenantId || tenantId === null,
-    refetchInterval: 60000,
+    staleTime: 1000 * 60 * 5,     // ✅ 5min — antes era 0 (refetch toda vez)
+    // ❌ REMOVIDO: refetchInterval: 60000 — o realtime já cuida disso
     queryFn: async () => {
       const hoje = new Date()
       const inicio = new Date()
@@ -107,7 +119,10 @@ export function useRealtimeLeads(tenantId, onNew) {
       .channel('leads-realtime')
       .on('postgres_changes', channelConfig, (payload) => {
         onNew?.(payload.new)
-        qc.invalidateQueries({ queryKey: ['analytics', tenantId] })
+        // ✅ 2.5.3: Invalidar analytics + metrics (ambos dependem de leads)
+        qc.invalidateQueries({ queryKey: ['analytics'] })
+        qc.invalidateQueries({ queryKey: ['metrics'] })
+        // ✅ 2.5.3: Invalidar leads com exact: false para pegar todas as paginações
         qc.invalidateQueries({ queryKey: ['leads'] })
       })
       .subscribe()
