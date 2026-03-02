@@ -1,3 +1,14 @@
+// ============================================================
+// Sidebar — Tenant-Aware + Role-Based Visibility
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS vs versão anterior:
+// 1. Leads Sistema: visível apenas para Platform Admins (isPlatformAdmin)
+// 2. Avatar mostra role_emoji e role_color do usuário
+// 3. Tooltip do avatar mostra tenant name
+// 4. Grupo "Institucional" renomeado para "Plataforma"
+// ============================================================
+
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
@@ -73,7 +84,16 @@ const IconConfig = () => (
   </svg>
 );
 
+const IconLogoff = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+);
+
 // ─── Definição da navegação por grupos ────────────────────────
+// show(auth): recebe o contexto auth e retorna true/false
 const NAV_GROUPS = [
   {
     label: 'Principal',
@@ -82,25 +102,25 @@ const NAV_GROUPS = [
     ],
   },
   {
-    label: 'Inteligência',
+    label: 'Inteligencia',
     items: [
       { path: '/analytics',  icon: <IconAnalytics />, label: 'Analytics',  show: (a) => a.isDiretor() },
-      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatórios', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor']) },
+      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatorios', show: (a) => a.isConsultor() },
     ],
   },
   {
-    label: 'Operação',
+    label: 'Operacao',
     items: [
-      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automação', show: (a) => a.isDiretor() },
-      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
-      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
-      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.hasRole(['Administrador', 'admin', 'Diretor', 'Gestor']) },
+      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automacao', show: (a) => a.isDiretor() },
+      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.isGestor() },
+      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.isGestor() },
+      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.isGestor() },
     ],
   },
   {
-    label: 'Institucional',
+    label: 'Plataforma',
     items: [
-      { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isAdmin() },
+      { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isPlatformAdmin() },
     ],
   },
   {
@@ -110,14 +130,6 @@ const NAV_GROUPS = [
     ],
   },
 ];
-
-const IconLogoff = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-    <polyline points="16 17 21 12 16 7"/>
-    <line x1="21" y1="12" x2="9" y2="12"/>
-  </svg>
-);
 
 export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const auth     = useAuth();
@@ -206,7 +218,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
           })}
         </nav>
 
-        {/* Logoff */}
+        {/* Logoff + Avatar */}
         <div className="mt-auto pt-4 border-t border-white/5 w-full px-3">
           <button
             onClick={() => setConfirmLogoff(true)}
@@ -219,14 +231,23 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
             </span>
           </button>
 
-          {/* Avatar usuário */}
-          <div className="flex items-center justify-center pb-2">
+          {/* Avatar com role_emoji e tenant name */}
+          <div className="flex flex-col items-center pb-2 gap-1">
             <div
-              className="w-9 h-9 rounded-full bg-gradient-to-br from-[#10B981] to-[#059669] flex items-center justify-center text-black font-bold text-sm"
-              title={`${auth.usuario?.nome} · ${auth.usuario?.role}`}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+              style={{
+                background: auth.usuario?.role_color
+                  ? `linear-gradient(135deg, ${auth.usuario.role_color}, ${auth.usuario.role_color}88)`
+                  : 'linear-gradient(135deg, #10B981, #059669)',
+                color: '#000',
+              }}
+              title={`${auth.usuario?.nome || '?'} · ${auth.usuario?.role || ''} · ${auth.tenant?.name || ''}`}
             >
-              {auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}
+              {auth.usuario?.role_emoji || auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}
             </div>
+            <span className="text-[6px] font-bold uppercase tracking-wider text-gray-700 text-center leading-tight max-w-full truncate px-1">
+              {auth.tenant?.name || ''}
+            </span>
           </div>
         </div>
       </aside>
@@ -234,7 +255,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
       <ConfirmModal
         isOpen={confirmLogoff}
         title="Sair do sistema"
-        message="Tem certeza que deseja encerrar sua sessão?"
+        message="Tem certeza que deseja encerrar sua sessao?"
         onConfirm={handleLogoffConfirm}
         onClose={() => setConfirmLogoff(false)}
       />
