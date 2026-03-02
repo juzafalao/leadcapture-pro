@@ -37,7 +37,7 @@ export default function SegmentosPage() {
     try {
       let query = supabase
         .from('segmentos')
-        .select('id, nome, emoji, created_at, tenant_id, tenant:tenant_id(name)')
+        .select('id, nome, emoji, created_at, tenant_id')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -49,6 +49,12 @@ export default function SegmentosPage() {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        // Fetch tenant names
+        const tenantIds = [...new Set(data.map(s => s.tenant_id).filter(Boolean))];
+        const { data: tenants } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
+        const tenantMap = {};
+        (tenants || []).forEach(t => { tenantMap[t.id] = t.name; });
+
         const segmentoIds = data.map(s => s.id);
         const { data: todasMarcas } = await supabase
           .from('marcas')
@@ -76,7 +82,7 @@ export default function SegmentosPage() {
         const segmentosCompletos = data.map(segmento => {
           const marcas = marcasMap[segmento.id] || [];
           const leadsCount = marcas.reduce((acc, m) => acc + (leadsCountMap[m.id] || 0), 0);
-          return { ...segmento, tenant_name: segmento.tenant?.name, marcas_relacionadas: marcas, leadsCount };
+          return { ...segmento, tenant_name: tenantMap[segmento.tenant_id] || 'Sem tenant', marcas_relacionadas: marcas, leadsCount };
         });
 
         setSegmentos(segmentosCompletos);
