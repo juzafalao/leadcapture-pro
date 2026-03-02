@@ -11,7 +11,7 @@ import LoadingSpinner from '../components/shared/LoadingSpinner';
 const PAGE_SIZE = 20;
 
 export default function MarcasPage() {
-  const { usuario } = useAuth();
+  const { usuario, isPlatformAdmin } = useAuth();
   const { alertModal, showAlert } = useAlertModal();
   const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);
   const [marcas, setMarcas] = useState([]);
@@ -32,17 +32,17 @@ export default function MarcasPage() {
   }, []);
 
   const fetchMarcas = async () => {
-    if (!usuario?.tenant_id) return;
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
     setLoading(true);
-
-    const { data, error } = await supabase
-      .from('marcas')
-      .select('*')
-      .eq('tenant_id', usuario.tenant_id)
-      .order('created_at', { ascending: false });
-
+    let query = supabase.from('marcas').select('*').order('created_at', { ascending: false });
+    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
+    const { data, error } = await query;
     if (!error && data) {
-      setMarcas(data);
+      const tenantIds = [...new Set(data.map(m => m.tenant_id).filter(Boolean))];
+      const { data: tenants } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
+      const tenantMap = {};
+      (tenants || []).forEach(t => { tenantMap[t.id] = t.name; });
+      setMarcas(data.map(m => ({ ...m, tenant_name: tenantMap[m.tenant_id] || 'Sem tenant' })));
     } else if (error) {
       showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
     }
@@ -50,17 +50,11 @@ export default function MarcasPage() {
   };
 
   const fetchSegmentos = async () => {
-    if (!usuario?.tenant_id) return;
-
-    const { data, error } = await supabase
-      .from('segmentos')
-      .select('id, nome, emoji')
-      .eq('tenant_id', usuario.tenant_id)
-      .order('nome');
-
-    if (!error && data) {
-      setSegmentos(data);
-    }
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
+    let query = supabase.from('segmentos').select('id, nome, emoji').order('nome');
+    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
+    const { data, error } = await query;
+    if (!error && data) setSegmentos(data);
   };
 
   useEffect(() => {

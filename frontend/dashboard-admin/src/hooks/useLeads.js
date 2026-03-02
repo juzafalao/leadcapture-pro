@@ -1,9 +1,19 @@
+// ============================================================
+// useLeads.js — Leads + Metrics (OTIMIZADO)
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3 (2.5.3):
+// 1. useLeads: staleTime 30s (evita refetch ao navegar entre páginas)
+// 2. useMetrics: staleTime 3min (antes era 2min, agora alinhado com realtime)
+// ============================================================
+
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
   return useQuery({
     queryKey: ['leads', tenantId, page, perPage, filters],
+    staleTime: 1000 * 30,           // ✅ 30s — evita refetch ao voltar para dashboard
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -14,8 +24,12 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
           status_comercial:id_status (id, label, slug, cor),
           motivo_desistencia:id_motivo_desistencia (id, nome)
         `, { count: 'exact' })
-        .eq('tenant_id', tenantId)
         .is('deleted_at', null)
+
+      // Platform admin (tenantId = null) vê leads de todos os tenants
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId)
+      }
 
       if (filters.search) {
         const s = filters.search
@@ -23,7 +37,6 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
       }
 
       if (filters.status && filters.status !== 'All') {
-        // Normaliza para o mesmo case do banco
         const cat = filters.status.charAt(0).toUpperCase() + filters.status.slice(1).toLowerCase()
         query = query.ilike('categoria', cat)
       }
@@ -42,7 +55,7 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
       if (error) throw error
       return { data: data ?? [], count: count ?? 0 }
     },
-    enabled: !!tenantId,
+    enabled: !!tenantId || tenantId === null,
     placeholderData: keepPreviousData
   })
 }
@@ -50,13 +63,19 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
 export function useMetrics(tenantId) {
   return useQuery({
     queryKey: ['metrics', tenantId],
+    staleTime: 1000 * 60 * 3,       // ✅ 3min (alinhado com realtime que invalida)
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
         .select('categoria')
-        .eq('tenant_id', tenantId)
         .is('deleted_at', null)
 
+      // Platform admin (tenantId = null) vê leads de todos os tenants
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       const rows = data ?? []
 
@@ -67,8 +86,7 @@ export function useMetrics(tenantId) {
         cold: rows.filter(l => ['cold', ''].includes((l.categoria || '').toLowerCase())).length
       }
     },
-    enabled: !!tenantId,
-    staleTime: 1000 * 60 * 2,
+    enabled: !!tenantId || tenantId === null,
   })
 }
 

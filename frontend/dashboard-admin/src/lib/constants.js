@@ -123,7 +123,7 @@ export const ROLES = {
  * Verifica se é Super Admin (ignora tenant)
  */
 export const isSuperAdmin = (user) => {
-  return user?.is_super_admin === true || user?.role === 'Administrador';
+  return user?.is_super_admin === true || (user?.role_nivel && user.role_nivel >= 5) || user?.role_nivel >= 5 || user?.role === 'Administrador';
 };
 
 /**

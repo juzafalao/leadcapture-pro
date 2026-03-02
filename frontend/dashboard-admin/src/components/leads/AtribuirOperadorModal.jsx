@@ -38,9 +38,9 @@ export default function AtribuirOperadorModal({ lead, onClose, onSuccess }) {
       if (error) throw error;
 
       let filtrados = data || [];
-      if (usuario.role === 'Consultor') {
+      if ((usuario.role_nivel || 0) <= 2) {
         filtrados = filtrados.filter(op => op.id === usuario.id);
-      } else if (usuario.role === 'Gestor') {
+      } else if ((usuario.role_nivel || 0) === 3) {
         filtrados = filtrados.filter(op => op.id === usuario.id || ['Consultor', 'Operador'].includes(op.role));
       }
 

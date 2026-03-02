@@ -10,9 +10,8 @@ import ConfirmModal from '../shared/ConfirmModal';
  * @returns {JSX.Element} The header element containing the logo and tenant label, user info, logout button, and a confirm modal for logout.
  */
 export default function Header({ onMenuClick }) {
-  const { usuario, logout } = useAuth();
+  const { usuario, tenant, logout } = useAuth();
   const navigate = useNavigate();
-  const tenant = usuario?.tenant;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleLogoutClick = () => {

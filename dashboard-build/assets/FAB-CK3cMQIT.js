@@ -1,4 +1,4 @@
-import{j as e,m as s}from"./motion-CnUDAaLS.js";import{u as i}from"./react-vendor-DDxOQdDP.js";function r({onClick:t}){const n=i(),a=()=>n.pathname.includes("marcas")?"Marca":n.pathname.includes("segmentos")?"Segmento":n.pathname.includes("usuarios")?"Usuário":"Novo";return e.jsxs(s.button,{initial:{scale:0,opacity:0},animate:{scale:1,opacity:1},whileHover:{scale:1.1},whileTap:{scale:.9},onClick:t,className:`
+import{j as e,m as s}from"./motion-9d3Db09n.js";import{u as i}from"./react-vendor-D-pGcriG.js";function r({onClick:t}){const n=i(),a=()=>n.pathname.includes("marcas")?"Marca":n.pathname.includes("segmentos")?"Segmento":n.pathname.includes("usuarios")?"Usuário":"Novo";return e.jsxs(s.button,{initial:{scale:0,opacity:0},animate:{scale:1,opacity:1},whileHover:{scale:1.1},whileTap:{scale:.9},onClick:t,className:`
         fixed
         bottom-8
         right-8

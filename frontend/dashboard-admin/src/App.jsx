@@ -1,3 +1,15 @@
+// ============================================================
+// App.jsx — Tenant-Aware + Role-Level Based Routes
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3:
+// 1. PrivateRoute aceita minLevel (número) OU allowedRoles (texto, retrocompatível)
+// 2. PrivateRoute aceita platformOnly para rotas de Platform Admin
+// 3. Constantes ROLES_* substituídas por LEVEL_* numéricos
+// 4. leads-sistema usa platformOnly ao invés de ROLES_ADMIN
+// 5. ✅ NOVO: Rota /audit-log (Diretor+ / nível >= 4)
+// ============================================================
+
 import React, { useState, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +27,7 @@ const LandingPage      = lazy(() => import('./pages/LandingPage'));
 const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
 const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
 const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
+const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
 
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -37,8 +50,28 @@ const PageFallback = () => (
   </div>
 );
 
-function PrivateRoute({ children, allowedRoles }) {
-  const { usuario, loading, isAuthenticated } = useAuth();
+// ── Níveis de acesso (da tabela roles) ──────────────────────
+// 5 = Administrador (super admin)
+// 4 = Diretor
+// 3 = Gestor
+// 2 = Consultor
+// 1 = Cliente
+const LEVEL_CONSULTOR = 2;
+const LEVEL_GESTOR    = 3;
+const LEVEL_DIRETOR   = 4;
+
+// Retrocompatibilidade: manter arrays de texto para migração gradual
+const ROLES_CONSULTOR = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
+const ROLES_GESTOR    = ['Administrador', 'admin', 'Diretor', 'Gestor'];
+const ROLES_DIRETOR   = ['Administrador', 'admin', 'Diretor'];
+const ROLES_ADMIN     = ['Administrador', 'admin'];
+
+/**
+ * PrivateRoute — Controle de acesso por nível ou role
+ */
+function PrivateRoute({ children, minLevel, allowedRoles, platformOnly }) {
+  const { usuario, loading, isAuthenticated, isPlatformAdmin, hasMinLevel } = useAuth();
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
@@ -46,19 +79,24 @@ function PrivateRoute({ children, allowedRoles }) {
       </div>
     );
   }
+
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  if (platformOnly && !isPlatformAdmin()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (minLevel && !hasMinLevel(minLevel)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   if (allowedRoles && !allowedRoles.includes(usuario?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
+
   return children;
 }
 
-/**
- * Wraps children in a container that applies a short fade-in animation.
- * @param {Object} props
- * @param {import('react').ReactNode} props.children - The content to render inside the animated container.
- * @returns {JSX.Element} A React element that renders the given children with a short fade-in effect.
- */
 function AnimatedPage({ children }) {
   return (
     <motion.div
@@ -71,29 +109,79 @@ function AnimatedPage({ children }) {
   );
 }
 
-/**
- * Defines the application's route hierarchy and wraps routed pages with animated transitions and lazy-loading fallbacks.
- *
- * @returns {JSX.Element} The route tree (Routes wrapped with AnimatePresence) that renders public routes, landing pages, and protected authenticated routes with role-based access.
- */
 function AppRoutes() {
   const location = useLocation();
   return (
     <AnimatePresence mode="sync">
       <Routes location={location} key={location.pathname}>
+        {/* Rotas públicas */}
         <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
         <Route path="/landing/:slug" element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/dashboard"     element={<PrivateRoute><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/relatorios"    element={<PrivateRoute allowedRoles={ROLES_CONSULTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/analytics"     element={<PrivateRoute allowedRoles={ROLES_DIRETOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/automacao"     element={<PrivateRoute allowedRoles={ROLES_DIRETOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/marcas"        element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MarcasPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/segmentos"     element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SegmentosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/usuarios"      element={<PrivateRoute allowedRoles={ROLES_GESTOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/leads-sistema" element={<PrivateRoute allowedRoles={ROLES_ADMIN}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="/configuracoes" element={<PrivateRoute allowedRoles={ROLES_DIRETOR}><AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout></PrivateRoute>} />
-        <Route path="*"              element={<Navigate to="/login" replace />} />
+
+        {/* Rotas autenticadas — qualquer usuário */}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Consultor+ (nível >= 2) */}
+        <Route path="/relatorios" element={
+          <PrivateRoute minLevel={LEVEL_CONSULTOR} allowedRoles={ROLES_CONSULTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Gestor+ (nível >= 3) */}
+        <Route path="/marcas" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MarcasPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/segmentos" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SegmentosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/usuarios" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Diretor+ (nível >= 4) */}
+        <Route path="/analytics" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/automacao" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/configuracoes" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* ✅ NOVO: Audit Log (Diretor+ / nível >= 4) */}
+        <Route path="/audit-log" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Platform Admin Only */}
+        <Route path="/leads-sistema" element={
+          <PrivateRoute platformOnly>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </AnimatePresence>
   );
@@ -116,11 +204,6 @@ function AuthenticatedLayout({ children }) {
     </div>
   );
 }
-
-const ROLES_CONSULTOR = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
-const ROLES_GESTOR    = ['Administrador', 'admin', 'Diretor', 'Gestor'];
-const ROLES_DIRETOR   = ['Administrador', 'admin', 'Diretor'];
-const ROLES_ADMIN     = ['Administrador', 'admin'];
 
 export default function App() {
   return (

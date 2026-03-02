@@ -12,7 +12,7 @@ import { useAlertModal } from '../hooks/useAlertModal';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import * as XLSX from 'xlsx';
 
-const PAGE_SIZE = 20; // 🆕 CONSTANTE DE PAGINAÇÃO
+const PAGE_SIZE = 20;
 
 // Status fixos da tabela leads_sistema (prospects do próprio sistema)
 const LEADS_SISTEMA_STATUS = [
@@ -48,7 +48,7 @@ function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesisten
   const [motivoDesistenciaId, setMotivoDesistenciaId] = useState(prospect?.motivo_desistencia_id || '');
   const [observacaoInterna, setObservacaoInterna] = useState(prospect?.observacao_interna || '');
   const [saving, setSaving] = useState(false);
-  const [feedback, setFeedback] = useState(null); // { type: 'success'|'error', message: string }
+  const [feedback, setFeedback] = useState(null);
 
   if (!prospect) return null;
 
@@ -139,7 +139,7 @@ function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesisten
           ))}
         </div>
 
-        {/* Observação original */}
+        {/* Observação original (mensagem do prospect) */}
         {prospect.observacao && (
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 mb-4">
             <p className="text-[9px] font-black uppercase tracking-widest text-blue-400 mb-1">📩 Mensagem do Prospect (Original)</p>
@@ -246,10 +246,6 @@ function ProspectModal({ prospect, onClose, onSaved, statusOpts, motivosDesisten
 
 /**
  * Render the LeadsSistema dashboard: a prospects listing UI with search and status filters, pagination, Excel export, and a modal for viewing/editing prospect details.
- *
- * Fetches prospects and active "motivos de desistência" from Supabase, shows KPIs, supports client-side filtering and debounced search, and provides optimistic updates after edits.
- *
- * @returns {JSX.Element} The React element for the LeadsSistema page.
  */
 export default function LeadsSistemaPage() {
   const { usuario } = useAuth();
@@ -307,7 +303,7 @@ export default function LeadsSistemaPage() {
       );
     }
     setFiltrados(lista);
-    setPage(1); // 🆕 RESETAR PÁGINA QUANDO FILTROS MUDAM
+    setPage(1);
   }, [prospects, busca, filtroStatus]);
 
   const fetchProspects = async ({ silent = false } = {}) => {
@@ -316,7 +312,7 @@ export default function LeadsSistemaPage() {
     try {
       const { data, error } = await supabase
         .from('leads_sistema')
-        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, motivo_desistencia_id, created_at, deleted_at')
+        .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, motivo_desistencia_id, created_at')
         .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
@@ -335,14 +331,12 @@ export default function LeadsSistemaPage() {
   };
 
   const handleSaved = (updatedData) => {
-    // Optimistic update: reflect changes in UI immediately
     if (updatedData) {
       setProspects(prev =>
         prev.map(p => p.id === updatedData.id ? { ...p, ...updatedData } : p)
       );
     }
     setSelected(null);
-    // Silent background refresh to sync with DB
     fetchProspects({ silent: true });
   };
 
@@ -385,7 +379,7 @@ export default function LeadsSistemaPage() {
     }
   };
 
-  // 🆕 PAGINAÇÃO
+  // Paginação
   const totalPages = Math.ceil(filtrados.length / PAGE_SIZE);
   const paginatedLeads = filtrados.slice(
     (page - 1) * PAGE_SIZE,
@@ -656,7 +650,7 @@ export default function LeadsSistemaPage() {
               </table>
             </div>
 
-            {/* 🆕 FOOTER COM PAGINAÇÃO */}
+            {/* FOOTER COM PAGINAÇÃO */}
             <div className="px-4 py-4 border-t border-white/5">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                 {/* Info */}
@@ -683,7 +677,6 @@ export default function LeadsSistemaPage() {
                     <div className="flex items-center gap-1">
                       {[...Array(totalPages)].map((_, i) => {
                         const pageNum = i + 1;
-                        // Show first, last, current, and neighbors
                         if (
                           pageNum === 1 ||
                           pageNum === totalPages ||
