@@ -1,5 +1,16 @@
+// ============================================================
+// LoginPage.jsx — Login com animações suaves
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3 (2.5.1):
+// 1. Animação fade-in + slide no card (framer-motion)
+// 2. Logo responsiva (menor no mobile)
+// 3. Shake no erro de login
+// ============================================================
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAuth } from '../components/AuthContext';
 import logoLogin from '../assets/logo-login.jpg';
 
@@ -107,8 +118,13 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Card central */}
-      <div className="w-full max-w-[420px] relative z-10">
+      {/* ✅ ALTERAÇÃO 1: Card com animação fade-in + slide-up */}
+      <motion.div
+        className="w-full max-w-[420px] relative z-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+      >
         <div
           className="rounded-3xl p-10 shadow-2xl"
           style={{
@@ -122,8 +138,9 @@ export default function LoginPage() {
           {/* Topo — logo + brand */}
           <div className="text-center mb-9">
             <div className="flex justify-center mb-6">
+              {/* ✅ ALTERAÇÃO 2: Logo responsiva — menor no mobile */}
               <div
-                className="w-[180px] h-[110px] rounded-2xl flex items-center justify-center overflow-hidden"
+                className="w-[140px] h-[86px] sm:w-[180px] sm:h-[110px] rounded-2xl flex items-center justify-center overflow-hidden"
               >
                 <img src={logoLogin} alt="LeadCapture Pro" style={{ width: '100%', height: '100%', objectFit: 'contain', imageRendering: 'auto', mixBlendMode: 'lighten' }} />
               </div>
@@ -205,9 +222,13 @@ export default function LoginPage() {
               </button>
             </div>
 
-            {/* Erro */}
+            {/* ✅ ALTERAÇÃO 3: Erro com animação shake */}
             {error && (
-              <div
+              <motion.div
+                key={error}
+                initial={{ x: 0 }}
+                animate={{ x: [0, -6, 6, -4, 4, 0] }}
+                transition={{ duration: 0.4 }}
                 className="rounded-xl px-4 py-3"
                 style={{
                   background: 'rgba(239,68,68,0.08)',
@@ -215,7 +236,7 @@ export default function LoginPage() {
                 }}
               >
                 <p className="text-red-400 text-sm text-center">{error}</p>
-              </div>
+              </motion.div>
             )}
 
             {/* Botão principal */}
@@ -260,12 +281,17 @@ export default function LoginPage() {
           </div>
 
         </div>
-      </div>
+      </motion.div>
 
       {/* Footer externo */}
-      <p className="text-center text-[9px] text-[#1E293B] mt-6 uppercase tracking-[0.35em]">
+      <motion.p
+        className="text-center text-[9px] text-[#1E293B] mt-6 uppercase tracking-[0.35em]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
         © 2026 Zafalão Tech · Todos os direitos reservados
-      </p>
+      </motion.p>
 
     </div>
   );
