@@ -2,11 +2,12 @@
 // Sidebar — Tenant-Aware + Role-Based Visibility
 // LeadCapture Pro — Zafalão Tech
 //
-// MUDANÇAS vs versão anterior:
+// MUDANÇAS v3:
 // 1. Leads Sistema: visível apenas para Platform Admins (isPlatformAdmin)
 // 2. Avatar mostra role_emoji e role_color do usuário
 // 3. Tooltip do avatar mostra tenant name
 // 4. Grupo "Institucional" renomeado para "Plataforma"
+// 5. ✅ NOVO: Item "Audit Log" no grupo Plataforma (Diretor+)
 // ============================================================
 
 import React, { useState } from 'react';
@@ -77,6 +78,14 @@ const IconLeadsSistema = () => (
   </svg>
 );
 
+const IconAuditLog = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+    <rect x="9" y="3" width="6" height="4" rx="1"/>
+    <path d="M9 12l2 2 4-4"/>
+  </svg>
+);
+
 const IconConfig = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="12" cy="12" r="3"/>
@@ -93,7 +102,6 @@ const IconLogoff = () => (
 );
 
 // ─── Definição da navegação por grupos ────────────────────────
-// show(auth): recebe o contexto auth e retorna true/false
 const NAV_GROUPS = [
   {
     label: 'Principal',
@@ -121,6 +129,7 @@ const NAV_GROUPS = [
     label: 'Plataforma',
     items: [
       { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isPlatformAdmin() },
+      { path: '/audit-log',     icon: <IconAuditLog />,     label: 'Audit Log',     show: (a) => a.isDiretor() },
     ],
   },
   {

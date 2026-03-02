@@ -2,11 +2,12 @@
 // App.jsx — Tenant-Aware + Role-Level Based Routes
 // LeadCapture Pro — Zafalão Tech
 //
-// MUDANÇAS vs versão anterior:
+// MUDANÇAS v3:
 // 1. PrivateRoute aceita minLevel (número) OU allowedRoles (texto, retrocompatível)
 // 2. PrivateRoute aceita platformOnly para rotas de Platform Admin
 // 3. Constantes ROLES_* substituídas por LEVEL_* numéricos
 // 4. leads-sistema usa platformOnly ao invés de ROLES_ADMIN
+// 5. ✅ NOVO: Rota /audit-log (Diretor+ / nível >= 4)
 // ============================================================
 
 import React, { useState, lazy, Suspense } from 'react';
@@ -26,6 +27,7 @@ const LandingPage      = lazy(() => import('./pages/LandingPage'));
 const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
 const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
 const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
+const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
 
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -66,11 +68,6 @@ const ROLES_ADMIN     = ['Administrador', 'admin'];
 
 /**
  * PrivateRoute — Controle de acesso por nível ou role
- * 
- * Props:
- *   minLevel     (number)  — nível mínimo para acessar (novo, preferido)
- *   allowedRoles (array)   — roles permitidas por texto (retrocompatível)
- *   platformOnly (boolean) — requer isPlatformAdmin() (para leads-sistema)
  */
 function PrivateRoute({ children, minLevel, allowedRoles, platformOnly }) {
   const { usuario, loading, isAuthenticated, isPlatformAdmin, hasMinLevel } = useAuth();
@@ -85,17 +82,14 @@ function PrivateRoute({ children, minLevel, allowedRoles, platformOnly }) {
 
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  // Verificação Platform Admin (para rotas como leads-sistema)
   if (platformOnly && !isPlatformAdmin()) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Verificação por nível numérico (novo sistema)
   if (minLevel && !hasMinLevel(minLevel)) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Verificação por texto (retrocompatível — pode ser removido quando migração completa)
   if (allowedRoles && !allowedRoles.includes(usuario?.role)) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -173,7 +167,14 @@ function AppRoutes() {
           </PrivateRoute>
         } />
 
-        {/* ✅ MUDANÇA PRINCIPAL: Platform Admin Only (não apenas "admin") */}
+        {/* ✅ NOVO: Audit Log (Diretor+ / nível >= 4) */}
+        <Route path="/audit-log" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Platform Admin Only */}
         <Route path="/leads-sistema" element={
           <PrivateRoute platformOnly>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout>
