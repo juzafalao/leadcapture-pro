@@ -38,11 +38,19 @@ export default function MarcasPage() {
     if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
     const { data, error } = await query;
     if (!error && data) {
-      const tenantIds = [...new Set(data.map(m => m.tenant_id).filter(Boolean))];
-      const { data: tenants } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
-      const tenantMap = {};
-      (tenants || []).forEach(t => { tenantMap[t.id] = t.name; });
-      setMarcas(data.map(m => ({ ...m, tenant_name: tenantMap[m.tenant_id] || 'Sem tenant' })));
+      if (isPlatformAdmin()) {
+        const tenantIds = [...new Set(data.map(m => m.tenant_id).filter(Boolean))];
+        if (tenantIds.length > 0) {
+          const { data: tenants } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
+          const tMap = {};
+          (tenants || []).forEach(t => { tMap[t.id] = t.name; });
+          setMarcas(data.map(m => ({ ...m, tenant_name: tMap[m.tenant_id] || '' })));
+        } else {
+          setMarcas(data);
+        }
+      } else {
+        setMarcas(data);
+      }
     } else if (error) {
       showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
     }

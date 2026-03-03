@@ -56,11 +56,11 @@ export default function LeadModal({ lead, onClose, tenantName }) {
   const isPerdido   = statusAtual?.slug === 'perdido';
 
   useEffect(() => {
-    if (!usuario?.tenant_id) return;
+    // Use lead's tenant_id for fetching options (important for Platform Admin viewing leads from different tenants)
+    const tenantId = lead?.tenant_id || usuario?.tenant_id;
+    if (!tenantId) return;
 
     async function fetchData() {
-      if (!usuario?.tenant_id) return;
-      const tenantId = usuario.tenant_id;
       const [
         { data: m, error: em },
         { data: s, error: es },
@@ -78,7 +78,7 @@ export default function LeadModal({ lead, onClose, tenantName }) {
       if (mo) setMotivosList(mo);
     }
     fetchData();
-  }, [usuario?.tenant_id]);
+  }, [lead?.tenant_id, usuario?.tenant_id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
