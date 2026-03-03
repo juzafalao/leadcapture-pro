@@ -1,0 +1,66 @@
+{
+  "name": "WhatsApp — Boas-vindas Novo Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "novo-lead-whatsapp",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-novo-lead",
+      "name": "Webhook Novo Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SERVER_URL }}/comunicacao/whatsapp/enviar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "x-api-key", "value": "={{ $env.API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "telefone", "value": "={{ $json.telefone }}" },
+            { "name": "template", "value": "boas_vindas" },
+            { "name": "vars", "value": "={{ JSON.stringify({ nome: $json.nome, marca: $json.marca, emoji: $json.emoji }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-whatsapp-boas-vindas",
+      "name": "Enviar Boas-vindas WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Boas-vindas enviadas' } }}"
+      },
+      "id": "respond",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Novo Lead": {
+      "main": [[{ "node": "Enviar Boas-vindas WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "Enviar Boas-vindas WhatsApp": {
+      "main": [[{ "node": "Responder", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["whatsapp", "lead", "automacao"]
+}

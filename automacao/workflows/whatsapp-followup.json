@@ -1,0 +1,84 @@
+{
+  "name": "WhatsApp — Follow-up 48h",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "schedule-followup",
+      "name": "Agendar Follow-up",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SERVER_URL }}/leads/followup-pendente",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.API_KEY }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "buscar-leads-followup",
+      "name": "Buscar Leads para Follow-up",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "dataPropertyName": "data"
+      },
+      "id": "split-leads",
+      "name": "Processar cada Lead",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SERVER_URL }}/comunicacao/whatsapp/enviar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "x-api-key", "value": "={{ $env.API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "telefone", "value": "={{ $json.telefone }}" },
+            { "name": "template", "value": "followup" },
+            { "name": "vars", "value": "={{ JSON.stringify({ nome: $json.nome, marca: $json.marca }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-followup",
+      "name": "Enviar Follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Agendar Follow-up": {
+      "main": [[{ "node": "Buscar Leads para Follow-up", "type": "main", "index": 0 }]]
+    },
+    "Buscar Leads para Follow-up": {
+      "main": [[{ "node": "Processar cada Lead", "type": "main", "index": 0 }]]
+    },
+    "Processar cada Lead": {
+      "main": [[{ "node": "Enviar Follow-up WhatsApp", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["whatsapp", "followup", "automacao"]
+}

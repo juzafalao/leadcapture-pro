@@ -82,6 +82,30 @@ _LeadCapture Pro · Zafalão Tech_`
 }
 
 /**
+ * Envia mensagem usando template pré-definido
+ * @param {string} telefone     - Número do destinatário
+ * @param {string} templateName - Nome do template
+ * @param {object} vars         - Variáveis do template
+ * @returns {Promise<{ success: boolean, error?: string }>}
+ */
+export async function enviarTemplate(telefone, templateName, vars = {}) {
+  const templates = {
+    boas_vindas: (v) => `Olá, ${v.nome || 'cliente'}! 👋\n\nRecebemos seu interesse em *${v.marca || 'nossa empresa'}* ${v.emoji || ''}\n\nEm breve um consultor entrará em contato.\n\n_LeadCapture Pro · Zafalão Tech_`,
+    followup: (v) => `Olá, ${v.nome || 'cliente'}! 👋\n\nPassando para saber se ainda tem interesse em *${v.marca || 'nossa empresa'}*.\n\nPodemos ajudá-lo? Responda aqui! 😊\n\n_LeadCapture Pro · Zafalão Tech_`,
+    hot_lead: (v) => `🔥 *Lead Quente Detectado!*\n\nNome: ${v.nome || '-'}\nTelefone: ${v.telefone || '-'}\nMarca: ${v.marca || '-'}\nScore: ${v.score || '-'}\n\n_LeadCapture Pro · Zafalão Tech_`,
+  }
+
+  const templateFn = templates[templateName]
+  if (!templateFn) {
+    console.warn(`[Comunicacao/WhatsApp] Template "${templateName}" não encontrado`)
+    return { success: false, error: `Template "${templateName}" não encontrado` }
+  }
+
+  const mensagem = templateFn(vars)
+  return enviarMensagem(telefone, mensagem)
+}
+
+/**
  * Verifica a conectividade com a Evolution API
  */
 export async function verificarConexao() {

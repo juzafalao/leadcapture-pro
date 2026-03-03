@@ -15,11 +15,23 @@ export const getSupabase = () => {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: false
+        detectSessionInUrl: true,
+        storageKey: 'sb-leadcapture-auth',
+        flowType: 'pkce',
+        // Fix: Navigator LockManager timeout on Vercel cold starts
+        // Disable lock to prevent "timed out waiting 10000ms" error
+        lock: {
+          enabled: false,
+        },
       },
       db: {
-        schema: 'public'
-      }
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'leadcapture-pro-dashboard',
+        },
+      },
     });
   }
   return supabaseInstance;

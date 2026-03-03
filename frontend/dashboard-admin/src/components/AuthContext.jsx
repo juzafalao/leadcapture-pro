@@ -68,6 +68,20 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
+        console.warn('[Auth] Erro ao verificar sessão:', error.message);
+        // If lock error, try to recover by getting user directly
+        if (error.message?.includes('lock') || error.message?.includes('timed out')) {
+          console.warn('[Auth] Lock timeout detectado, tentando recuperar...');
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await loadUserData(user.id);
+              return;
+            }
+          } catch {
+            // ignore recovery error
+          }
+        }
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith('sb-')) localStorage.removeItem(key);
         });
@@ -80,7 +94,8 @@ export const AuthProvider = ({ children }) => {
         setUsuario(null);
         setTenant(null);
       }
-    } catch (error) {
+    } catch (err) {
+      console.error('[Auth] Erro crítico ao verificar sessão:', err);
       setUsuario(null);
       setTenant(null);
     } finally {

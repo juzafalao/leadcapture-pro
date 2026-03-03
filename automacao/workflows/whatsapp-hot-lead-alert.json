@@ -1,0 +1,103 @@
+{
+  "name": "WhatsApp — Alerta Lead Quente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hot-lead-alert",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-hot-lead",
+      "name": "Webhook Lead Quente",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 70,
+              "operator": { "type": "number", "operation": "gte" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-score",
+      "name": "Verificar Score ≥ 70",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $env.SERVER_URL }}/comunicacao/whatsapp/enviar",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "x-api-key", "value": "={{ $env.API_KEY }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "telefone", "value": "={{ $env.GESTOR_TELEFONE }}" },
+            { "name": "template", "value": "hot_lead" },
+            { "name": "vars", "value": "={{ JSON.stringify({ nome: $json.nome, telefone: $json.telefone, marca: $json.marca, score: $json.score }) }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "alert-gestor",
+      "name": "Alertar Gestor WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, alerted: true } }}"
+      },
+      "id": "respond-ok",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, alerted: false, reason: 'score abaixo do threshold' } }}"
+      },
+      "id": "respond-skip",
+      "name": "Responder Skip",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [720, 420]
+    }
+  ],
+  "connections": {
+    "Webhook Lead Quente": {
+      "main": [[{ "node": "Verificar Score ≥ 70", "type": "main", "index": 0 }]]
+    },
+    "Verificar Score ≥ 70": {
+      "main": [
+        [{ "node": "Alertar Gestor WhatsApp", "type": "main", "index": 0 }],
+        [{ "node": "Responder Skip", "type": "main", "index": 0 }]
+      ]
+    },
+    "Alertar Gestor WhatsApp": {
+      "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "tags": ["whatsapp", "hot-lead", "alerta", "automacao"]
+}

@@ -93,6 +93,14 @@ const IconConfig = () => (
   </svg>
 );
 
+const IconLandingEditor = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="2" y="3" width="20" height="14" rx="2"/>
+    <path d="M8 21h8M12 17v4"/>
+    <path d="M7 8h4M7 11h6"/>
+  </svg>
+);
+
 const IconLogoff = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -119,10 +127,11 @@ const NAV_GROUPS = [
   {
     label: 'Operacao',
     items: [
-      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automacao', show: (a) => a.isDiretor() },
-      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.isGestor() },
-      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.isGestor() },
-      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.isGestor() },
+      { path: '/automacao',      icon: <IconAutomacao />,      label: 'Automacao',     show: (a) => a.isDiretor() },
+      { path: '/landing-editor', icon: <IconLandingEditor />, label: 'Landing',       show: (a) => a.isGestor() },
+      { path: '/marcas',         icon: <IconMarcas />,         label: 'Marcas',        show: (a) => a.isGestor() },
+      { path: '/segmentos',      icon: <IconSegmentos />,      label: 'Segmentos',     show: (a) => a.isGestor() },
+      { path: '/usuarios',       icon: <IconTeam />,           label: 'Time',          show: (a) => a.isGestor() },
     ],
   },
   {

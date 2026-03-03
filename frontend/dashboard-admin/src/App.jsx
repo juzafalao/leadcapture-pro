@@ -28,9 +28,12 @@ const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
 const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
 const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
 const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
+const LandingEditorPage = lazy(() => import('./pages/LandingEditorPage'));
 
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ToastProvider from './components/shared/ToastProvider';
+import OnboardingWizard from './components/onboarding/OnboardingWizard';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -174,6 +177,13 @@ function AppRoutes() {
           </PrivateRoute>
         } />
 
+        {/* ✅ NOVO: Landing Editor (Gestor+) */}
+        <Route path="/landing-editor" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LandingEditorPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
         {/* Platform Admin Only */}
         <Route path="/leads-sistema" element={
           <PrivateRoute platformOnly>
@@ -191,6 +201,7 @@ function AuthenticatedLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
     <div className="flex bg-[#0F172A] min-h-screen font-sans text-[#F8FAFC]">
+      <OnboardingWizard />
       <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
       <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
@@ -209,9 +220,11 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
+        <ToastProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
