@@ -71,12 +71,6 @@ export default function UsuariosPage() {
   }, [usuario?.tenant_id, fetchUsuarios]);
 
   useEffect(() => {
-    console.log('🔍 UsuariosPage - usuario:', usuario);
-    console.log('🔍 UsuariosPage - tenant_id:', usuario?.tenant_id);
-    console.log('🔍 UsuariosPage - usuarios:', usuarios.length);
-  }, [usuario, usuarios]);
-
-  useEffect(() => {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
