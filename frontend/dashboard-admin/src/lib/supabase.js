@@ -15,11 +15,18 @@ export const getSupabase = () => {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: false
+        detectSessionInUrl: false,
+        storageKey: 'sb-leadcapture-auth',
+        flowType: 'pkce',
       },
       db: {
-        schema: 'public'
-      }
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'leadcapture-pro-dashboard',
+        },
+      },
     });
   }
   return supabaseInstance;
