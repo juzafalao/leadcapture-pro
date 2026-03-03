@@ -18,6 +18,7 @@ export const getSupabase = () => {
         detectSessionInUrl: false,
         storageKey: 'sb-leadcapture-auth',
         flowType: 'pkce',
+        lock: { enabled: false },   // Prevents cold-start timeout on Vercel
       },
       db: {
         schema: 'public',
