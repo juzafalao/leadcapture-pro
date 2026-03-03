@@ -16,8 +16,10 @@ export const getSupabase = () => {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: false,
-        storageKey: 'sb-leadcapture-auth',
-        flowType: 'pkce',
+        storageKey: 'leadcapture-pro-auth',
+        lock: typeof navigator !== 'undefined' && navigator?.locks?.request
+          ? (name, acquireTimeout, fn) => navigator.locks.request(name, fn.bind(null))
+          : async (_name, _acquireTimeout, fn) => await fn(null),
       },
       db: {
         schema: 'public',

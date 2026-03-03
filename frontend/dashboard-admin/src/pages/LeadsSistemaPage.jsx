@@ -697,8 +697,10 @@ export default function LeadsSistemaPage() {
                               {pageNum}
                             </button>
                           );
-                        } else if (pageNum === page - 2 || pageNum === page + 2) {
-                          return <span key={pageNum} className="text-gray-600">...</span>;
+                        } else if (pageNum === page - 2) {
+                          return <span key="ellipsis-start" className="text-gray-600">...</span>;
+                        } else if (pageNum === page + 2) {
+                          return <span key="ellipsis-end" className="text-gray-600">...</span>;
                         }
                         return null;
                       })}
