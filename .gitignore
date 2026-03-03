@@ -59,6 +59,11 @@ supabase/.temp/
 /landing/
 /landing-page/
 
-# Permitir build do dashboard
+# Test artifacts
+playwright-report/
+test-results/
+
+# Local dev scripts
+*.local.py
 
 # Permitir build do dashboard
