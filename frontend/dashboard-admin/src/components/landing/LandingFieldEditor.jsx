@@ -126,7 +126,7 @@ export default function LandingFieldEditor({ fields, onChange }) {
 
       {fields.length === 0 && (
         <div className="text-center py-8 text-sm text-[#475569]">
-          Nenhum campo adicionado. Clique em &quot;+ Adicionar campo&quot; para começar.
+          Nenhum campo adicionado. Clique em &apos;+ Adicionar campo&apos; para começar.
         </div>
       )}
 

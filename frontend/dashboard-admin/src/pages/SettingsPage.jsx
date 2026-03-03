@@ -84,12 +84,15 @@ export default function SettingsPage() {
     if (!newKeyLabel.trim() || !usuario?.tenant_id) return
     setApiKeyCreating(true)
     try {
-      const fullKey = `lcp_${crypto.randomUUID().replace(/-/g, '')}`
+      // Generate a cryptographically strong API key using getRandomValues
+      const randomBytes = new Uint8Array(32)
+      crypto.getRandomValues(randomBytes)
+      const randomHex = Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('')
+      const fullKey = `lcp_${randomHex}`
       const keyPreview = `${fullKey.slice(0, 8)}...${fullKey.slice(-4)}`
       const { error } = await supabase.from('api_keys').insert({
         tenant_id: usuario.tenant_id,
         label: newKeyLabel.trim(),
-        key_hash: fullKey, // In production, store a hash; here simplified
         key_preview: keyPreview,
         revoked: false,
         created_by: usuario.id,

@@ -27,7 +27,7 @@ export function useOnboarding() {
         .update({ onboarding_completed: true })
         .eq('id', usuario.id)
         .then(() => {})
-        .catch(() => {});
+        .catch((err) => { console.error('[Onboarding] Erro ao persistir conclusão:', err); });
     }
   }, [usuario?.id]);
 
