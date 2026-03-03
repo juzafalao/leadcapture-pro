@@ -68,6 +68,16 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
+        // Fallback: try getUser() in case getSession() failed due to lock timeout
+        try {
+          const { data: { user }, error: userError } = await supabase.auth.getUser();
+          if (!userError && user) {
+            await loadUserData(user.id);
+            return;
+          }
+        } catch {
+          // getUser also failed — fall through to clear session below
+        }
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith('sb-')) localStorage.removeItem(key);
         });
