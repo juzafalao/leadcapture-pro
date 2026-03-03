@@ -47,9 +47,10 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(express.static(path.join(__dirname, 'public')))
 
 // ─── Roteadores ──────────────────────────────────────────────
-app.use('/api/leads',  leadsRouter)
-app.use('/api/marcas', marcasRouter)
-app.use('/',           sistemaRouter)   // inclui /health e /api/sistema/*
+app.use('/api/leads',   leadsRouter)
+app.use('/api/marcas',  marcasRouter)
+app.get('/health', (_req, res) => res.json({ status: 'ok', service: 'LeadCapture Pro', timestamp: new Date().toISOString() }))
+app.use('/api/sistema', sistemaRouter)
 
 // ─── Dashboard (SPA React) ───────────────────────────────────
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
@@ -57,10 +58,8 @@ app.get('/dashboard/*', (_req, res) => {
   res.sendFile(join(__dirname, '../dashboard-build/index.html'))
 })
 
-// ─── Painel Admin ────────────────────────────────────────────
-app.get('/admin', (_req, res) => {
-  res.sendFile(join(__dirname, 'admin/index.html'))
-})
+// ─── LeadCapture Pro — Nova Landing Page SaaS ────────────────
+app.use('/landing', express.static(join(__dirname, '../landing')))
 
 // ─── Landing Pages Dinâmicas (tenant/marca) ──────────────────
 // Rota: /landing/:slug → renderiza landing page customizada por marca
@@ -100,13 +99,6 @@ app.get('/landing/:slug', async (req, res) => {
   }
 })
 
-// ─── Captação — Landing Page Institucional do Produto ────────
-// Servir a landing page do próprio LeadCapture Pro (módulo captação)
-app.use('/captacao', express.static(join(__dirname, '../captacao')))
-app.get('/captacao/*', (_req, res) => {
-  res.sendFile(join(__dirname, '../captacao/index.html'))
-})
-
 // ─── Fallback 404 ────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Rota não encontrada' })
@@ -143,7 +135,7 @@ function _pagina404(slug) {
     <h1>🔍</h1>
     <h2>Landing page não encontrada</h2>
     <p>A página solicitada não existe no sistema.</p>
-    <p><a href="/captacao">Conheça o LeadCapture Pro →</a></p>
+    <p><a href="/landing">Conheça o LeadCapture Pro →</a></p>
   </div>
 </body>
 </html>`
