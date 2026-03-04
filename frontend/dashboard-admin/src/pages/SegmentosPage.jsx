@@ -72,10 +72,10 @@ export default function SegmentosPage() {
         if (todasMarcasIds.length > 0) {
           const { data: leadsData } = await supabase
             .from('leads')
-            .select('marca_id')
-            .in('marca_id', todasMarcasIds);
+            .select('id_marca')
+            .in('id_marca', todasMarcasIds);
           (leadsData || []).forEach(l => {
-            leadsCountMap[l.marca_id] = (leadsCountMap[l.marca_id] || 0) + 1;
+            leadsCountMap[l.id_marca] = (leadsCountMap[l.id_marca] || 0) + 1;
           });
         }
 
