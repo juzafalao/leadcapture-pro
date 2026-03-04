@@ -137,13 +137,7 @@ router.post('/google-forms', async (req, res) => {
     const documentoRaw  = form.documento || form['CPF ou CNPJ'] || form.cpf_cnpj || ''
     const docInfo        = documentoRaw ? validarDocumento(documentoRaw) : null
 
-    // Observação enriquecida
     const mensagem   = form.mensagem || form['Mensagem'] || form.message || ''
-    const observacao = [
-      `Capital: R$ ${capital.toLocaleString('pt-BR')}`,
-      `Origem: Google Forms`,
-      mensagem ? `Mensagem: ${mensagem}` : null,
-    ].filter(Boolean).join(' | ')
 
     const leadData = {
       tenant_id,
@@ -159,7 +153,6 @@ router.post('/google-forms', async (req, res) => {
       status:             'novo',
       fonte:              'google-forms',
       mensagem_original:  sanitizarTexto(mensagem, 1000),
-      observacao:         sanitizarTexto(observacao, 500),
     }
 
     // Verificar duplicata (janela de 24 horas)
