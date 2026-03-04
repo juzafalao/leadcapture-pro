@@ -52,13 +52,15 @@ router.post('/', async (req, res) => {
 
     // Documento opcional
     const leadData = { ...dados }
+    if (leadData.marca_id !== undefined) {
+      leadData.id_marca = leadData.marca_id
+      delete leadData.marca_id
+    }
     if (dados.documento) {
       const doc = validarDocumento(dados.documento)
       if (!doc.valido) {
         return res.status(400).json({ success: false, error: 'Documento inválido (CPF: 11 dígitos | CNPJ: 14 dígitos)' })
       }
-      leadData.documento      = doc.limpo
-      leadData.tipo_documento = doc.tipo
     }
 
     leadData.telefone  = normalizarTelefone(dados.telefone)
@@ -77,7 +79,7 @@ router.post('/', async (req, res) => {
     const { data: marcaInfo } = await supabase
       .from('marcas')
       .select('nome, emoji')
-      .eq('id', lead.marca_id)
+      .eq('id', lead.id_marca)
       .single()
 
     if (marcaInfo) {
@@ -145,7 +147,7 @@ router.post('/google-forms', async (req, res) => {
 
     const leadData = {
       tenant_id,
-      marca_id,
+      id_marca: marca_id,
       nome:               sanitizarTexto(nome),
       email:              email.trim().toLowerCase(),
       telefone,
@@ -158,10 +160,6 @@ router.post('/google-forms', async (req, res) => {
       fonte:              'google-forms',
       mensagem_original:  sanitizarTexto(mensagem, 1000),
       observacao:         sanitizarTexto(observacao, 500),
-      ...(docInfo?.valido && {
-        documento:      docInfo.limpo,
-        tipo_documento: docInfo.tipo,
-      }),
     }
 
     // Verificar duplicata (janela de 24 horas)
@@ -169,7 +167,7 @@ router.post('/google-forms', async (req, res) => {
       .from('leads')
       .select('id, created_at')
       .eq('email', leadData.email)
-      .eq('marca_id', leadData.marca_id)
+      .eq('id_marca', leadData.id_marca)
       .order('created_at', { ascending: false })
       .limit(1)
 

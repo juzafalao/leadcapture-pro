@@ -68,16 +68,21 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) {
-        // Fallback: try getUser() in case getSession() failed due to lock timeout
-        try {
-          const { data: { user }, error: userError } = await supabase.auth.getUser();
-          if (!userError && user) {
-            await loadUserData(user.id);
-            return;
+        console.warn('[Auth] Session check error:', error.message);
+        // If lock/timeout error, try to recover via getUser() before clearing
+        if (error.message?.includes('lock') || error.message?.includes('timed out')) {
+          console.warn('[Auth] Lock timeout detected, attempting recovery...');
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await loadUserData(user.id);
+              return; // Successfully recovered
+            }
+          } catch (recoveryError) {
+            console.warn('[Auth] Recovery failed:', recoveryError.message);
           }
-        } catch {
-          // getUser also failed — fall through to clear session below
         }
+        // Clear corrupt session data
         Object.keys(localStorage).forEach((key) => {
           if (key.startsWith('sb-')) localStorage.removeItem(key);
         });
@@ -91,6 +96,7 @@ export const AuthProvider = ({ children }) => {
         setTenant(null);
       }
     } catch (error) {
+      console.error('[Auth] Critical session check error:', error);
       setUsuario(null);
       setTenant(null);
     } finally {

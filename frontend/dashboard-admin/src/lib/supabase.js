@@ -38,7 +38,7 @@ export const getSupabase = () => {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: false,
         storageKey: 'sb-leadcapture-auth',
         flowType: 'pkce',
       },
