@@ -15,6 +15,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './components/Sidebar';
 import Header from './components/layout/Header';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
 const MarcasPage       = lazy(() => import('./pages/MarcasPage'));
@@ -207,6 +208,7 @@ function AuthenticatedLayout({ children }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Router>
@@ -214,5 +216,6 @@ export default function App() {
         </Router>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
