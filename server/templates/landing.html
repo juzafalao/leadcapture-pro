@@ -38,6 +38,16 @@
       background: radial-gradient(ellipse at 30% 50%, rgba(255,255,255,.08) 0%, transparent 60%);
     }
     .lp-emoji  { font-size: 64px; display: block; margin-bottom: 12px; }
+    .lp-logo {
+      max-height: 120px;
+      max-width: 280px;
+      object-fit: contain;
+      margin-bottom: 12px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,.15));
+    }
     .lp-title  { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 900; letter-spacing: -1px; color: #000; margin-bottom: 6px; }
     .lp-sub    { font-size: 1rem; color: rgba(0,0,0,.65); font-weight: 500; }
     .lp-badge  {
@@ -123,7 +133,7 @@
 <body>
 
   <div class="lp-header">
-    <span class="lp-emoji">{{MARCA_EMOJI}}</span>
+    {{MARCA_LOGO_BLOCK}}
     <h1 class="lp-title">{{MARCA_NOME}}</h1>
     <p class="lp-sub">Seja um franqueado de sucesso</p>
     <div class="lp-badge">Oportunidade de negócio</div>
