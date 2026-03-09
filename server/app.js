@@ -140,7 +140,12 @@ app.get('/landing/:slug', async (req, res) => {
 
     const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
 
+    const logoBlock = marca.logo_url
+      ? `<img src="${escapeHtml(marca.logo_url)}" alt="${escapeHtml(marca.nome)}" class="lp-logo" />`
+      : `<span class="lp-emoji">${escapeHtml(marca.emoji || '🏢')}</span>`
+
     html = html
+      .replace(/{{MARCA_LOGO_BLOCK}}/g, logoBlock)
       .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || '🏢'))
       .replace(/{{MARCA_NOME}}/g,     escapeHtml(marca.nome))
       .replace(/{{MARCA_ID}}/g,       escapeHtml(marca.id))
