@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && npm run build",
+  "buildCommand": "npm install && cd frontend/dashboard-admin && npm install && npx vite build",
   "outputDirectory": "frontend/dashboard-admin/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
