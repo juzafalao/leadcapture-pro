@@ -118,6 +118,7 @@ function AppRoutes() {
         {/* Rotas públicas */}
         <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
         <Route path="/landing/:slug" element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
+        <Route path="/lp/:slug"      element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
         <Route path="/" element={<Navigate to="/login" replace />} />
 
         {/* Rotas autenticadas — qualquer usuário */}
