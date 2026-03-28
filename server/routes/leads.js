@@ -77,7 +77,7 @@ router.post('/', validateLead, async (req, res) => {
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id })
   } catch (err) {
     console.error('[Leads] Erro:', err.message)
-    res.status(500).json({ success: false, error: 'Erro interno ao processar lead' })
+    res.status(500).json({ success: false, error: 'Erro interno ao processar lead', detalhe: err.message })
   }
 })
 
