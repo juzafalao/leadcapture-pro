@@ -1,13 +1,6 @@
-// ============================================================
-// ROUTES — /api/leads
-// Captura e gestão de leads (landing pages, Google Forms, sistema)
-//
-// MUDANÇA v1.9.0: Adicionado middleware Zod em todas as rotas POST
-// ============================================================
-
 import { Router } from 'express'
-import supabase            from '../core/database.js'
-import { processarCapital, calcularScore, determinarCategoria } from '../core/scoring.js'
+import supabase from '../core/database.js'
+import { processarCapital } from '../core/scoring.js'
 import {
   isEmailValido,
   isTelefoneValido,
@@ -16,13 +9,12 @@ import {
   normalizarTelefone,
   sanitizarTexto,
 } from '../core/validation.js'
-import { notificarNovoLead }    from '../comunicacao/email.js'
-import { enviarBoasVindas }     from '../comunicacao/whatsapp.js'
+import { notificarNovoLead, notificarLeadQuente } from '../comunicacao/email.js'
+import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
 
 const router = Router()
 
-// Converte capital de texto (landing page) para número (banco)
 const capitalMap = {
   'ate-100k':   80000,
   '100k-300k':  200000,
@@ -39,32 +31,35 @@ router.post('/', validateLead, async (req, res) => {
       dados, ['tenant_id', 'nome', 'email', 'telefone']
     )
     if (!valido) {
-      return res.status(400).json({ success: false, error: `Campo obrigatório: ${campoFaltando}` })
+      return res.status(400).json({ success: false, error: `Campo obrigatorio: ${campoFaltando}` })
     }
     if (sanitizarTexto(dados.nome).length < 3) {
       return res.status(400).json({ success: false, error: 'Nome deve ter pelo menos 3 caracteres' })
     }
     if (!isEmailValido(dados.email)) {
-      return res.status(400).json({ success: false, error: 'E-mail inválido' })
+      return res.status(400).json({ success: false, error: 'E-mail invalido' })
     }
     if (!isTelefoneValido(dados.telefone)) {
-      return res.status(400).json({ success: false, error: 'Telefone inválido (mínimo 10 dígitos)' })
+      return res.status(400).json({ success: false, error: 'Telefone invalido (minimo 10 digitos)' })
     }
 
     const leadData = { ...dados }
 
-    // Normaliza marca_id → id_marca
     if (leadData.marca_id !== undefined) {
       leadData.id_marca = leadData.marca_id
       delete leadData.marca_id
     }
 
-    // Converte capital de texto para número
     if (typeof leadData.capital_disponivel === 'string') {
       leadData.capital_disponivel = capitalMap[leadData.capital_disponivel] ?? null
     }
 
-    // Normaliza regiao → regiao_interesse
+    if (leadData.capital_disponivel) {
+      const { score, categoria } = processarCapital(leadData.capital_disponivel)
+      leadData.score     = score
+      leadData.categoria = categoria
+    }
+
     if (leadData.regiao !== undefined) {
       leadData.regiao_interesse = leadData.regiao_interesse || leadData.regiao
       delete leadData.regiao
@@ -73,7 +68,7 @@ router.post('/', validateLead, async (req, res) => {
     if (dados.documento) {
       const doc = validarDocumento(dados.documento)
       if (!doc.valido) {
-        return res.status(400).json({ success: false, error: 'Documento inválido (CPF: 11 dígitos | CNPJ: 14 dígitos)' })
+        return res.status(400).json({ success: false, error: 'Documento invalido' })
       }
     }
 
@@ -85,18 +80,55 @@ router.post('/', validateLead, async (req, res) => {
     if (error) throw error
 
     const lead = data[0]
-    console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | ${lead.categoria?.toUpperCase()}`)
+    console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
     const { data: marcaInfo } = await supabase
-      .from('marcas').select('nome, emoji').eq('id', lead.id_marca).single()
+      .from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single()
 
     if (marcaInfo) {
+      const { data: diretores } = await supabase
+        .from('usuarios')
+        .select('email')
+        .eq('tenant_id', lead.tenant_id)
+        .eq('role', 'Diretor')
+        .eq('active', true)
+
+      const emailsDiretores = (diretores || []).map(d => d.email).filter(Boolean)
+
       notificarNovoLead(lead, marcaInfo).catch(err =>
-        console.warn('[Leads] E-mail não enviado:', err.message)
+        console.warn('[Leads] E-mail notificacao:', err.message)
       )
+
+      if (lead.score >= 65) {
+        notificarLeadQuente(lead, marcaInfo, emailsDiretores).catch(err =>
+          console.warn('[Leads] E-mail lead quente:', err.message)
+        )
+      }
+
+      const n8nUrl = process.env.N8N_WEBHOOK_URL
+      if (n8nUrl) {
+        fetch(n8nUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId:    lead.id,
+            nome:      lead.nome,
+            email:     lead.email,
+            telefone:  lead.telefone,
+            score:     lead.score,
+            categoria: lead.categoria,
+            capital:   lead.capital_disponivel,
+            regiao:    lead.regiao_interesse,
+            marca:     marcaInfo.nome,
+            tenant_id: lead.tenant_id,
+            fonte:     lead.fonte,
+            timestamp: new Date().toISOString(),
+          })
+        }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
+      }
     }
 
-    res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id })
+    res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
   } catch (err) {
     console.error('[Leads] Erro:', err.message)
     res.status(500).json({ success: false, error: 'Erro interno ao processar lead', detalhe: err.message })
@@ -117,28 +149,26 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
     const tenant_id = form.tenant_id || process.env.DEFAULT_TENANT_ID || ''
 
     if (!nome || nome.trim().length < 3) {
-      return res.status(400).json({ success: false, error: 'Nome inválido ou ausente' })
+      return res.status(400).json({ success: false, error: 'Nome invalido ou ausente' })
     }
     if (!isEmailValido(email)) {
-      return res.status(400).json({ success: false, error: 'E-mail inválido ou ausente' })
+      return res.status(400).json({ success: false, error: 'E-mail invalido ou ausente' })
     }
     if (!isTelefoneValido(telefone)) {
-      return res.status(400).json({ success: false, error: 'Telefone inválido ou ausente' })
+      return res.status(400).json({ success: false, error: 'Telefone invalido ou ausente' })
     }
     if (!marca_id) {
-      return res.status(400).json({ success: false, error: 'marca_id é obrigatório' })
+      return res.status(400).json({ success: false, error: 'marca_id e obrigatorio' })
     }
 
-    const capitalRaw = form.capital || form['Capital disponível'] || form.capital_disponivel || '0'
+    const capitalRaw = form.capital || form['Capital disponivel'] || form.capital_disponivel || '0'
     const { capital, score, categoria } = processarCapital(capitalRaw)
 
-    const documentoRaw = form.documento || form['CPF ou CNPJ'] || form.cpf_cnpj || ''
-    const docInfo      = documentoRaw ? validarDocumento(documentoRaw) : null
-    const mensagem     = form.mensagem || form['Mensagem'] || form.message || ''
+    const mensagem = form.mensagem || form['Mensagem'] || form.message || ''
 
     const leadData = {
       tenant_id,
-      id_marca: marca_id,
+      id_marca:           marca_id,
       nome:               sanitizarTexto(nome),
       email:              email.trim().toLowerCase(),
       telefone,
@@ -163,9 +193,8 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
     if (existente?.length > 0) {
       const horasAtras = (Date.now() - new Date(existente[0].created_at).getTime()) / 3_600_000
       if (horasAtras < 24) {
-        console.warn(`[Leads/GoogleForms] Duplicata detectada (${Math.round(horasAtras)}h atrás): ${email}`)
         return res.json({
-          success: true, message: 'Lead já existente (menos de 24h)',
+          success: true, message: 'Lead ja existente (menos de 24h)',
           leadId: existente[0].id, duplicado: true,
         })
       }
@@ -200,25 +229,25 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
       { nome, email, telefone }, ['nome', 'email', 'telefone']
     )
     if (!valido) {
-      return res.status(400).json({ success: false, error: `Campo obrigatório: ${campoFaltando}` })
+      return res.status(400).json({ success: false, error: `Campo obrigatorio: ${campoFaltando}` })
     }
     if (!isEmailValido(email)) {
-      return res.status(400).json({ success: false, error: 'E-mail inválido' })
+      return res.status(400).json({ success: false, error: 'E-mail invalido' })
     }
 
     const { data, error } = await supabase
       .from('leads_sistema')
       .insert([{
-        nome:      sanitizarTexto(nome),
-        email:     email.trim().toLowerCase(),
-        telefone:  normalizarTelefone(telefone),
-        companhia: sanitizarTexto(companhia || ''),
-        cidade:    sanitizarTexto(cidade    || ''),
-        estado:    sanitizarTexto(estado    || ''),
+        nome:       sanitizarTexto(nome),
+        email:      email.trim().toLowerCase(),
+        telefone:   normalizarTelefone(telefone),
+        companhia:  sanitizarTexto(companhia || ''),
+        cidade:     sanitizarTexto(cidade    || ''),
+        estado:     sanitizarTexto(estado    || ''),
         observacao: sanitizarTexto(observacao || ''),
-        fonte:     req.body.fonte || 'captacao-landing',
-        status:    'novo',
-        tenant_id: '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
+        fonte:      req.body.fonte || 'captacao-landing',
+        status:     'novo',
+        tenant_id:  '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
       }])
       .select()
 
@@ -228,10 +257,10 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
     console.log(`[Leads/Sistema] Prospect salvo: ${lead.id} | ${lead.nome}`)
 
     notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err =>
-      console.warn('[Leads/Sistema] E-mail não enviado:', err.message)
+      console.warn('[Leads/Sistema] E-mail nao enviado:', err.message)
     )
 
-    res.json({ success: true, message: 'Recebemos seu contato! Em breve nossa equipe entrará em contato.', leadId: lead.id })
+    res.json({ success: true, message: 'Recebemos seu contato! Em breve nossa equipe entrara em contato.', leadId: lead.id })
   } catch (err) {
     console.error('[Leads/Sistema] Erro:', err.message)
     res.status(500).json({ success: false, error: 'Erro interno ao processar prospect' })
