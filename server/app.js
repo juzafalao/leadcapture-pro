@@ -52,7 +52,7 @@ inicializarEmail()
 const allowedOrigins = [
   'https://leadcapture-pro.vercel.app',
   'https://www.leadcapture-pro.vercel.app',
-  // Adicionar domínios customizados de tenants aqui
+  'https://leadcapture-proprod.vercel.app',
   ...(process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || []),
 ]
 
