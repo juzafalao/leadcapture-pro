@@ -22,13 +22,21 @@ import { validateLead, validateLeadSistema, validateGoogleForms } from '../middl
 
 const router = Router()
 
+// Converte capital de texto (landing page) para número (banco)
+const capitalMap = {
+  'ate-100k':   80000,
+  '100k-300k':  200000,
+  '300k-500k':  400000,
+  'acima-500k': 600000,
+}
+
 router.post('/', validateLead, async (req, res) => {
   try {
     console.log('[Leads] Novo lead via landing page')
     const dados = req.body
 
     const { valido, campoFaltando } = validarCamposObrigatorios(
-      dados, ['tenant_id', 'marca_id', 'nome', 'email', 'telefone']
+      dados, ['tenant_id', 'nome', 'email', 'telefone']
     )
     if (!valido) {
       return res.status(400).json({ success: false, error: `Campo obrigatório: ${campoFaltando}` })
@@ -44,10 +52,24 @@ router.post('/', validateLead, async (req, res) => {
     }
 
     const leadData = { ...dados }
+
+    // Normaliza marca_id → id_marca
     if (leadData.marca_id !== undefined) {
       leadData.id_marca = leadData.marca_id
       delete leadData.marca_id
     }
+
+    // Converte capital de texto para número
+    if (typeof leadData.capital_disponivel === 'string') {
+      leadData.capital_disponivel = capitalMap[leadData.capital_disponivel] ?? null
+    }
+
+    // Normaliza regiao → regiao_interesse
+    if (leadData.regiao !== undefined) {
+      leadData.regiao_interesse = leadData.regiao_interesse || leadData.regiao
+      delete leadData.regiao
+    }
+
     if (dados.documento) {
       const doc = validarDocumento(dados.documento)
       if (!doc.valido) {
