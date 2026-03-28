@@ -1,19 +1,31 @@
-// ============================================================
-// useLeads.js — Leads + Metrics (OTIMIZADO)
-// LeadCapture Pro — Zafalão Tech
-//
-// MUDANÇAS v3 (2.5.3):
-// 1. useLeads: staleTime 30s (evita refetch ao navegar entre páginas)
-// 2. useMetrics: staleTime 3min (antes era 2min, agora alinhado com realtime)
-// ============================================================
-
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useEffect } from 'react'
 
 export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
+  const qc = useQueryClient()
+
+  // Realtime — invalida cache quando chega lead novo
+  useEffect(() => {
+    if (!tenantId) return
+    const channel = supabase
+      .channel(`leads-realtime-${tenantId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'leads',
+        filter: `tenant_id=eq.${tenantId}`
+      }, () => {
+        qc.invalidateQueries({ queryKey: ['leads'] })
+        qc.invalidateQueries({ queryKey: ['metrics'] })
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [tenantId, qc])
+
   return useQuery({
     queryKey: ['leads', tenantId, page, perPage, filters],
-    staleTime: 1000 * 30,           // ✅ 30s — evita refetch ao voltar para dashboard
+    staleTime: 1000 * 30,
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -26,7 +38,6 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
         `, { count: 'exact' })
         .is('deleted_at', null)
 
-      // Platform admin (tenantId = null) vê leads de todos os tenants
       if (tenantId) {
         query = query.eq('tenant_id', tenantId)
       }
@@ -56,21 +67,21 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
       return { data: data ?? [], count: count ?? 0 }
     },
     enabled: !!tenantId || tenantId === null,
-    placeholderData: keepPreviousData
+    placeholderData: keepPreviousData,
+    refetchInterval: 1000 * 60, // fallback: refetch a cada 1 minuto
   })
 }
 
 export function useMetrics(tenantId) {
   return useQuery({
     queryKey: ['metrics', tenantId],
-    staleTime: 1000 * 60 * 3,       // ✅ 3min (alinhado com realtime que invalida)
+    staleTime: 1000 * 60 * 3,
     queryFn: async () => {
       let query = supabase
         .from('leads')
         .select('categoria')
         .is('deleted_at', null)
 
-      // Platform admin (tenantId = null) vê leads de todos os tenants
       if (tenantId) {
         query = query.eq('tenant_id', tenantId)
       }
@@ -87,6 +98,7 @@ export function useMetrics(tenantId) {
       }
     },
     enabled: !!tenantId || tenantId === null,
+    refetchInterval: 1000 * 60,
   })
 }
 
