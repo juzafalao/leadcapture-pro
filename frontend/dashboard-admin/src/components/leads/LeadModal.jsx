@@ -1,3 +1,12 @@
+// ============================================================
+// LeadModal.jsx — Modal de Lead com Tenant Name
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3 (2.5.2):
+// 1. Recebe prop tenantName (vindo do DashboardPage)
+// 2. Badge colorido com nome do tenant no header
+// ============================================================
+
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
@@ -7,7 +16,7 @@ import { useAlertModal } from '../../hooks/useAlertModal';
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
 
-export default function LeadModal({ lead, onClose }) {
+export default function LeadModal({ lead, onClose, tenantName }) {
   const { usuario } = useAuth();
   const queryClient = useQueryClient();
   const { alertModal, showAlert } = useAlertModal();
@@ -47,11 +56,11 @@ export default function LeadModal({ lead, onClose }) {
   const isPerdido   = statusAtual?.slug === 'perdido';
 
   useEffect(() => {
-    if (!usuario?.tenant_id) return;
+    // Use lead's tenant_id for fetching options (important for Platform Admin viewing leads from different tenants)
+    const tenantId = lead?.tenant_id || usuario?.tenant_id;
+    if (!tenantId) return;
 
     async function fetchData() {
-      if (!usuario?.tenant_id) return;
-      const tenantId = usuario.tenant_id;
       const [
         { data: m, error: em },
         { data: s, error: es },
@@ -69,7 +78,7 @@ export default function LeadModal({ lead, onClose }) {
       if (mo) setMotivosList(mo);
     }
     fetchData();
-  }, [usuario?.tenant_id]);
+  }, [lead?.tenant_id, usuario?.tenant_id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -164,7 +173,15 @@ export default function LeadModal({ lead, onClose }) {
                 {lead?.nome?.charAt(0).toUpperCase() || '+'}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">{isNovo ? 'Novo Lead' : 'Editar Lead'}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-white">{isNovo ? 'Novo Lead' : 'Editar Lead'}</h2>
+                  {/* ✅ 2.5.2: Badge do tenant name */}
+                  {tenantName && (
+                    <span className="text-[10px] px-2 py-0.5 bg-[#10B981]/10 border border-[#10B981]/30 rounded-md text-[#10B981] font-bold uppercase tracking-wider">
+                      {tenantName}
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-400">{isNovo ? 'Preencha as informações' : lead.nome}</p>
               </div>
             </div>

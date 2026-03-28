@@ -2,10 +2,18 @@
 // LeadCapture Pro — Servidor Principal
 // Zafalão Tech · 2026
 //
+// MUDANÇAS v1.9.0 (Fase A — Hardening):
+// 1. ✅ Rate limiting: global + webhook + status
+// 2. ✅ CORS restritivo (lista de domínios permitidos)
+// 3. ✅ Validação Zod no POST /api/leads (via middleware)
+// 4. ✅ Headers de segurança (X-Content-Type-Options, etc.)
+// 5. ✅ Request logging básico
+//
 // Arquitetura de módulos:
 //   core/         → banco de dados, scoring, validação
 //   comunicacao/  → email e WhatsApp
 //   routes/       → roteadores Express por domínio
+//   middleware/   → rate limiting, validação Zod
 //   captacao/     → landing page institucional do produto
 // ============================================================
 
@@ -18,6 +26,9 @@ import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
 
 dotenv.config()
+
+// Middlewares de segurança
+import { globalLimiter, webhookLimiter, statusLimiter } from './middleware/rateLimiter.js'
 
 // Serviços
 import { inicializarEmail } from './comunicacao/email.js'
@@ -37,19 +48,67 @@ const __dirname  = dirname(__filename)
 const app = express()
 inicializarEmail()
 
-// ─── Middlewares Globais ─────────────────────────────────────
+// ─── CORS Restritivo ─────────────────────────────────────────
+const allowedOrigins = [
+  'https://leadcapture-pro.vercel.app',
+  'https://www.leadcapture-pro.vercel.app',
+  // Adicionar domínios customizados de tenants aqui
+  ...(process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || []),
+]
+
+// Em desenvolvimento, permitir localhost
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push('http://localhost:5173')
+  allowedOrigins.push('http://localhost:4000')
+  allowedOrigins.push('http://localhost:3000')
+}
+
 app.use(cors({
-  origin:  process.env.CORS_ORIGINS?.split(',') || '*',
+  origin: (origin, callback) => {
+    // Permitir requests sem origin (curl, Postman, webhooks server-to-server)
+    if (!origin) return callback(null, true)
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    callback(new Error(`Origem não permitida pelo CORS: ${origin}`))
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  credentials: true,
 }))
+
+// ─── Middlewares Globais ─────────────────────────────────────
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(express.static(path.join(__dirname, 'public')))
 
+// ─── Headers de Segurança ────────────────────────────────────
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-XSS-Protection', '1; mode=block')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  next()
+})
+
+// ─── Rate Limiting Global ────────────────────────────────────
+app.use(globalLimiter)
+
+// ─── Request Logging ─────────────────────────────────────────
+app.use((req, _res, next) => {
+  if (req.path !== '/health') {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
+  }
+  next()
+})
+
 // ─── Roteadores ──────────────────────────────────────────────
-app.use('/api/leads',  leadsRouter)
-app.use('/api/marcas', marcasRouter)
-app.use('/',           sistemaRouter)   // inclui /health e /api/sistema/*
+app.use('/api/leads',   webhookLimiter, leadsRouter)
+app.use('/api/marcas',  marcasRouter)
+app.get('/health', statusLimiter, (_req, res) => res.json({
+  status: 'ok',
+  service: 'LeadCapture Pro',
+  version: '1.9.0',
+  timestamp: new Date().toISOString(),
+}))
+app.use('/api/sistema', statusLimiter, sistemaRouter)
 
 // ─── Dashboard (SPA React) ───────────────────────────────────
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
@@ -57,10 +116,8 @@ app.get('/dashboard/*', (_req, res) => {
   res.sendFile(join(__dirname, '../dashboard-build/index.html'))
 })
 
-// ─── Painel Admin ────────────────────────────────────────────
-app.get('/admin', (_req, res) => {
-  res.sendFile(join(__dirname, 'admin/index.html'))
-})
+// ─── LeadCapture Pro — Nova Landing Page SaaS ────────────────
+app.use('/landing', express.static(join(__dirname, '../landing')))
 
 // ─── Landing Pages Dinâmicas (tenant/marca) ──────────────────
 // Rota: /landing/:slug → renderiza landing page customizada por marca
@@ -83,7 +140,12 @@ app.get('/landing/:slug', async (req, res) => {
 
     const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
 
+    const logoBlock = marca.logo_url
+      ? `<img src="${escapeHtml(marca.logo_url)}" alt="${escapeHtml(marca.nome)}" class="lp-logo" />`
+      : `<span class="lp-emoji">${escapeHtml(marca.emoji || '🏢')}</span>`
+
     html = html
+      .replace(/{{MARCA_LOGO_BLOCK}}/g, logoBlock)
       .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || '🏢'))
       .replace(/{{MARCA_NOME}}/g,     escapeHtml(marca.nome))
       .replace(/{{MARCA_ID}}/g,       escapeHtml(marca.id))
@@ -100,13 +162,6 @@ app.get('/landing/:slug', async (req, res) => {
   }
 })
 
-// ─── Captação — Landing Page Institucional do Produto ────────
-// Servir a landing page do próprio LeadCapture Pro (módulo captação)
-app.use('/captacao', express.static(join(__dirname, '../captacao')))
-app.get('/captacao/*', (_req, res) => {
-  res.sendFile(join(__dirname, '../captacao/index.html'))
-})
-
 // ─── Fallback 404 ────────────────────────────────────────────
 app.use((_req, res) => {
   res.status(404).json({ success: false, error: 'Rota não encontrada' })
@@ -114,6 +169,10 @@ app.use((_req, res) => {
 
 // ─── Error Handler Global ────────────────────────────────────
 app.use((err, _req, res, _next) => {
+  // CORS error
+  if (err.message?.includes('CORS')) {
+    return res.status(403).json({ success: false, error: 'Origem não permitida' })
+  }
   console.error('[App] Erro não tratado:', err)
   res.status(500).json({ success: false, error: 'Erro interno do servidor' })
 })
@@ -143,7 +202,7 @@ function _pagina404(slug) {
     <h1>🔍</h1>
     <h2>Landing page não encontrada</h2>
     <p>A página solicitada não existe no sistema.</p>
-    <p><a href="/captacao">Conheça o LeadCapture Pro →</a></p>
+    <p><a href="/landing">Conheça o LeadCapture Pro →</a></p>
   </div>
 </body>
 </html>`

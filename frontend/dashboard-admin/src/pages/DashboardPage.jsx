@@ -1,8 +1,18 @@
-import React, { useState } from 'react';
+// ============================================================
+// DashboardPage.jsx — Dashboard de Leads com Tenant Name
+// LeadCapture Pro — Zafalão Tech
+//
+// MUDANÇAS v3 (2.5.2):
+// 1. Coluna "Tenant" na tabela (só para isPlatformAdmin)
+// 2. Lookup de tenant names via query separada
+// ============================================================
+
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../components/AuthContext';
 import { useLeads, useMetrics } from '../hooks/useLeads';
 import { useDebounce } from '../hooks/useDebounce';
+import { supabase } from '../lib/supabase';
 import KPIFilter from '../components/dashboard/KPIFilter';
 import LeadModal from '../components/leads/LeadModal';
 import AtribuirOperadorModal from '../components/leads/AtribuirOperadorModal';
@@ -14,13 +24,9 @@ const ROLES_CONSULTOR = ['Consultor'];
 
 /**
  * Render the leads management dashboard with KPI filters, search and filter controls, leads table, pagination, FAB and modals.
- *
- * Displays KPIs, a debounced search, "Meus Leads" toggle, a responsive table of leads with status and assignment actions, pagination controls, and modals for viewing/creating leads and assigning operators.
- *
- * @returns {JSX.Element} The DashboardPage React element containing the leads dashboard UI.
  */
 export default function DashboardPage() {
-  const { usuario } = useAuth();
+  const { usuario, isPlatformAdmin } = useAuth();
 
   const [page, setPage] = useState(1);
   const [perPage] = useState(20);
@@ -29,8 +35,11 @@ export default function DashboardPage() {
   const [filtroMeusLeads, setFiltroMeusLeads] = useState(false);
   const debouncedBusca = useDebounce(busca, 500);
 
+  // ✅ 2.5.2: Mapa de tenant names (só para platform admin)
+  const [tenantMap, setTenantMap] = useState({});
+
   const { data: leadsData, isLoading: loading, isPlaceholderData } = useLeads({
-    tenantId: usuario?.tenant_id,
+    tenantId: isPlatformAdmin() ? null : usuario?.tenant_id,
     page,
     perPage,
     filters: {
@@ -44,7 +53,29 @@ export default function DashboardPage() {
   const leads = leadsData?.data || [];
   const totalCount = leadsData?.count || 0;
   const totalPages = Math.ceil(totalCount / perPage);
-  const { data: metrics } = useMetrics(usuario?.tenant_id);
+  const { data: metrics } = useMetrics(isPlatformAdmin() ? null : usuario?.tenant_id);
+
+  // ✅ 2.5.2: Buscar tenant names quando leads mudam (platform admin)
+  useEffect(() => {
+    if (!isPlatformAdmin() || leads.length === 0) return;
+    const tenantIds = [...new Set(leads.map(l => l.tenant_id).filter(Boolean))];
+    const missing = tenantIds.filter(id => !tenantMap[id]);
+    if (missing.length === 0) return;
+
+    supabase
+      .from('tenants')
+      .select('id, name')
+      .in('id', missing)
+      .then(({ data }) => {
+        if (data) {
+          setTenantMap(prev => {
+            const updated = { ...prev };
+            data.forEach(t => { updated[t.id] = t.name; });
+            return updated;
+          });
+        }
+      });
+  }, [leads, isPlatformAdmin]);
 
   const [selectedLead, setSelectedLead] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,7 +87,7 @@ export default function DashboardPage() {
   const handleAtribuir = (lead) => { setLeadParaAtribuir(lead); setIsAtribuirModalOpen(true); };
   const handleCloseAtribuirModal = () => { setIsAtribuirModalOpen(false); setLeadParaAtribuir(null); };
 
-  React.useEffect(() => { setPage(1); }, [kpiAtivo, filtroMeusLeads, debouncedBusca]);
+  useEffect(() => { setPage(1); }, [kpiAtivo, filtroMeusLeads, debouncedBusca]);
 
   const kpis = metrics || { total: 0, hot: 0, warm: 0, cold: 0 };
 
@@ -139,6 +170,10 @@ export default function DashboardPage() {
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Status Comercial</th>
                     <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden xl:table-cell">Atribuído</th>
+                    {/* ✅ 2.5.2: Coluna Tenant (só platform admin) */}
+                    {isPlatformAdmin() && (
+                      <th className="px-4 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider hidden lg:table-cell">Tenant</th>
+                    )}
                     <th className="px-4 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Ações</th>
                   </tr>
                 </thead>
@@ -246,6 +281,19 @@ export default function DashboardPage() {
                         )}
                       </td>
 
+                      {/* ✅ 2.5.2: Coluna Tenant (só platform admin) */}
+                      {isPlatformAdmin() && (
+                        <td className="px-4 py-4 hidden lg:table-cell">
+                          {tenantMap[lead.tenant_id] ? (
+                            <span className="text-xs px-2 py-0.5 bg-white/5 border border-white/10 rounded-md text-gray-400">
+                              {tenantMap[lead.tenant_id]}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-700">—</span>
+                          )}
+                        </td>
+                      )}
+
                       {/* Ações */}
                       <td className="px-4 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -290,7 +338,7 @@ export default function DashboardPage() {
       {/* FAB */}
       <FAB onClick={() => handleOpenModal(null)} />
 
-      {/* MODALS */}
+      {/* MODALS — ✅ 2.5.2: passa tenantName para o LeadModal */}
       {isModalOpen && (
         <LeadModal
           lead={selectedLead}
@@ -298,6 +346,7 @@ export default function DashboardPage() {
           isGestor={isGestor}
           isConsultor={isConsultor}
           usuarioRole={usuario?.role}
+          tenantName={isPlatformAdmin() && selectedLead ? tenantMap[selectedLead.tenant_id] : null}
         />
       )}
       {isAtribuirModalOpen && leadParaAtribuir && (
