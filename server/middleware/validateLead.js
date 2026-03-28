@@ -19,14 +19,18 @@ const leadSchema = z.object({
   fonte:              z.string().max(100).trim().optional().or(z.literal('')),
   score:              z.number().int().min(0).max(100).optional(),
   categoria:          z.enum(['hot', 'warm', 'cold']).optional(),
-  capital_disponivel: z.number().min(0).optional().nullable(),
+  capital_disponivel: z.string().max(50).trim().optional().or(z.literal('')),
+  regiao:             z.string().max(200).trim().optional().or(z.literal('')),
   regiao_interesse:   z.string().max(200).trim().optional().or(z.literal('')),
   cidade:             z.string().max(100).trim().optional().or(z.literal('')),
   estado:             z.string().max(50).trim().optional().or(z.literal('')),
   urgencia:           z.enum(['baixa', 'normal', 'alta', 'urgente']).optional(),
   tenant_id:          z.string().uuid('tenant_id deve ser UUID válido'),
   id_marca:           z.string().uuid('id_marca deve ser UUID válido').optional().nullable(),
-}).strip() // Remove campos não declarados (segurança)
+  marca_id:           z.string().uuid('marca_id deve ser UUID válido').optional().nullable(),
+  gclid:              z.string().max(500).trim().optional().or(z.literal('')),
+  fbclid:             z.string().max(500).trim().optional().or(z.literal('')),
+}).strip()
 
 // Schema para leads_sistema (prospects do SaaS)
 const leadSistemaSchema = z.object({

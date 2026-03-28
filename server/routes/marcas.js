@@ -18,7 +18,7 @@ router.get('/slug/:slug', async (req, res) => {
 
     const { data, error } = await supabase
       .from('marcas')
-      .select('id, nome, slug, emoji, invest_min, invest_max, id_segmento, tenant_id')
+      .select('id, nome, slug, emoji, invest_min, invest_max, id_segmento, tenant_id, logo_url, google_ads_conversion_id, google_ads_conversion_label, meta_pixel_id')
       .eq('slug', slug)
       .eq('ativo', true)
       .single()
