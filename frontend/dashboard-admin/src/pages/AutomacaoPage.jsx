@@ -48,7 +48,10 @@ export default function AutomacaoPage() {
   const [drawerWf, setDrawerWf] = useState(null)
 
   useEffect(() => {
-    fetch('/api/sistema/status')
+  const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '')
+
+// ... dentro do useEffect que já existe:
+fetch(`${API_URL}/api/sistema/status`)
       .then(r => r.json())
       .then(setApiStatus)
       .catch(() => setApiStatus(null))
