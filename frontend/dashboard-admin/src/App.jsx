@@ -16,6 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './components/Sidebar';
 import Header from './components/layout/Header';
 import ErrorBoundary from './components/ErrorBoundary';
+import ChatBot from './components/ChatBot';
 
 const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
 const MarcasPage       = lazy(() => import('./pages/MarcasPage'));
@@ -203,6 +204,7 @@ function AuthenticatedLayout({ children }) {
           </p>
         </footer>
       </main>
+      <ChatBot />
     </div>
   );
 }

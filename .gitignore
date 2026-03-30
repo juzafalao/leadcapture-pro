@@ -67,3 +67,12 @@ test-results/
 *.local.py
 
 # Permitir build do dashboard
+# Build gerado do frontend (nao deve estar no git — Vercel builda direto)
+dashboard-build/
+frontend/dashboard-admin/dist/
+
+# Hooks backup
+frontend/dashboard-admin/src/hooks.backup*/
+
+# Docker (nao usado em producao)
+# docker/ mantido apenas para referencia local
