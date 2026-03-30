@@ -22,6 +22,9 @@ export function useStatusColunas(tenantId) {
     queryKey: ['status-colunas', tenantId],
     staleTime: 1000 * 60 * 10,
     queryFn: async () => {
+      // Se não tem tenant (platform admin vendo tudo), usa colunas padrão
+      if (!tenantId) return COLUNAS_PADRAO
+
       const { data, error } = await supabase
         .from('status_comercial')
         .select('id, label, slug, cor, ordem')
@@ -32,11 +35,11 @@ export function useStatusColunas(tenantId) {
       return data.map(s => ({
         id:    s.id,
         label: s.label,
-        slug:  s.slug,
+        slug:  s.slug?.toLowerCase(),
         cor:   s.cor || '#6366F1',
       }))
     },
-    enabled: !!tenantId,
+    enabled: true, // sempre executa — tenantId null usa padrão
   })
 }
 
@@ -73,19 +76,28 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
       if (error) throw error
       const leads = data ?? []
 
-      // Agrupa por coluna
+      // Agrupa por coluna — prioriza status_comercial.slug, depois lead.status, depois 'novo'
       const mapa = {}
       colunas.forEach(col => { mapa[col.slug] = [] })
 
+      // Conjunto de slugs válidos para lookup rápido
+      const slugsValidos = new Set(colunas.map(c => c.slug))
+
       leads.forEach(lead => {
-        const slug = lead.status_comercial?.slug || lead.status || 'novo'
-        const key = mapa[slug] !== undefined ? slug : 'novo'
-        if (mapa[key] !== undefined) {
-          mapa[key].push(lead)
-        } else {
-          mapa['novo'] = mapa['novo'] || []
-          mapa['novo'].push(lead)
+        // 1. Tenta o slug do status_comercial (join)
+        const slugStatus = lead.status_comercial?.slug?.toLowerCase()
+        // 2. Fallback para lead.status
+        const slugLead = lead.status?.toLowerCase()
+
+        let coluna = 'novo'
+        if (slugStatus && slugsValidos.has(slugStatus)) {
+          coluna = slugStatus
+        } else if (slugLead && slugsValidos.has(slugLead)) {
+          coluna = slugLead
         }
+        // Se nenhum bate com as colunas, vai para 'novo'
+        if (!mapa[coluna]) coluna = colunas[0]?.slug || 'novo'
+        mapa[coluna].push(lead)
       })
 
       return mapa

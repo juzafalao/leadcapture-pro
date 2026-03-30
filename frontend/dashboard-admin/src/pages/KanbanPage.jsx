@@ -153,10 +153,10 @@ function Coluna({ coluna, leads = [], onDrop, onDragOver, onDragLeave, isDragOve
 // ── Página principal do Kanban ────────────────────────────────
 export default function KanbanPage() {
   const { usuario, isPlatformAdmin } = useAuth()
-  // Platform Admin vê todos os leads (tenantId = undefined ignora o filtro)
-  // Tenant normal filtra pelo próprio tenant
-  const tenantId = usuario?.tenant_id || null
-  const isAdmin  = isPlatformAdmin()
+  // Platform Admin (is_super_admin + is_platform) vê TODOS os leads
+  // Qualquer outro usuário vê apenas o próprio tenant
+  const isPlataforma = isPlatformAdmin()
+  const tenantId = isPlataforma ? null : (usuario?.tenant_id || null)
 
   const [dragLeadId, setDragLeadId] = useState(null)
   const [dragOver, setDragOver] = useState(null)
