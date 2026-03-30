@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../AuthContext';
 import { useAlertModal } from '../../hooks/useAlertModal';
+import LeadTimeline from './LeadTimeline';
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
 
@@ -23,6 +24,7 @@ export default function LeadModal({ lead, onClose, tenantName }) {
   const isGestor = ROLES_GESTOR.includes(usuario?.role);
 
   const isNovo = !lead?.id;
+  const [abaAtiva, setAbaAtiva] = useState('dados');
 
   const [formData, setFormData] = useState({
     nome:                  lead?.nome || '',
@@ -188,8 +190,38 @@ export default function LeadModal({ lead, onClose, tenantName }) {
             <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-400 hover:text-white transition-all">✕</button>
           </div>
 
+          {/* ABAS — só para leads existentes */}
+          {!isNovo && (
+            <div className="flex border-b border-white/5 px-6 flex-shrink-0">
+              {[
+                { id: 'dados',    label: 'Dados' },
+                { id: 'timeline', label: 'Timeline' },
+              ].map(aba => (
+                <button
+                  key={aba.id}
+                  onClick={() => setAbaAtiva(aba.id)}
+                  className={`px-4 py-3 text-xs font-bold uppercase tracking-widest transition-all border-b-2 -mb-px ${
+                    abaAtiva === aba.id
+                      ? 'text-[#10B981] border-[#10B981]'
+                      : 'text-gray-600 border-transparent hover:text-gray-400'
+                  }`}
+                >
+                  {aba.label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* BODY */}
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
+
+            {/* ABA TIMELINE */}
+            {abaAtiva === 'timeline' && !isNovo && (
+              <LeadTimeline lead={lead} />
+            )}
+
+            {/* ABA DADOS — envolve todo o conteúdo original */}
+            <div className={abaAtiva === 'timeline' && !isNovo ? 'hidden' : ''}>
 
             {/* AVISO CONSULTOR */}
             {!isGestor && !isNovo && (
@@ -351,6 +383,9 @@ export default function LeadModal({ lead, onClose, tenantName }) {
                   <div className="bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-gray-300 text-sm">{lead.mensagem_original}</div>
                 </div>
               )}
+            </div>
+
+            {/* Fecha div aba dados */}
             </div>
           </div>
 

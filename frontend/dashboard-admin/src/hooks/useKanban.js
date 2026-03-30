@@ -50,19 +50,25 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
     staleTime: 1000 * 30,
     refetchInterval: 1000 * 60,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads')
         .select(`
           id, nome, email, telefone, score, categoria,
-          capital_disponivel, regiao_interesse, fonte, created_at,
+          capital_disponivel, regiao_interesse, fonte, created_at, status,
           marca:id_marca (id, nome, emoji),
           status_comercial:id_status (id, label, slug, cor),
           operador:id_operador_responsavel (id, nome)
         `)
-        .eq('tenant_id', tenantId)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
         .limit(200)
+
+      // Filtra por tenant apenas se não for platform admin
+      if (tenantId) {
+        query = query.eq('tenant_id', tenantId)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       const leads = data ?? []
@@ -84,7 +90,7 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
 
       return mapa
     },
-    enabled: !!tenantId && colunas.length > 0,
+    enabled: colunas.length > 0,
   })
 }
 
