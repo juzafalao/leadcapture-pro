@@ -78,6 +78,14 @@ const IconLeadsSistema = () => (
   </svg>
 );
 
+const IconKanban = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="5" height="18" rx="1"/>
+    <rect x="10" y="3" width="5" height="12" rx="1"/>
+    <rect x="17" y="3" width="5" height="15" rx="1"/>
+  </svg>
+);
+
 const IconAuditLog = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
@@ -106,7 +114,8 @@ const NAV_GROUPS = [
   {
     label: 'Principal',
     items: [
-      { path: '/dashboard',  icon: <IconLeads />, label: 'Leads',   show: () => true },
+      { path: '/dashboard', icon: <IconLeads />,    label: 'Leads',  show: () => true },
+      { path: '/kanban',    icon: <IconKanban />,   label: 'Funil',  show: () => true },
     ],
   },
   {

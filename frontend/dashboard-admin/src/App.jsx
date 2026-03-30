@@ -30,6 +30,7 @@ const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
 const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
 const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
 const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
+const KanbanPage       = lazy(() => import('./pages/KanbanPage'));
 
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -174,6 +175,12 @@ function AppRoutes() {
         <Route path="/audit-log" element={
           <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/kanban" element={
+          <PrivateRoute minLevel={LEVEL_CONSULTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><KanbanPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
 
