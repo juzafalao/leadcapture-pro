@@ -5,7 +5,11 @@ import { useLocation } from 'react-router-dom';
 export default function FAB({ onClick }) {
   const location = useLocation();
 
-  // Determinar o texto com base na rota
+  // Leads nao podem ser criados manualmente — apenas por landing page, Google Forms ou integrações
+  if (location.pathname === '/dashboard' || location.pathname.includes('/leads')) {
+    return null;
+  }
+
   const getButtonText = () => {
     if (location.pathname.includes('marcas')) return 'Marca';
     if (location.pathname.includes('segmentos')) return 'Segmento';
