@@ -71,8 +71,8 @@ router.post('/message', chatLimiter, async (req, res) => {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
+        model: 'claude-haiku-4-5-20251001', // haiku: 3x mais rapido, ideal para chatbot interno
+        max_tokens: 512,                    // reduz tokens para resposta mais rapida
         system: systemPrompt,
         messages
       })

@@ -22,6 +22,18 @@ const capitalMap = {
   'acima-500k': 600000,
 }
 
+// Converte capital para numero — aceita chave do mapa OU numero direto
+function resolverCapital(valor) {
+  if (!valor) return null
+  if (typeof valor === 'number') return valor
+  const str = String(valor).trim()
+  // Tenta chave do mapa primeiro
+  if (capitalMap[str] !== undefined) return capitalMap[str]
+  // Tenta numero direto (ex: "200000" ou "200.000")
+  const num = Number(str.replace(/\./g, '').replace(',', '.'))
+  return isNaN(num) || num <= 0 ? null : num
+}
+
 router.post('/', validateLead, async (req, res) => {
   try {
     console.log('[Leads] Novo lead via landing page')
@@ -51,7 +63,7 @@ router.post('/', validateLead, async (req, res) => {
     }
 
     if (typeof leadData.capital_disponivel === 'string') {
-      leadData.capital_disponivel = capitalMap[leadData.capital_disponivel] ?? null
+      leadData.capital_disponivel = resolverCapital(leadData.capital_disponivel)
     }
 
     if (leadData.capital_disponivel) {

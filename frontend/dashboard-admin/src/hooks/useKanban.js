@@ -50,21 +50,22 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
   // Realtime — invalida ao receber novo lead
   return useQuery({
     queryKey: ['kanban', tenantId],
-    staleTime: 1000 * 30,
-    refetchInterval: 1000 * 60,
+    staleTime: 1000 * 60 * 2,   // 2 min de cache — evita refetch desnecessario
+    refetchInterval: 1000 * 90, // refetch a cada 90s apenas
     queryFn: async () => {
       let query = supabase
         .from('leads')
         .select(`
-          id, nome, email, telefone, score, categoria,
+          id, nome, score, categoria,
           capital_disponivel, regiao_interesse, fonte, created_at, status,
+          id_marca, id_status, id_operador_responsavel,
           marca:id_marca (id, nome, emoji),
           status_comercial:id_status (id, label, slug, cor),
           operador:id_operador_responsavel (id, nome)
         `)
         .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(200)
+        .order('score', { ascending: false })
+        .limit(100)                             // limite para performance
 
       // Filtra por tenant apenas se não for platform admin
       if (tenantId) {
