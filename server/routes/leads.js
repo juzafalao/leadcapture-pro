@@ -11,7 +11,6 @@ import {
 } from '../core/validation.js'
 import { notificarNovoLead, notificarLeadQuente } from '../comunicacao/email.js'
 import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
-import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
 
 const router = Router()
