@@ -48,6 +48,7 @@ const __dirname  = dirname(__filename)
 
 // ─── Inicialização ───────────────────────────────────────────
 const app = express()
+app.set('trust proxy', 1) // Vercel/proxy reverso
 inicializarEmail()
 
 // ─── CORS Restritivo ─────────────────────────────────────────
@@ -112,7 +113,7 @@ app.get('/health', statusLimiter, (_req, res) => res.json({
 }))
 app.use('/api/sistema', statusLimiter, sistemaRouter)
 app.use('/api/chat',      chatRouter)
-// app.use('/api/whatsapp', whatsappRouter) // temporariamente desativado
+app.use('/api/whatsapp', whatsappRouter)
 
 // ─── Dashboard (SPA React) ───────────────────────────────────
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))

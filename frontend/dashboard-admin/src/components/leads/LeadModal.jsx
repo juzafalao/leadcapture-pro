@@ -47,7 +47,7 @@ export default function LeadModal({ lead, onClose, tenantName }) {
       experiencia_anterior:  lead?.experiencia_anterior || false,
       urgencia:              lead?.urgencia || 'normal',
     })
-  }, [lead?.id, lead?.id_status, lead?.status])
+  }, [lead?.id, lead?.id_status, lead?.status, lead?.status_comercial?.id])
 
   const [formData, setFormData] = useState({
     nome:                  lead?.nome || '',
@@ -69,13 +69,20 @@ export default function LeadModal({ lead, onClose, tenantName }) {
   });
 
   const [marcas, setMarcas]           = useState([]);
-  const [statusList, setStatusList]   = useState(
-    lead?.status_comercial
-      ? [{ id: lead.status_comercial.id, label: lead.status_comercial.label, slug: lead.status_comercial.slug }]
-      : []
-  );
+  const [statusList, setStatusList]   = useState([]);
   const [motivosList, setMotivosList] = useState([]);
   const [isSaving, setIsSaving]       = useState(false);
+
+  // Sincroniza statusList quando lead muda (ex: vindo do Kanban)
+  useEffect(() => {
+    if (lead?.status_comercial) {
+      setStatusList(prev => {
+        const jaExiste = prev.some(s => s.id === lead.status_comercial.id)
+        if (jaExiste) return prev
+        return [{ id: lead.status_comercial.id, label: lead.status_comercial.label, slug: lead.status_comercial.slug }, ...prev]
+      })
+    }
+  }, [lead?.status_comercial?.id])
 
   const statusAtual = statusList.find(s => s.id === formData.id_status);
   const isPerdido   = statusAtual?.slug === 'perdido';

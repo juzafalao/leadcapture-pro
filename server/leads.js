@@ -11,7 +11,6 @@ import {
 } from '../core/validation.js'
 import { notificarNovoLead, notificarLeadQuente } from '../comunicacao/email.js'
 import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
-import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
 
 const router = Router()
@@ -95,35 +94,38 @@ router.post('/', validateLead, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
-    const { data: marcaInfo } = await supabase
-      .from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single()
+    // Queries em paralelo — elimina N+1
+    const [{ data: marcaInfo }, { data: diretores }] = await Promise.all([
+      supabase.from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single(),
+      supabase.from('usuarios').select('email').eq('tenant_id', lead.tenant_id).eq('role', 'Diretor').eq('active', true)
+    ])
+
+    const marcaFallback    = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
+    const emailsDiretores  = (diretores || []).map(d => d.email).filter(e => e && !e.endsWith('.local'))
 
     if (marcaInfo) {
-      const { data: diretores } = await supabase
-        .from('usuarios')
-        .select('email')
-        .eq('tenant_id', lead.tenant_id)
-        .eq('role', 'Diretor')
-        .eq('active', true)
-
-      const emailsDiretores = (diretores || []).map(d => d.email).filter(Boolean)
-
-      notificarNovoLead(lead, marcaInfo).catch(err =>
+      notificarNovoLead(lead, marcaFallback).catch(err =>
         console.warn('[Leads] E-mail notificacao:', err.message)
       )
 
       if (lead.score >= 65) {
-        notificarLeadQuente(lead, marcaInfo, emailsDiretores).catch(err =>
+        notificarLeadQuente(lead, marcaFallback, emailsDiretores).catch(err =>
           console.warn('[Leads] E-mail lead quente:', err.message)
         )
       }
 
       // WhatsApp: envia boas-vindas e inicia qualificacao por IA
       if (process.env.EVOLUTION_API_KEY) {
-        enviarBoasVindas(lead, marcaInfo).catch(err =>
+        enviarBoasVindas(lead, marcaFallback).catch(err =>
           console.warn('[Leads] WhatsApp boas-vindas:', err.message)
         )
       }
+    } else {
+      // Mesmo sem marca, notifica por email
+      notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err =>
+        console.warn('[Leads] E-mail notificacao (sem marca):', err.message)
+      )
+    }
 
       const n8nUrl = process.env.N8N_WEBHOOK_URL
       if (n8nUrl) {
@@ -139,14 +141,13 @@ router.post('/', validateLead, async (req, res) => {
             categoria: lead.categoria,
             capital:   lead.capital_disponivel,
             regiao:    lead.regiao_interesse,
-            marca:     marcaInfo.nome,
+            marca:     marcaFallback.nome,
             tenant_id: lead.tenant_id,
             fonte:     lead.fonte,
             timestamp: new Date().toISOString(),
           })
         }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
       }
-    }
 
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
   } catch (err) {
