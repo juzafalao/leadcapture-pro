@@ -26,46 +26,13 @@ export default function LeadModal({ lead, onClose, tenantName }) {
   const isNovo = !lead?.id;
   const [abaAtiva, setAbaAtiva] = useState('dados');
 
-  // Sincroniza formData quando lead muda (ex: vindo do Kanban com status atualizado)
-  useEffect(() => {
-    if (!lead) return
-    setFormData({
-      nome:                  lead?.nome || '',
-      email:                 lead?.email || '',
-      telefone:              lead?.telefone || '',
-      cidade:                lead?.cidade || '',
-      estado:                lead?.estado || '',
-      capital_disponivel:    lead?.capital_disponivel || 0,
-      id_status:             lead?.id_status || '',
-      id_motivo_desistencia: lead?.id_motivo_desistencia || '',
-      categoria:             lead?.categoria || 'Cold',
-      score:                 lead?.score || 0,
-      fonte:                 lead?.fonte || '',
-      id_marca:              lead?.id_marca || lead?.marca?.id || '',
-      resumo_qualificacao:   lead?.resumo_qualificacao || '',
-      mensagem_original:     lead?.mensagem_original || '',
-      experiencia_anterior:  lead?.experiencia_anterior || false,
-      urgencia:              lead?.urgencia || 'normal',
-    })
-  }, [lead?.id, lead?.id_status, lead?.status, lead?.status_comercial?.id])
-
+  // ✅ FIX: Inicializar com valores padrão (não com lead)
   const [formData, setFormData] = useState({
-    nome:                  lead?.nome || '',
-    email:                 lead?.email || '',
-    telefone:              lead?.telefone || '',
-    cidade:                lead?.cidade || '',
-    estado:                lead?.estado || '',
-    capital_disponivel:    lead?.capital_disponivel || 0,
-    id_status:             lead?.id_status || '',
-    id_motivo_desistencia: lead?.id_motivo_desistencia || '',
-    categoria:             lead?.categoria || 'Cold',
-    score:                 lead?.score || 0,
-    fonte:                 lead?.fonte || '',
-    id_marca:              lead?.id_marca || lead?.marca?.id || '',
-    resumo_qualificacao:   lead?.resumo_qualificacao || '',
-    mensagem_original:     lead?.mensagem_original || '',
-    experiencia_anterior:  lead?.experiencia_anterior || false,
-    urgencia:              lead?.urgencia || 'normal',
+    nome: '', email: '', telefone: '', cidade: '', estado: '',
+    capital_disponivel: 0, id_status: '', id_motivo_desistencia: '',
+    categoria: 'Cold', score: 0, fonte: '', id_marca: '',
+    resumo_qualificacao: '', mensagem_original: '',
+    experiencia_anterior: false, urgencia: 'normal',
   });
 
   const [marcas, setMarcas]           = useState([]);
@@ -73,22 +40,50 @@ export default function LeadModal({ lead, onClose, tenantName }) {
   const [motivosList, setMotivosList] = useState([]);
   const [isSaving, setIsSaving]       = useState(false);
 
-  // Sincroniza statusList quando lead muda (ex: vindo do Kanban)
+  // ✅ FIX: Sincroniza formData quando lead muda — dependências completas
   useEffect(() => {
-    if (lead?.status_comercial) {
+    if (!lead) return;
+    setFormData({
+      nome:                  lead.nome || '',
+      email:                 lead.email || '',
+      telefone:              lead.telefone || '',
+      cidade:                lead.cidade || '',
+      estado:                lead.estado || '',
+      capital_disponivel:    lead.capital_disponivel || 0,
+      id_status:             lead.id_status || '',
+      id_motivo_desistencia: lead.id_motivo_desistencia || '',
+      categoria:             lead.categoria || 'Cold',
+      score:                 lead.score || 0,
+      fonte:                 lead.fonte || '',
+      id_marca:              lead.id_marca || lead.marca?.id || '',
+      resumo_qualificacao:   lead.resumo_qualificacao || '',
+      mensagem_original:     lead.mensagem_original || '',
+      experiencia_anterior:  lead.experiencia_anterior || false,
+      urgencia:              lead.urgencia || 'normal',
+    });
+    // ✅ FIX: Sincroniza statusList com status_comercial do lead
+    if (lead.status_comercial) {
       setStatusList(prev => {
-        const jaExiste = prev.some(s => s.id === lead.status_comercial.id)
-        if (jaExiste) return prev
-        return [{ id: lead.status_comercial.id, label: lead.status_comercial.label, slug: lead.status_comercial.slug }, ...prev]
-      })
+        const jaExiste = prev.some(s => s.id === lead.status_comercial.id);
+        if (jaExiste) return prev;
+        return [{ id: lead.status_comercial.id, label: lead.status_comercial.label, slug: lead.status_comercial.slug }, ...prev];
+      });
     }
-  }, [lead?.status_comercial?.id])
+  }, [
+    lead?.id,
+    lead?.id_status,
+    lead?.status,
+    lead?.status_comercial?.id, // ✅ FIX: dependência adicionada
+    lead?.categoria,
+    lead?.score,
+    lead?.nome,
+  ]);
 
   const statusAtual = statusList.find(s => s.id === formData.id_status);
   const isPerdido   = statusAtual?.slug === 'perdido';
 
+  // ✅ FIX: Busca lista completa de status do tenant
   useEffect(() => {
-    // Use lead's tenant_id for fetching options (important for Platform Admin viewing leads from different tenants)
     const tenantId = lead?.tenant_id || usuario?.tenant_id;
     if (!tenantId) return;
 
@@ -99,14 +94,15 @@ export default function LeadModal({ lead, onClose, tenantName }) {
         { data: mo, error: emo },
       ] = await Promise.all([
         supabase.from('marcas').select('id, nome, emoji').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
-        supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId),
+        supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId).order('ordem', { ascending: true }),
         supabase.from('motivos_desistencia').select('id, nome').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
       ]);
       if (em) console.error('Erro ao buscar marcas:', em);
       if (es) console.error('Erro ao buscar status_comercial:', es);
       if (emo) console.error('Erro ao buscar motivos_desistencia:', emo);
       if (m) setMarcas(m);
-      if (s) setStatusList(s);
+      // ✅ FIX: Sempre sobrescreve com lista completa do banco
+      if (s && s.length > 0) setStatusList(s);
       if (mo) setMotivosList(mo);
     }
     fetchData();

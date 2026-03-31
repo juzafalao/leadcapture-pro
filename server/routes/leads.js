@@ -94,65 +94,58 @@ router.post('/', validateLead, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
-    const { data: marcaInfo } = await supabase
-      .from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single()
+    // ✅ Queries em paralelo — elimina N+1
+    const [{ data: marcaInfo }, { data: diretores }] = await Promise.all([
+      supabase.from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single(),
+      supabase.from('usuarios').select('email').eq('tenant_id', lead.tenant_id).eq('role', 'Diretor').eq('active', true),
+    ])
 
-    const marcaFallback = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
+    const marcaFallback   = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
+    const emailsDiretores = (diretores || []).map(d => d.email).filter(e => e && !e.endsWith('.local'))
 
-    if (marcaInfo) {
-      const { data: diretores } = await supabase
-        .from('usuarios')
-        .select('email')
-        .eq('tenant_id', lead.tenant_id)
-        .eq('role', 'Diretor')
-        .eq('active', true)
+    // Notificações — sempre envia independente da marca
+    notificarNovoLead(lead, marcaFallback).catch(err =>
+      console.warn('[Leads] E-mail notificacao:', err.message)
+    )
 
-      const emailsDiretores = (diretores || []).map(d => d.email).filter(Boolean)
-
-      notificarNovoLead(lead, marcaFallback).catch(err =>
-        console.warn('[Leads] E-mail notificacao:', err.message)
-      )
-
-      if (lead.score >= 65) {
-        notificarLeadQuente(lead, marcaFallback, emailsDiretores).catch(err =>
-          console.warn('[Leads] E-mail lead quente:', err.message)
-        )
-      }
-
-      // WhatsApp: envia boas-vindas e inicia qualificacao por IA
-      if (process.env.EVOLUTION_API_KEY) {
-        enviarBoasVindas(lead, marcaFallback).catch(err =>
-          console.warn('[Leads] WhatsApp boas-vindas:', err.message)
-        )
-      }
-    } else {
-      // Mesmo sem marca, notifica por email
-      notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err =>
-        console.warn('[Leads] E-mail notificacao (sem marca):', err.message)
+    if (lead.score >= 65) {
+      notificarLeadQuente(lead, marcaFallback, emailsDiretores).catch(err =>
+        console.warn('[Leads] E-mail lead quente:', err.message)
       )
     }
 
-      const n8nUrl = process.env.N8N_WEBHOOK_URL
-      if (n8nUrl) {
-        fetch(n8nUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            leadId:    lead.id,
-            nome:      lead.nome,
-            email:     lead.email,
-            telefone:  lead.telefone,
-            score:     lead.score,
-            categoria: lead.categoria,
-            capital:   lead.capital_disponivel,
-            regiao:    lead.regiao_interesse,
-            marca:     marcaFallback.nome,
-            tenant_id: lead.tenant_id,
-            fonte:     lead.fonte,
-            timestamp: new Date().toISOString(),
-          })
-        }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
-      }
+    // WhatsApp: envia boas-vindas e inicia qualificacao por IA
+    if (process.env.EVOLUTION_API_KEY) {
+      enviarBoasVindas(lead, marcaFallback)
+        .then(r => r.simulated
+          ? console.log('[Leads] WhatsApp simulado (sem API key)')
+          : console.log(`[Leads] WhatsApp enviado para ${lead.telefone}`)
+        )
+        .catch(err => console.warn('[Leads] WhatsApp boas-vindas:', err.message))
+    }
+
+    // N8N webhook (opcional)
+    const n8nUrl = process.env.N8N_WEBHOOK_URL
+    if (n8nUrl) {
+      fetch(n8nUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId:    lead.id,
+          nome:      lead.nome,
+          email:     lead.email,
+          telefone:  lead.telefone,
+          score:     lead.score,
+          categoria: lead.categoria,
+          capital:   lead.capital_disponivel,
+          regiao:    lead.regiao_interesse,
+          marca:     marcaFallback.nome,
+          tenant_id: lead.tenant_id,
+          fonte:     lead.fonte,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
+    }
 
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
   } catch (err) {
