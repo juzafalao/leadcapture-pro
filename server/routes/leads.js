@@ -146,14 +146,13 @@ router.post('/', validateLead, async (req, res) => {
             categoria: lead.categoria,
             capital:   lead.capital_disponivel,
             regiao:    lead.regiao_interesse,
-            marca:     marcaInfo.nome,
+            marca:     marcaFallback.nome,
             tenant_id: lead.tenant_id,
             fonte:     lead.fonte,
             timestamp: new Date().toISOString(),
           })
         }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
       }
-    }
 
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
   } catch (err) {
