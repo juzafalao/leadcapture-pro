@@ -38,7 +38,7 @@ import leadsRouter   from './routes/leads.js'
 import marcasRouter  from './routes/marcas.js'
 import sistemaRouter from './routes/sistema.js'
 import chatRouter      from './routes/chat.js'
-import whatsappRouter  from './routes/whatsapp.js'
+// import whatsappRouter  from './routes/whatsapp.js' // temporariamente desativado
 
 // Supabase (usado diretamente aqui apenas para landing page dinâmica)
 import supabase from './core/database.js'
@@ -112,7 +112,7 @@ app.get('/health', statusLimiter, (_req, res) => res.json({
 }))
 app.use('/api/sistema', statusLimiter, sistemaRouter)
 app.use('/api/chat',      chatRouter)
-app.use('/api/whatsapp', whatsappRouter)
+// app.use('/api/whatsapp', whatsappRouter) // temporariamente desativado
 
 // ─── Dashboard (SPA React) ───────────────────────────────────
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
