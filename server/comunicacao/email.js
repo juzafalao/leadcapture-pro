@@ -133,9 +133,14 @@ export async function notificarNovoLead(lead, marca) {
 }
 
 export async function notificarLeadQuente(lead, marca, emailsDiretores = []) {
-  const destinatarios = emailsDiretores.length > 0
-    ? emailsDiretores.join(',')
-    : process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com'
+  const notificationEmail = process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com'
+
+  // Sempre inclui NOTIFICATION_EMAIL + emails reais dos diretores (filtra emails falsos)
+  const emailsReais = emailsDiretores.filter(e =>
+    e && e.includes('@') && !e.endsWith('.local') && !e.includes('demo-') && !e.includes('fake')
+  )
+  const todosDestinatarios = [...new Set([notificationEmail, ...emailsReais])]
+  const destinatarios = todosDestinatarios.join(',')
 
   if (!transporter) {
     console.log('[Email] [SIMULADO] lead quente ->', destinatarios, '| score:', lead.score)

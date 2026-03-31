@@ -186,15 +186,17 @@ export default function KanbanPage() {
     const lead = dragLead.current
     if (!lead) return
 
-    const slugAtual = lead.status_comercial?.slug || lead.status || 'novo'
+    const slugAtual = lead.status_comercial?.slug?.toLowerCase() || lead.status?.toLowerCase() || 'novo'
     if (slugAtual === coluna.slug) return
 
     setMovendo(true)
     try {
+      // UUID válido tem 36 chars com hifens (formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+      const isUUID = typeof coluna.id === 'string' && coluna.id.length === 36 && coluna.id.includes('-')
       await moverLead({
-        leadId: lead.id,
-        novoStatusSlug: coluna.slug,
-        novoStatusId: typeof coluna.id === 'string' && coluna.id.length > 10 ? coluna.id : null,
+        leadId:          lead.id,
+        novoStatusSlug:  coluna.slug,
+        novoStatusId:    isUUID ? coluna.id : null,
       })
     } catch (err) {
       console.error('[Kanban] Erro ao mover lead:', err.message)
