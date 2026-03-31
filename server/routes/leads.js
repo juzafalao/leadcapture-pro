@@ -97,6 +97,8 @@ router.post('/', validateLead, async (req, res) => {
     const { data: marcaInfo } = await supabase
       .from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single()
 
+    const marcaFallback = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
+
     if (marcaInfo) {
       const { data: diretores } = await supabase
         .from('usuarios')
@@ -107,22 +109,28 @@ router.post('/', validateLead, async (req, res) => {
 
       const emailsDiretores = (diretores || []).map(d => d.email).filter(Boolean)
 
-      notificarNovoLead(lead, marcaInfo).catch(err =>
+      notificarNovoLead(lead, marcaFallback).catch(err =>
         console.warn('[Leads] E-mail notificacao:', err.message)
       )
 
       if (lead.score >= 65) {
-        notificarLeadQuente(lead, marcaInfo, emailsDiretores).catch(err =>
+        notificarLeadQuente(lead, marcaFallback, emailsDiretores).catch(err =>
           console.warn('[Leads] E-mail lead quente:', err.message)
         )
       }
 
       // WhatsApp: envia boas-vindas e inicia qualificacao por IA
       if (process.env.EVOLUTION_API_KEY) {
-        enviarBoasVindas(lead, marcaInfo).catch(err =>
+        enviarBoasVindas(lead, marcaFallback).catch(err =>
           console.warn('[Leads] WhatsApp boas-vindas:', err.message)
         )
       }
+    } else {
+      // Mesmo sem marca, notifica por email
+      notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err =>
+        console.warn('[Leads] E-mail notificacao (sem marca):', err.message)
+      )
+    }
 
       const n8nUrl = process.env.N8N_WEBHOOK_URL
       if (n8nUrl) {

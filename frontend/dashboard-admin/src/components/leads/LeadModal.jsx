@@ -103,7 +103,7 @@ export default function LeadModal({ lead, onClose, tenantName }) {
       if (mo) setMotivosList(mo);
     }
     fetchData();
-  }, [lead?.tenant_id, usuario?.tenant_id]);
+  }, [lead?.id, lead?.tenant_id, usuario?.tenant_id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;

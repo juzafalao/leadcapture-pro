@@ -25,7 +25,7 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
 
   return useQuery({
     queryKey: ['leads', tenantId, page, perPage, filters],
-    staleTime: 1000 * 60 * 5,   // 5 min — realtime cobre mudancas em tempo real
+    staleTime: tenantId ? 1000 * 60 * 5 : 1000 * 30,  // admin sem realtime: 30s; tenant normal: 5min
     placeholderData: keepPreviousData,
     queryFn: async () => {
       let query = supabase
