@@ -56,7 +56,7 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
       let query = supabase
         .from('leads')
         .select(`
-          id, nome, score, categoria,
+          id, nome, score, categoria, tenant_id,
           capital_disponivel, regiao_interesse, fonte, created_at, status,
           id_marca, id_status, id_operador_responsavel,
           marca:id_marca (id, nome, emoji),
