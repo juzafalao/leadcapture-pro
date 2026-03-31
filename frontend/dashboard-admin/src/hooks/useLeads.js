@@ -25,12 +25,17 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
 
   return useQuery({
     queryKey: ['leads', tenantId, page, perPage, filters],
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 60 * 5,   // 5 min — realtime cobre mudancas em tempo real
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       let query = supabase
         .from('leads')
         .select(`
-          *,
+          id, nome, email, telefone, cidade, estado,
+          score, categoria, capital_disponivel, regiao_interesse,
+          fonte, status, created_at, updated_at,
+          id_marca, id_status, id_operador_responsavel, id_motivo_desistencia,
+          tenant_id,
           marca:id_marca (id, nome, emoji),
           operador:id_operador_responsavel (id, nome, role),
           status_comercial:id_status (id, label, slug, cor),
@@ -68,7 +73,6 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
     },
     enabled: !!tenantId || tenantId === null,
     placeholderData: keepPreviousData,
-    refetchInterval: 1000 * 60, // fallback: refetch a cada 1 minuto
   })
 }
 
@@ -98,7 +102,7 @@ export function useMetrics(tenantId) {
       }
     },
     enabled: !!tenantId || tenantId === null,
-    refetchInterval: 1000 * 60,
+    refetchInterval: 1000 * 120,
   })
 }
 

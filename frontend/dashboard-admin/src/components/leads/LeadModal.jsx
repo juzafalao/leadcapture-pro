@@ -26,6 +26,29 @@ export default function LeadModal({ lead, onClose, tenantName }) {
   const isNovo = !lead?.id;
   const [abaAtiva, setAbaAtiva] = useState('dados');
 
+  // Sincroniza formData quando lead muda (ex: vindo do Kanban com status atualizado)
+  useEffect(() => {
+    if (!lead) return
+    setFormData({
+      nome:                  lead?.nome || '',
+      email:                 lead?.email || '',
+      telefone:              lead?.telefone || '',
+      cidade:                lead?.cidade || '',
+      estado:                lead?.estado || '',
+      capital_disponivel:    lead?.capital_disponivel || 0,
+      id_status:             lead?.id_status || '',
+      id_motivo_desistencia: lead?.id_motivo_desistencia || '',
+      categoria:             lead?.categoria || 'Cold',
+      score:                 lead?.score || 0,
+      fonte:                 lead?.fonte || '',
+      id_marca:              lead?.id_marca || lead?.marca?.id || '',
+      resumo_qualificacao:   lead?.resumo_qualificacao || '',
+      mensagem_original:     lead?.mensagem_original || '',
+      experiencia_anterior:  lead?.experiencia_anterior || false,
+      urgencia:              lead?.urgencia || 'normal',
+    })
+  }, [lead?.id, lead?.id_status, lead?.status])
+
   const [formData, setFormData] = useState({
     nome:                  lead?.nome || '',
     email:                 lead?.email || '',
