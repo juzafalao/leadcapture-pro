@@ -95,7 +95,7 @@ export default function LeadModal({ lead, onClose, tenantName }) {
         { data: mo, error: emo },
       ] = await Promise.all([
         supabase.from('marcas').select('id, nome, emoji').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
-        supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId).order('ordem', { ascending: true }),
+        supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId),
         supabase.from('motivos_desistencia').select('id, nome').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
       ]);
       if (em) console.error('Erro ao buscar marcas:', em);
