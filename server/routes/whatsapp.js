@@ -1,8 +1,16 @@
-import express from 'express';
-const router = express.Router();
+import { Router } from 'express'
 
-router.get('/status', (req, res) => {
-  res.json({ status: 'desativado', mensagem: 'WhatsApp temporariamente desativado' });
-});
+const whatsappRouter = Router()
 
-export default router;
+// Rota de teste
+whatsappRouter.get('/test', (req, res) => {
+  res.json({ status: 'ok', message: 'WhatsApp router is working' })
+})
+
+// Webhook para receber mensagens
+whatsappRouter.post('/webhook', (req, res) => {
+  console.log('[WhatsApp Webhook]', req.body)
+  res.json({ success: true })
+})
+
+export default whatsappRouter
