@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../AuthContext';
 import { useAlertModal } from '../../hooks/useAlertModal';
 import LeadTimeline from './LeadTimeline';
+import { useMoverLead } from '../../hooks/useKanban';
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor'];
 
@@ -94,7 +95,7 @@ export default function LeadModal({ lead, onClose, tenantName }) {
         { data: mo, error: emo },
       ] = await Promise.all([
         supabase.from('marcas').select('id, nome, emoji').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
-        supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId).order('id', { ascending: true }),
+        supabase.from('status_comercial').select('id, label, slug').eq('tenant_id', tenantId).order('ordem', { ascending: true }),
         supabase.from('motivos_desistencia').select('id, nome').eq('tenant_id', tenantId).eq('ativo', true).order('nome'),
       ]);
       if (em) console.error('Erro ao buscar marcas:', em);
@@ -124,6 +125,8 @@ export default function LeadModal({ lead, onClose, tenantName }) {
       return updated;
     });
   };
+
+  const { mutateAsync: moverLeadOtimista } = useMoverLead();
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -160,17 +163,37 @@ export default function LeadModal({ lead, onClose, tenantName }) {
       const payload = isGestor ? payloadGestor : payloadConsultor;
 
       if (isNovo) {
-        const { error } = await supabase.from('leads').insert([{...payloadGestor, tenant_id: usuario.tenant_id,}]);
+        // Lead novo — sem optimistic (não existe no cache ainda)
+        const { error } = await supabase.from('leads').insert([{ ...payloadGestor, tenant_id: usuario.tenant_id }]);
         if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+        queryClient.invalidateQueries({ queryKey: ['kanban'] });
+        queryClient.invalidateQueries({ queryKey: ['metrics'] });
       } else {
+        // ✅ OPTIMISTIC: se mudou o status, usa useMoverLead (instantâneo no Kanban)
+        const statusMudou = formData.id_status !== lead?.id_status;
+        const novoSlug    = statusList.find(s => s.id === formData.id_status)?.slug || formData.id_status;
+
+        if (statusMudou && formData.id_status) {
+          // Dispara optimistic update no Kanban imediatamente
+          moverLeadOtimista({
+            leadId:         lead.id,
+            novoStatusSlug: novoSlug,
+            novoStatusId:   formData.id_status,
+            tenantId:       lead.tenant_id || usuario?.tenant_id,
+          }).catch(() => {}); // erro já tem rollback interno
+        }
+
+        // Salva todos os outros campos normalmente
         const { error } = await supabase.from('leads')
           .update({ ...payload, updated_at: new Date().toISOString() })
           .eq('id', lead.id);
         if (error) throw error;
+
+        queryClient.invalidateQueries({ queryKey: ['leads'] });
+        queryClient.invalidateQueries({ queryKey: ['metrics'] });
       }
 
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['metrics'] });
       onClose();
     } catch (error) {
       console.error('Erro ao salvar lead:', error);
