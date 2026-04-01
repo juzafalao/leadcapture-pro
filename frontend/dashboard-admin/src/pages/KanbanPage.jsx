@@ -275,6 +275,7 @@ export default function KanbanPage() {
           <LeadModal
             lead={leadSelecionado}
             onClose={() => setLeadSelecionado(null)}
+            statusReadOnly={true}
           />
         )}
       </AnimatePresence>
