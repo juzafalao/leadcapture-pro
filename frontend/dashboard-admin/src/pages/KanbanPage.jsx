@@ -197,6 +197,7 @@ export default function KanbanPage() {
         leadId:          lead.id,
         novoStatusSlug:  coluna.slug,
         novoStatusId:    isUUID ? coluna.id : null,
+        tenantId,        // necessário para optimistic update
       })
     } catch (err) {
       console.error('[Kanban] Erro ao mover lead:', err.message)

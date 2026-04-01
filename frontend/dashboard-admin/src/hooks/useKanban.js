@@ -1,29 +1,46 @@
 // ============================================================
-// useKanban.js — Leads agrupados por coluna + mutacao de mover
-// LeadCapture Pro — Zafalao Tech
+// useKanban.js — Kanban de alta performance
+// LeadCapture Pro — Zafalão Tech
+//
+// ARQUITETURA:
+// ┌─────────────────────────────────────────────────────────┐
+// │  FONTE ÚNICA DE VERDADE: status_comercial.id (UUID)    │
+// │  leads.id_status ──► status_comercial (FK real)        │
+// │  leads.status    ──► sincronizado automaticamente      │
+// └─────────────────────────────────────────────────────────┘
+//
+// FEATURES:
+// ✅ Optimistic Updates — card move imediatamente, rollback em erro
+// ✅ Realtime Supabase  — todos os usuários veem mudanças ao vivo
+// ✅ Cache inteligente  — staleTime + gcTime calibrados
+// ✅ Single source of truth — apenas id_status define a coluna
+// ✅ Batch invalidation — invalida queries relacionadas em paralelo
 // ============================================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useEffect } from 'react'
 
-// Colunas padrao do funil — slugs devem bater com status_comercial do banco
-// (usadas apenas como fallback quando nao ha status_comercial configurado)
+// Colunas fallback — usadas APENAS quando tenant não tem status_comercial no banco
+// Slugs espelham exatamente o que existe na tabela status_comercial
 export const COLUNAS_PADRAO = [
-  { id: 'novo',       label: 'Novo Lead',     slug: 'novo',       cor: '#ee7b4d' },
-  { id: 'contato',    label: 'Em Contato',    slug: 'contato',    cor: '#F59E0B' },
-  { id: 'agendado',   label: 'Agendado',      slug: 'agendado',   cor: '#3B82F6' },
-  { id: 'negociacao', label: 'Em Negociação', slug: 'negociacao', cor: '#8B5CF6' },
-  { id: 'convertido', label: 'Vendido',       slug: 'convertido', cor: '#10B981' },
-  { id: 'perdido',    label: 'Perdido',       slug: 'perdido',    cor: '#EF4444' },
+  { id: 'novo',       label: 'Novo Lead',      slug: 'novo',       cor: '#ee7b4d' },
+  { id: 'contato',    label: 'Em Contato',     slug: 'contato',    cor: '#F59E0B' },
+  { id: 'agendado',   label: 'Agendado',       slug: 'agendado',   cor: '#3B82F6' },
+  { id: 'negociacao', label: 'Em Negociação',  slug: 'negociacao', cor: '#8B5CF6' },
+  { id: 'convertido', label: 'Vendido',        slug: 'convertido', cor: '#10B981' },
+  { id: 'perdido',    label: 'Perdido',        slug: 'perdido',    cor: '#EF4444' },
 ]
 
-// Busca status_comercial configurados no banco
+// ── Status Colunas ────────────────────────────────────────────
+// Busca os status_comercial do tenant e os transforma em colunas
+// Cache longo (10min) — status raramente mudam
 export function useStatusColunas(tenantId) {
   return useQuery({
     queryKey: ['status-colunas', tenantId],
-    staleTime: 1000 * 60 * 10,
+    staleTime:  1000 * 60 * 10, // 10 min
+    gcTime:     1000 * 60 * 30, // 30 min no garbage collector
     queryFn: async () => {
-      // Se não tem tenant (platform admin vendo tudo), usa colunas padrão
       if (!tenantId) return COLUNAS_PADRAO
 
       const { data, error } = await supabase
@@ -33,102 +50,182 @@ export function useStatusColunas(tenantId) {
         .order('ordem', { ascending: true })
 
       if (error || !data?.length) return COLUNAS_PADRAO
+
       return data.map(s => ({
-        id:    s.id,
+        id:    s.id,            // UUID real do banco
         label: s.label,
-        slug:  s.slug?.toLowerCase(),
+        slug:  s.slug?.toLowerCase().trim(),
         cor:   s.cor || '#6366F1',
       }))
     },
-    enabled: true, // sempre executa — tenantId null usa padrão
   })
 }
 
-// Busca leads agrupados por coluna para o Kanban
+// ── Kanban Leads ─────────────────────────────────────────────
+// Busca leads e agrupa por coluna usando SOMENTE id_status como fonte de verdade
+// Realtime Supabase mantém todos os clientes sincronizados
 export function useKanbanLeads({ tenantId, colunas = [] }) {
   const qc = useQueryClient()
 
-  // Realtime — invalida ao receber novo lead
+  // ✅ REALTIME — Supabase broadcast qualquer mudança em leads
+  useEffect(() => {
+    if (!colunas.length) return
+
+    const channel = supabase
+      .channel(`kanban-leads-${tenantId ?? 'all'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads',
+          ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {}),
+        },
+        () => {
+          // Invalida cache — React Query refaz a query automaticamente
+          qc.invalidateQueries({ queryKey: ['kanban', tenantId] })
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [tenantId, colunas.length, qc])
+
   return useQuery({
     queryKey: ['kanban', tenantId],
-    staleTime: 1000 * 60 * 2,   // 2 min de cache — evita refetch desnecessario
-    refetchInterval: 1000 * 90, // refetch a cada 90s apenas
+    staleTime: 1000 * 60 * 5, // 5 min — realtime cobre atualizações
+    gcTime:    1000 * 60 * 10,
+    enabled:   colunas.length > 0,
     queryFn: async () => {
       let query = supabase
         .from('leads')
         .select(`
           id, nome, score, categoria, tenant_id,
-          capital_disponivel, regiao_interesse, fonte, created_at, status,
-          id_marca, id_status, id_operador_responsavel,
+          capital_disponivel, regiao_interesse, fonte, created_at,
+          id_marca, id_status,
           marca:id_marca (id, nome, emoji),
           status_comercial:id_status (id, label, slug, cor),
           operador:id_operador_responsavel (id, nome)
         `)
         .is('deleted_at', null)
         .order('score', { ascending: false })
-        .limit(100)                             // limite para performance
+        .limit(200)
 
-      // Filtra por tenant apenas se não for platform admin
-      if (tenantId) {
-        query = query.eq('tenant_id', tenantId)
-      }
+      if (tenantId) query = query.eq('tenant_id', tenantId)
 
       const { data, error } = await query
-
       if (error) throw error
+
       const leads = data ?? []
 
-      // Agrupa por coluna — prioriza status_comercial.slug, depois lead.status, depois 'novo'
-      const mapa = {}
-      colunas.forEach(col => { mapa[col.slug] = [] })
+      // ── Agrupamento por coluna ────────────────────────────
+      // Lookup O(1) via Map — mais rápido que find() em array
+      const slugParaColuna = new Map(colunas.map(c => [c.slug, c.slug]))
+      const idParaSlug     = new Map(colunas.map(c => [c.id, c.slug]))
+      const primeiraColuna = colunas[0]?.slug ?? 'novo'
 
-      // Conjunto de slugs válidos para lookup rápido
-      const slugsValidos = new Set(colunas.map(c => c.slug))
+      // Inicializa mapa com arrays vazios
+      const mapa = Object.fromEntries(colunas.map(c => [c.slug, []]))
 
-      leads.forEach(lead => {
-        // 1. Tenta o slug do status_comercial (join)
-        const slugStatus = lead.status_comercial?.slug?.toLowerCase()
-        // 2. Fallback para lead.status
-        const slugLead = lead.status?.toLowerCase()
+      for (const lead of leads) {
+        // ✅ FONTE ÚNICA: id_status tem prioridade absoluta
+        let slugFinal = primeiraColuna
 
-        let coluna = 'novo'
-        if (slugStatus && slugsValidos.has(slugStatus)) {
-          coluna = slugStatus
-        } else if (slugLead && slugsValidos.has(slugLead)) {
-          coluna = slugLead
+        if (lead.id_status) {
+          // 1. Tenta resolver pelo UUID do id_status — mais confiável
+          const slugPorId = idParaSlug.get(lead.id_status)
+          if (slugPorId) {
+            slugFinal = slugPorId
+          } else {
+            // 2. Fallback: slug do join status_comercial
+            const slugJoin = lead.status_comercial?.slug?.toLowerCase().trim()
+            if (slugJoin && slugParaColuna.has(slugJoin)) {
+              slugFinal = slugJoin
+            }
+          }
         }
-        // Se nenhum bate com as colunas, vai para 'novo'
-        if (!mapa[coluna]) coluna = colunas[0]?.slug || 'novo'
-        mapa[coluna].push(lead)
-      })
+
+        // Garante que a coluna existe no mapa (segurança)
+        if (!(slugFinal in mapa)) slugFinal = primeiraColuna
+        mapa[slugFinal].push(lead)
+      }
 
       return mapa
     },
-    enabled: colunas.length > 0,
   })
 }
 
-// Mutacao: mover lead para outra coluna
+// ── Mover Lead ───────────────────────────────────────────────
+// Optimistic update: card move IMEDIATAMENTE na UI
+// Se falhar, rollback automático com estado anterior
 export function useMoverLead() {
   const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ leadId, novoStatusSlug, novoStatusId }) => {
-      const update = novoStatusId
-        ? { id_status: novoStatusId, status: novoStatusSlug }
-        : { status: novoStatusSlug, id_status: null }
 
+  return useMutation({
+    mutationFn: async ({ leadId, novoStatusSlug, novoStatusId, tenantId }) => {
+      // Sempre atualiza os DOIS campos para manter consistência total
       const { data, error } = await supabase
         .from('leads')
-        .update({ ...update, updated_at: new Date().toISOString() })
+        .update({
+          id_status:  novoStatusId  || null,
+          status:     novoStatusSlug,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', leadId)
-        .select()
+        .select('id, id_status, status')
         .single()
 
       if (error) throw error
       return data
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['kanban'] })
+
+    // ✅ OPTIMISTIC UPDATE — move card antes da resposta do servidor
+    onMutate: async ({ leadId, novoStatusSlug, novoStatusId, tenantId }) => {
+      const queryKey = ['kanban', tenantId]
+
+      // Cancela qualquer refetch em andamento para evitar conflito
+      await qc.cancelQueries({ queryKey })
+
+      // Snapshot do estado atual (para rollback)
+      const snapshot = qc.getQueryData(queryKey)
+
+      // Atualiza cache otimisticamente
+      qc.setQueryData(queryKey, (mapaAtual) => {
+        if (!mapaAtual) return mapaAtual
+
+        const novoMapa = {}
+        for (const [slug, leads] of Object.entries(mapaAtual)) {
+          novoMapa[slug] = leads.filter(l => l.id !== leadId)
+        }
+
+        // Encontra o lead no snapshot e o move para a nova coluna
+        const leadMovido = Object.values(mapaAtual)
+          .flat()
+          .find(l => l.id === leadId)
+
+        if (leadMovido && novoMapa[novoStatusSlug] !== undefined) {
+          novoMapa[novoStatusSlug] = [
+            { ...leadMovido, id_status: novoStatusId, status: novoStatusSlug },
+            ...novoMapa[novoStatusSlug],
+          ]
+        }
+
+        return novoMapa
+      })
+
+      return { snapshot, queryKey }
+    },
+
+    // ✅ ROLLBACK em caso de erro
+    onError: (_err, _vars, context) => {
+      if (context?.snapshot) {
+        qc.setQueryData(context.queryKey, context.snapshot)
+      }
+    },
+
+    // ✅ Invalida queries relacionadas após sucesso
+    onSettled: (_data, _err, { tenantId }) => {
+      qc.invalidateQueries({ queryKey: ['kanban', tenantId] })
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['metrics'] })
     },
