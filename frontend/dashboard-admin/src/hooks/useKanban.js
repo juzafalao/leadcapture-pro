@@ -6,14 +6,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-// Colunas padrao do funil (usadas quando nao ha status_comercial configurado)
+// Colunas padrao do funil — slugs devem bater com status_comercial do banco
+// (usadas apenas como fallback quando nao ha status_comercial configurado)
 export const COLUNAS_PADRAO = [
-  { id: 'novo',        label: 'Novo',        slug: 'novo',        cor: '#6366F1' },
-  { id: 'contato',     label: 'Em Contato',  slug: 'contato',     cor: '#F59E0B' },
-  { id: 'qualificado', label: 'Qualificado', slug: 'qualificado', cor: '#3B82F6' },
-  { id: 'proposta',    label: 'Proposta',    slug: 'proposta',    cor: '#8B5CF6' },
-  { id: 'convertido',  label: 'Convertido',  slug: 'convertido',  cor: '#10B981' },
-  { id: 'perdido',     label: 'Perdido',     slug: 'perdido',     cor: '#EF4444' },
+  { id: 'novo',       label: 'Novo Lead',     slug: 'novo',       cor: '#ee7b4d' },
+  { id: 'contato',    label: 'Em Contato',    slug: 'contato',    cor: '#F59E0B' },
+  { id: 'agendado',   label: 'Agendado',      slug: 'agendado',   cor: '#3B82F6' },
+  { id: 'negociacao', label: 'Em Negociação', slug: 'negociacao', cor: '#8B5CF6' },
+  { id: 'convertido', label: 'Vendido',       slug: 'convertido', cor: '#10B981' },
+  { id: 'perdido',    label: 'Perdido',       slug: 'perdido',    cor: '#EF4444' },
 ]
 
 // Busca status_comercial configurados no banco
