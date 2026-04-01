@@ -38,7 +38,7 @@ import leadsRouter   from './routes/leads.js'
 import marcasRouter  from './routes/marcas.js'
 import sistemaRouter from './routes/sistema.js'
 import chatRouter      from './routes/chat.js'
-// import whatsappRouter  from './routes/whatsapp.js' // temporariamente desativado
+import whatsappRouter  from './routes/whatsapp.js'
 
 // Supabase (usado diretamente aqui apenas para landing page dinâmica)
 import supabase from './core/database.js'
