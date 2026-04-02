@@ -5,7 +5,7 @@ import { useAuth } from '../components/AuthContext';
 import UserCard from '../components/dashboard/UserCard';
 import FAB from '../components/dashboard/FAB';
 import UserModal from '../components/usuarios/UserModal';
-import { exportUsuariosToExcel, exportUsuariosToPDF } from '../utils/exportUtils.js';
+import { exportUsuariosToExcel, exportUsuariosToPDF } from '../utils/exportUtilsLegacy.js';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 
 const PAGE_SIZE = 20;
