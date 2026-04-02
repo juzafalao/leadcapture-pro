@@ -31,10 +31,16 @@ export default function LandingPage() {
 
   useEffect(() => {
     async function fetchMarca() {
+      // Sempre usa a origem atual da página — funciona em qualquer ambiente
+      const url = `${window.location.origin}/api/marcas/slug/${slug}`
       try {
-        const res = await fetch(`${API_URL}/api/marcas/slug/${slug}`)
+        const res = await fetch(url)
+        if (!res.ok) {
+          setError('Marca não encontrada')
+          return
+        }
         const data = await res.json()
-        if (data.success) {
+        if (data.success && data.marca) {
           setMarca(data.marca)
           if (data.marca?.google_ads_conversion_id) {
             const s = document.createElement('script')
@@ -51,9 +57,15 @@ export default function LandingPage() {
             window.fbq('init', data.marca.meta_pixel_id)
             window.fbq('track', 'PageView')
           }
-        } else { setError('Marca não encontrada') }
-      } catch { setError('Erro ao carregar') }
-      finally { setLoading(false) }
+        } else {
+          setError('Marca não encontrada')
+        }
+      } catch (err) {
+        console.error('[Landing] Erro ao carregar marca:', err)
+        setError('Erro ao carregar. Verifique sua conexão.')
+      } finally {
+        setLoading(false)
+      }
     }
     fetchMarca()
   }, [slug])
@@ -62,7 +74,7 @@ export default function LandingPage() {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const res = await fetch(`${API_URL}/api/leads`, {
+      const res = await fetch(`${window.location.origin}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
