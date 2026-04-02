@@ -13,11 +13,11 @@
 
 import * as Sentry from '@sentry/react'
 
-const DSN = import.meta.env.VITE_SENTRY_DSN
+const DSN = import.meta.env.VITE_SENTRY_DSN || 'https://3e7a25624d64314bab4480792ff264b7@o4511151526772736.ingest.us.sentry.io/4511151533457408'
 
 export function initSentry() {
-  // Só inicializa em produção e se a DSN estiver configurada
-  if (!DSN || import.meta.env.DEV) return
+  // Só inicializa se a DSN estiver configurada
+  if (!DSN) return
 
   Sentry.init({
     dsn: DSN,
