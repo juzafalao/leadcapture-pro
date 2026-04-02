@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '')
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== 'undefined' ? window.location.origin : 'https://leadcapture-proprod.vercel.app')
+).replace(/\/$/, '')
 
 function Bubble({ style }) {
   return <div className="bubble" style={style} />
