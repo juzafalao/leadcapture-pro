@@ -194,22 +194,22 @@ function AppRoutes() {
 
         {/* Novas features P3 */}
         <Route path="/crm" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR}>
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CRMPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
         <Route path="/email-marketing" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR}>
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><EmailMarketingPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
         <Route path="/canais" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR}>
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CanaisPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
         <Route path="/api-publica" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR}>
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><APIPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
