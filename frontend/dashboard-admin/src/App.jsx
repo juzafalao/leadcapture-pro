@@ -1,214 +1,261 @@
 // ============================================================
-// LeadCapture Pro — Servidor Principal
-// Zafalão Tech · 2026
+// App.jsx — Tenant-Aware + Role-Level Based Routes
+// LeadCapture Pro — Zafalão Tech
 //
-// MUDANÇAS v1.9.0 (Fase A — Hardening):
-// 1. ✅ Rate limiting: global + webhook + status
-// 2. ✅ CORS restritivo (lista de domínios permitidos)
-// 3. ✅ Validação Zod no POST /api/leads (via middleware)
-// 4. ✅ Headers de segurança (X-Content-Type-Options, etc.)
-// 5. ✅ Request logging básico
-//
-// Arquitetura de módulos:
-//   core/         → banco de dados, scoring, validação
-//   comunicacao/  → email e WhatsApp
-//   routes/       → roteadores Express por domínio
-//   middleware/   → rate limiting, validação Zod
-//   captacao/     → landing page institucional do produto
+// MUDANÇAS v3:
+// 1. PrivateRoute aceita minLevel (número) OU allowedRoles (texto, retrocompatível)
+// 2. PrivateRoute aceita platformOnly para rotas de Platform Admin
+// 3. Constantes ROLES_* substituídas por LEVEL_* numéricos
+// 4. leads-sistema usa platformOnly ao invés de ROLES_ADMIN
+// 5. ✅ NOVO: Rota /audit-log (Diretor+ / nível >= 4)
 // ============================================================
 
-import express from 'express'
-import cors    from 'cors'
-import dotenv  from 'dotenv'
-import path    from 'path'
-import fs      from 'fs'
-import { fileURLToPath } from 'url'
-import { join, dirname } from 'path'
+import React, { useState, lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import Sidebar from './components/Sidebar';
+import Header from './components/layout/Header';
+import ErrorBoundary from './components/ErrorBoundary';
+import ChatBot from './components/ChatBot';
 
-dotenv.config()
+const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
+const MarcasPage       = lazy(() => import('./pages/MarcasPage'));
+const SegmentosPage    = lazy(() => import('./pages/SegmentosPage'));
+const UsuariosPage     = lazy(() => import('./pages/UsuariosPage'));
+const SettingsPage     = lazy(() => import('./pages/SettingsPage'));
+const LeadsSistemaPage = lazy(() => import('./pages/LeadsSistemaPage'));
+const LoginPage        = lazy(() => import('./pages/LoginPage'));
+const LandingPage      = lazy(() => import('./pages/LandingPage'));
+const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
+const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
+const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
+const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
+const KanbanPage       = lazy(() => import('./pages/KanbanPage'));
+const CRMPage          = lazy(() => import('./pages/CRMPage'));
+const EmailMarketingPage = lazy(() => import('./pages/EmailMarketingPage'));
+const CanaisPage       = lazy(() => import('./pages/CanaisPage'));
+const APIPage          = lazy(() => import('./pages/APIPage'));
+import { AuthProvider, useAuth } from './components/AuthContext.jsx';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Middlewares de segurança
-import { globalLimiter, webhookLimiter, statusLimiter } from './middleware/rateLimiter.js'
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 0,                        // sem retry — falhou, mostra erro imediatamente
+      refetchOnWindowFocus: false,     // não refetch ao focar janela
+      refetchOnReconnect: 'always',    // refetch quando voltar online
+      staleTime: 1000 * 60 * 5,       // dados válidos por 5min (era 3min)
+      gcTime:    1000 * 60 * 30,      // cache mantido 30min na memória (era 15min)
+      networkMode: 'offlineFirst',     // usa cache mesmo offline
+    },
+    mutations: {
+      retry: 0,                        // mutações não fazem retry
+      networkMode: 'always',
+    },
+  },
+});
 
-// Serviços
-import { inicializarEmail } from './comunicacao/email.js'
+const PageFallback = () => (
+  <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
+    <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+  </div>
+);
 
-// Roteadores
-import leadsRouter   from './routes/leads.js'
-import marcasRouter  from './routes/marcas.js'
-import sistemaRouter from './routes/sistema.js'
-import chatRouter      from './routes/chat.js'
-import whatsappRouter  from './routes/whatsapp.js'
+// ── Níveis de acesso (da tabela roles) ──────────────────────
+// 5 = Administrador (super admin)
+// 4 = Diretor
+// 3 = Gestor
+// 2 = Consultor
+// 1 = Cliente
+const LEVEL_CONSULTOR = 2;
+const LEVEL_GESTOR    = 3;
+const LEVEL_DIRETOR   = 4;
 
-// Supabase (usado diretamente aqui apenas para landing page dinâmica)
-import supabase from './core/database.js'
+// Retrocompatibilidade: manter arrays de texto para migração gradual
+const ROLES_CONSULTOR = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
+const ROLES_GESTOR    = ['Administrador', 'admin', 'Diretor', 'Gestor'];
+const ROLES_DIRETOR   = ['Administrador', 'admin', 'Diretor'];
+const ROLES_ADMIN     = ['Administrador', 'admin'];
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname  = dirname(__filename)
+/**
+ * PrivateRoute — Controle de acesso por nível ou role
+ */
+function PrivateRoute({ children, minLevel, allowedRoles, platformOnly }) {
+  const { usuario, loading, isAuthenticated, isPlatformAdmin, hasMinLevel } = useAuth();
 
-// ─── Inicialização ───────────────────────────────────────────
-const app = express()
-app.set('trust proxy', 1) // Vercel/proxy reverso
-inicializarEmail()
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
-// ─── CORS Restritivo ─────────────────────────────────────────
-const allowedOrigins = [
-  'https://leadcapture-pro.vercel.app',
-  'https://www.leadcapture-pro.vercel.app',
-  'https://leadcapture-proprod.vercel.app',
-  ...(process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || []),
-]
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-// Em desenvolvimento, permitir localhost
-if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://localhost:5173')
-  allowedOrigins.push('http://localhost:4000')
-  allowedOrigins.push('http://localhost:3000')
+  if (platformOnly && !isPlatformAdmin()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (minLevel && !hasMinLevel(minLevel)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(usuario?.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
 }
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Permitir requests sem origin (curl, Postman, webhooks server-to-server)
-    if (!origin) return callback(null, true)
-    if (allowedOrigins.includes(origin)) return callback(null, true)
-    callback(new Error(`Origem não permitida pelo CORS: ${origin}`))
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  credentials: true,
-}))
+function AnimatedPage({ children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.15 }}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
-// ─── Middlewares Globais ─────────────────────────────────────
-app.use(express.json({ limit: '1mb' }))
-app.use(express.urlencoded({ extended: true, limit: '1mb' }))
-app.use(express.static(path.join(__dirname, 'public')))
+function AppRoutes() {
+  const location = useLocation();
+  return (
+    <AnimatePresence mode="sync">
+      <Routes location={location} key={location.pathname}>
+        {/* Rotas públicas */}
+        <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
+        <Route path="/landing/:slug" element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
+        <Route path="/lp/:slug"      element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
-// ─── Headers de Segurança ────────────────────────────────────
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('X-XSS-Protection', '1; mode=block')
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  next()
-})
+        {/* Rotas autenticadas — qualquer usuário */}
+        <Route path="/dashboard" element={
+          <PrivateRoute>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-// ─── Rate Limiting Global ────────────────────────────────────
-app.use(globalLimiter)
+        {/* Consultor+ (nível >= 2) */}
+        <Route path="/relatorios" element={
+          <PrivateRoute minLevel={LEVEL_CONSULTOR} allowedRoles={ROLES_CONSULTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-// ─── Request Logging ─────────────────────────────────────────
-app.use((req, _res, next) => {
-  if (req.path !== '/health') {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
-  }
-  next()
-})
+        {/* Gestor+ (nível >= 3) */}
+        <Route path="/marcas" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MarcasPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/segmentos" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SegmentosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/usuarios" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-// ─── Roteadores ──────────────────────────────────────────────
-app.use('/api/leads',   webhookLimiter, leadsRouter)
-app.use('/api/marcas',  marcasRouter)
-app.get('/health', statusLimiter, (_req, res) => res.json({
-  status: 'ok',
-  service: 'LeadCapture Pro',
-  version: '1.9.0',
-  timestamp: new Date().toISOString(),
-}))
-app.use('/api/sistema', statusLimiter, sistemaRouter)
-app.use('/api/chat',      chatRouter)
-app.use('/api/whatsapp', whatsappRouter)
+        {/* Diretor+ (nível >= 4) */}
+        <Route path="/analytics" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/automacao" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/configuracoes" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-// ─── Dashboard (SPA React) ───────────────────────────────────
-app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
-app.get('/dashboard/*', (_req, res) => {
-  res.sendFile(join(__dirname, '../dashboard-build/index.html'))
-})
+        {/* ✅ NOVO: Audit Log (Diretor+ / nível >= 4) */}
+        <Route path="/audit-log" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-// ─── LeadCapture Pro — Nova Landing Page SaaS ────────────────
-app.use('/landing', express.static(join(__dirname, '../landing')))
+        <Route path="/kanban" element={
+          <PrivateRoute minLevel={LEVEL_CONSULTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><KanbanPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-// ─── Landing Pages Dinâmicas (tenant/marca) ──────────────────
-// Rota: /landing/:slug → renderiza landing page customizada por marca
-app.get('/landing/:slug', async (req, res) => {
-  try {
-    const { slug } = req.params
+        {/* Novas features P3 */}
+        <Route path="/crm" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CRMPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/email-marketing" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><EmailMarketingPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/canais" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CanaisPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/api-publica" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><APIPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-    const { data: marca, error } = await supabase
-      .from('marcas')
-      .select('*')
-      .eq('slug', slug)
-      .single()
+        {/* Platform Admin Only */}
+        <Route path="/leads-sistema" element={
+          <PrivateRoute platformOnly>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
 
-    if (error || !marca) {
-      return res.status(404).send(_pagina404(slug))
-    }
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </AnimatePresence>
+  );
+}
 
-    const templatePath = path.join(__dirname, 'templates', 'landing.html')
-    let html = fs.readFileSync(templatePath, 'utf-8')
+function AuthenticatedLayout({ children }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  return (
+    <div className="flex bg-[#0F172A] min-h-screen font-sans text-[#F8FAFC]">
+      <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
+      <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
+        <Header onMenuClick={() => setMobileMenuOpen(true)} />
+        <div className="flex-1">{children}</div>
+        <footer className="border-t border-[#1F2937] py-4 text-center bg-[#0F172A]">
+          <p className="text-[9px] text-[#CBD5E1]/30 font-bold uppercase tracking-[0.2em]">
+            Desenvolvido por — <span className="text-[#10B981]">Zafalão Tech</span>
+          </p>
+        </footer>
+      </main>
+      <ChatBot />
+    </div>
+  );
+}
 
-    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
-
-    const logoBlock = marca.logo_url
-      ? `<img src="${escapeHtml(marca.logo_url)}" alt="${escapeHtml(marca.nome)}" class="lp-logo" />`
-      : `<span class="lp-emoji">${escapeHtml(marca.emoji || '🏢')}</span>`
-
-    html = html
-      .replace(/{{MARCA_LOGO_BLOCK}}/g, logoBlock)
-      .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || '🏢'))
-      .replace(/{{MARCA_NOME}}/g,     escapeHtml(marca.nome))
-      .replace(/{{MARCA_ID}}/g,       escapeHtml(marca.id))
-      .replace(/{{TENANT_ID}}/g,      escapeHtml(marca.tenant_id))
-      .replace(/{{INVEST_MIN}}/g,     (marca.invest_min || 0).toLocaleString('pt-BR'))
-      .replace(/{{INVEST_MAX}}/g,     (marca.invest_max || 0).toLocaleString('pt-BR'))
-      .replace(/{{COR_PRIMARIA}}/g,   escapeHtml(marca.cor_primaria || '#ee7b4d'))
-      .replace(/{{COR_SECUNDARIA}}/g, escapeHtml(marca.cor_secundaria || '#f59e42'))
-
-    res.send(html)
-  } catch (err) {
-    console.error('[Landing] Erro:', err.message)
-    res.status(500).send('Erro ao carregar landing page')
-  }
-})
-
-// ─── Fallback 404 ────────────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ success: false, error: 'Rota não encontrada' })
-})
-
-// ─── Error Handler Global ────────────────────────────────────
-app.use((err, _req, res, _next) => {
-  // CORS error
-  if (err.message?.includes('CORS')) {
-    return res.status(403).json({ success: false, error: 'Origem não permitida' })
-  }
-  console.error('[App] Erro não tratado:', err)
-  res.status(500).json({ success: false, error: 'Erro interno do servidor' })
-})
-
-export default app
-
-// ─── Helpers ─────────────────────────────────────────────────
-function _pagina404(slug) {
-  return `<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Página não encontrada · LeadCapture Pro</title>
-  <style>
-    body { display:flex; align-items:center; justify-content:center; min-height:100vh;
-           font-family:sans-serif; background:#0a0a0b; color:#f4f4f5; margin:0; }
-    .box { text-align:center; }
-    h1 { font-size:5rem; margin:0 0 8px; }
-    h2 { font-weight:300; color:#a1a1aa; }
-    p  { color:#52525b; margin-top:8px; }
-    a  { color:#ee7b4d; }
-  </style>
-</head>
-<body>
-  <div class="box">
-    <h1>🔍</h1>
-    <h2>Landing page não encontrada</h2>
-    <p>A página solicitada não existe no sistema.</p>
-    <p><a href="/landing">Conheça o LeadCapture Pro →</a></p>
-  </div>
-</body>
-</html>`
+export default function App() {
+  return (
+    <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </QueryClientProvider>
+    </ErrorBoundary>
+  );
 }
