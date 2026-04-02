@@ -109,6 +109,35 @@ const IconLogoff = () => (
   </svg>
 );
 
+const IconEmail = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="2" y="4" width="20" height="16" rx="2"/>
+    <path d="M22 7l-10 7L2 7"/>
+  </svg>
+);
+
+const IconCanais = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+  </svg>
+);
+
+const IconCRM = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const IconAPI = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <polyline points="16 18 22 12 16 6"/>
+    <polyline points="8 6 2 12 8 18"/>
+  </svg>
+);
+
 // ─── Definição da navegação por grupos ────────────────────────
 const NAV_GROUPS = [
   {
@@ -128,10 +157,13 @@ const NAV_GROUPS = [
   {
     label: 'Operacao',
     items: [
-      { path: '/automacao',    icon: <IconAutomacao />,    label: 'Automacao', show: (a) => a.isDiretor() },
-      { path: '/marcas',       icon: <IconMarcas />,       label: 'Marcas',    show: (a) => a.isGestor() },
-      { path: '/segmentos',    icon: <IconSegmentos />,    label: 'Segmentos', show: (a) => a.isGestor() },
-      { path: '/usuarios',     icon: <IconTeam />,         label: 'Time',      show: (a) => a.isGestor() },
+      { path: '/automacao',      icon: <IconAutomacao />,    label: 'Automacao',      show: (a) => a.isDiretor() },
+      { path: '/email-marketing',icon: <IconEmail />,        label: 'Email Mktg',     show: (a) => a.isGestor(), badge: 'Novo' },
+      { path: '/canais',         icon: <IconCanais />,       label: 'Canais',         show: (a) => a.isGestor(), badge: 'Novo' },
+      { path: '/crm',            icon: <IconCRM />,          label: 'CRM',            show: (a) => a.isGestor(), badge: 'Em breve' },
+      { path: '/marcas',         icon: <IconMarcas />,       label: 'Marcas',         show: (a) => a.isGestor() },
+      { path: '/segmentos',      icon: <IconSegmentos />,    label: 'Segmentos',      show: (a) => a.isGestor() },
+      { path: '/usuarios',       icon: <IconTeam />,         label: 'Time',           show: (a) => a.isGestor() },
     ],
   },
   {
@@ -139,6 +171,7 @@ const NAV_GROUPS = [
     items: [
       { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isPlatformAdmin() },
       { path: '/audit-log',     icon: <IconAuditLog />,     label: 'Audit Log',     show: (a) => a.isDiretor() },
+      { path: '/api-publica',   icon: <IconAPI />,          label: 'API Docs',      show: (a) => a.isDiretor(), badge: 'Novo' },
     ],
   },
   {
@@ -229,6 +262,15 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
                     <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
                       {item.label}
                     </span>
+                    {item.badge && (
+                      <span className={`text-[5px] font-black uppercase px-1 py-0.5 rounded-full leading-none ${
+                        item.badge === 'Em breve'
+                          ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
+                          : 'bg-[#10B981]/20 text-[#10B981]'
+                      }`}>
+                        {item.badge === 'Em breve' ? '🚧' : '✦'}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>

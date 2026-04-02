@@ -31,7 +31,10 @@ const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
 const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
 const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
 const KanbanPage       = lazy(() => import('./pages/KanbanPage'));
-
+const CRMPage          = lazy(() => import('./pages/CRMPage'));
+const EmailMarketingPage = lazy(() => import('./pages/EmailMarketingPage'));
+const CanaisPage       = lazy(() => import('./pages/CanaisPage'));
+const APIPage          = lazy(() => import('./pages/APIPage'));
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -186,6 +189,28 @@ function AppRoutes() {
         <Route path="/kanban" element={
           <PrivateRoute minLevel={LEVEL_CONSULTOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><KanbanPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Novas features P3 */}
+        <Route path="/crm" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CRMPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/email-marketing" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><EmailMarketingPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/canais" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CanaisPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+        <Route path="/api-publica" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><APIPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
 
