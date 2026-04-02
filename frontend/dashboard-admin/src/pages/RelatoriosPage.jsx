@@ -8,6 +8,11 @@ import {
   XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, Legend, CartesianGrid
 } from 'recharts'
 import LoadingSpinner from '../components/shared/LoadingSpinner'
+import {
+  exportLeadsCSV, exportFunilCSV, exportConsultorCSV, exportMarcaCSV,
+  exportTemporalCSV, exportFonteCSV, exportPerdaCSV, exportRegiaoCSV,
+  exportScoreCSV, exportRelatorioCompleto,
+} from '../utils/exportUtils'
 
 const COLORS = ['#10B981','#3b82f6','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
 const fmtK   = v => v >= 1000000 ? `R$ ${(v/1000000).toFixed(1)}mi` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : `R$ ${Math.round(v)}`
@@ -91,27 +96,11 @@ function RankingTable({ dados, colunas }) {
   )
 }
 
-function exportCSV(dados, nome, showAlertFn) {
-  if (!dados?.length) {
-    if (showAlertFn) showAlertFn({ type: 'warning', title: 'Atenção', message: 'Sem dados para exportar.' })
-    return
-  }
-  const keys = Object.keys(dados[0])
-  const rows = dados.map(r => keys.map(k => {
-    const v = r[k]
-    return typeof v === 'object' ? JSON.stringify(v) : String(v ?? '')
-  }))
-  const csv = '\uFEFF' + [keys.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n')
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8;'}))
-  a.download = `${nome}_${new Date().toISOString().split('T')[0]}.csv`
-  a.click()
-}
-
+// exportCSV e exportPDF são agora tratados pelo handleExportCSV abaixo
 function exportPDF() { window.print() }
 
 // ── HEADER COMPARTILHADO ──
-function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isLoading, d, onVoltar, onExportCSV }) {
+function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isLoading, d, onVoltar, onExportCSV, onExportCompleto }) {
   return (
     <>
       {/* TÍTULO */}
@@ -130,16 +119,32 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
         {tipoAtivo && (
           <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} className="flex items-center gap-2 flex-wrap">
             <button onClick={onExportCSV}
-              className="flex items-center gap-2 bg-[#0F172A] border border-white/10 hover:border-green-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-green-400 transition-all">
-              📊 CSV
+              className="flex items-center gap-2 bg-[#0F172A] border border-white/10 hover:border-green-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-green-400 transition-all"
+              title="Exportar este relatório em CSV">
+              📊 Exportar CSV
+            </button>
+            <button onClick={onExportCompleto}
+              className="flex items-center gap-2 bg-[#0F172A] border border-white/10 hover:border-blue-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-blue-400 transition-all"
+              title="Exportar relatório completo com todos os dados">
+              📦 Relatório Completo
             </button>
             <button onClick={exportPDF}
               className="flex items-center gap-2 bg-[#0F172A] border border-white/10 hover:border-red-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-red-400 transition-all">
-              📄 PDF
+              🖨️ Imprimir/PDF
             </button>
             <button onClick={onVoltar}
               className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] px-5 py-2.5 rounded-xl text-xs font-black text-black transition-all shadow-lg shadow-[#10B981]/20">
               ← Voltar
+            </button>
+          </motion.div>
+        )}
+        {/* Botão relatório completo na tela inicial */}
+        {!tipoAtivo && d?.total > 0 && (
+          <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}>
+            <button onClick={onExportCompleto}
+              className="flex items-center gap-2 bg-[#0F172A] border border-white/10 hover:border-green-500/40 px-4 py-2.5 rounded-xl text-xs font-black text-gray-400 hover:text-green-400 transition-all"
+              title="Baixar relatório completo em CSV">
+              📦 Exportar Tudo em CSV
             </button>
           </motion.div>
         )}
@@ -204,7 +209,28 @@ export default function RelatoriosPage() {
   const tipoInfo = TIPOS.find(t => t.id === tipoAtivo)
 
   const handleVoltar = () => setTipoAtivo(null)
-  const handleExportCSV = () => exportCSV(d.leads||[], tipoInfo?.label||'relatorio', showAlert)
+  const handleExportCSV = () => {
+    const mapExport = {
+      funil:     () => exportFunilCSV(d.funil),
+      consultor: () => exportConsultorCSV(d.porConsultor),
+      marca:     () => exportMarcaCSV(d.porMarca),
+      temporal:  () => exportTemporalCSV(d.temporal),
+      fonte:     () => exportFonteCSV(d.porFonte),
+      perda:     () => exportPerdaCSV(d.motivosPerda),
+      regiao:    () => exportRegiaoCSV(d.porRegiao),
+      score:     () => exportScoreCSV(d.scoreDist),
+      conversao: () => exportLeadsCSV(d.leads, 'leads_conversao'),
+      capital:   () => exportLeadsCSV(d.leads, 'leads_capital'),
+    }
+    const fn = tipoAtivo ? mapExport[tipoAtivo] : () => exportRelatorioCompleto(d, filtros.periodo)
+    const ok = fn ? fn() : exportRelatorioCompleto(d, filtros.periodo)
+    if (!ok) showAlert({ type: 'warning', title: 'Sem dados', message: 'Nenhum dado disponível para exportar.' })
+  }
+
+  const handleExportCompleto = () => {
+    const ok = exportRelatorioCompleto(d, filtros.periodo)
+    if (!ok) showAlert({ type: 'warning', title: 'Sem dados', message: 'Nenhum dado disponível para exportar.' })
+  }
 
   // ════════════════════════════════════════════
   // RENDER DE CADA RELATÓRIO
@@ -645,6 +671,7 @@ export default function RelatoriosPage() {
         d={d}
         onVoltar={handleVoltar}
         onExportCSV={handleExportCSV}
+        onExportCompleto={handleExportCompleto}
       />
 
       <AnimatePresence mode="wait">
