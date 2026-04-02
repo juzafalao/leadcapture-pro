@@ -12,6 +12,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { setSentryUser, clearSentryUser } from '../lib/sentry';
 
 const AuthContext = createContext();
 
@@ -53,6 +54,7 @@ export const AuthProvider = ({ children }) => {
 
       setUsuario(userData);
       setTenant(tenantData || null);
+      setSentryUser(userData); // identifica o usuário nos reports de erro
     } catch (err) {
       console.error('Erro ao carregar usuário:', err);
       setUsuario(null);
@@ -124,6 +126,7 @@ export const AuthProvider = ({ children }) => {
     // ✅ CRÍTICO: Limpar React Query ANTES de mudar estado
     queryClient.cancelQueries();          // Cancela fetches em andamento
     queryClient.clear();                  // Remove TODO o cache
+    clearSentryUser();                    // Remove identificação do usuário no Sentry
     setUsuario(null);
     setTenant(null);
     await supabase.auth.signOut({ scope: 'local' });

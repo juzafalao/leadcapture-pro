@@ -173,11 +173,27 @@ app.use((_req, res) => {
 })
 
 // ─── Error Handler Global ────────────────────────────────────
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   // CORS error
   if (err.message?.includes('CORS')) {
     return res.status(403).json({ success: false, error: 'Origem não permitida' })
   }
+
+  // Envia para Sentry se DSN configurada
+  if (process.env.SENTRY_DSN) {
+    try {
+      const Sentry = await import('@sentry/node').catch(() => null)
+      if (Sentry) {
+        Sentry.withScope(scope => {
+          scope.setExtra('url',    req.url)
+          scope.setExtra('method', req.method)
+          scope.setExtra('body',   JSON.stringify(req.body || {}).slice(0, 500))
+          Sentry.captureException(err)
+        })
+      }
+    } catch (_) {}
+  }
+
   console.error('[App] Erro não tratado:', err)
   res.status(500).json({ success: false, error: 'Erro interno do servidor' })
 })
