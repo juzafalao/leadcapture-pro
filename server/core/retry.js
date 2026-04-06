@@ -1,11 +1,12 @@
 // ============================================================
 // CORE — Retry com Backoff Exponencial
 // Função utilitária reutilizável para tentativas com espera
-// progressiva entre falhas.
+// exponencialmente progressiva entre falhas.
 // ============================================================
 
 /**
  * Executa uma função assíncrona com retry e backoff exponencial.
+ * Delays: baseDelay, baseDelay*2, baseDelay*4, ...
  *
  * @param {() => Promise<*>} fn        - Função a executar
  * @param {object}           [opts]    - Opções
@@ -28,12 +29,12 @@ export async function retryWithBackoff(fn, opts = {}) {
       console.warn(`[${label}] ❌ Tentativa ${attempt}/${maxRetries}: ${err.message}`)
 
       if (attempt === maxRetries) {
-        console.error(`[${label}] ❌ Falha apos ${maxRetries} tentativas`)
+        console.error(`[${label}] ❌ Falha após ${maxRetries} tentativas`)
         throw err
       }
 
-      const delay = baseDelay * attempt
-      console.log(`[${label}] ⏳ Aguardando ${delay}ms antes da proxima tentativa...`)
+      const delay = baseDelay * Math.pow(2, attempt - 1)
+      console.log(`[${label}] ⏳ Aguardando ${delay}ms antes da próxima tentativa...`)
       await new Promise(resolve => setTimeout(resolve, delay))
     }
   }
