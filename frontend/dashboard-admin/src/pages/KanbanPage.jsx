@@ -11,7 +11,7 @@ import LeadModal from '../components/leads/LeadModal'
 import LoadingSpinner from '../components/shared/LoadingSpinner'
 
 // ── Card de lead no Kanban ────────────────────────────────────
-function LeadCard({ lead, onDragStart, onClick }) {
+function LeadCard({ lead, onDragStart, onTouchStart, onClick }) {
   const cat = (lead.categoria || '').toLowerCase()
   const catColor = cat === 'hot' ? '#EF4444' : cat === 'warm' ? '#F59E0B' : '#6366F1'
   const catLabel = cat === 'hot' ? '🔥 Hot' : cat === 'warm' ? '🌤 Warm' : '❄️ Cold'
@@ -24,9 +24,10 @@ function LeadCard({ lead, onDragStart, onClick }) {
       exit={{ opacity: 0, scale: 0.95 }}
       draggable
       onDragStart={e => onDragStart(e, lead)}
+      onTouchStart={e => onTouchStart && onTouchStart(e, lead)}
       onClick={() => onClick(lead)}
       className="bg-[#0F172A] border border-white/5 rounded-2xl p-4 cursor-grab active:cursor-grabbing hover:border-white/10 transition-all group"
-      style={{ userSelect: 'none' }}
+      style={{ userSelect: 'none', touchAction: 'none' }}
       whileHover={{ y: -1 }}
     >
       {/* Score + categoria */}
@@ -85,10 +86,11 @@ function LeadCard({ lead, onDragStart, onClick }) {
 }
 
 // ── Coluna do Kanban ─────────────────────────────────────────
-function Coluna({ coluna, leads = [], onDrop, onDragOver, onDragLeave, isDragOver, onCardClick, onDragStart }) {
+function Coluna({ coluna, leads = [], onDrop, onDragOver, onDragLeave, isDragOver, onCardClick, onDragStart, onTouchStart, touchTargetSlug }) {
   return (
     <div
-      className="flex flex-col min-w-[260px] max-w-[280px] flex-shrink-0"
+      className="flex flex-col min-w-[240px] max-w-[260px] lg:min-w-[260px] lg:max-w-[280px] flex-shrink-0"
+      data-coluna={coluna.slug}
       onDragOver={e => { e.preventDefault(); onDragOver(coluna.slug) }}
       onDragLeave={onDragLeave}
       onDrop={e => onDrop(e, coluna)}
@@ -110,10 +112,10 @@ function Coluna({ coluna, leads = [], onDrop, onDragOver, onDragLeave, isDragOve
       <div
         className="flex-1 min-h-[120px] rounded-2xl transition-all duration-200 p-2 space-y-2"
         style={{
-          background: isDragOver
+          background: (isDragOver || touchTargetSlug === coluna.slug)
             ? `${coluna.cor}12`
             : 'rgba(255,255,255,0.02)',
-          border: isDragOver
+          border: (isDragOver || touchTargetSlug === coluna.slug)
             ? `1.5px dashed ${coluna.cor}60`
             : '1.5px dashed transparent',
         }}
@@ -124,6 +126,7 @@ function Coluna({ coluna, leads = [], onDrop, onDragOver, onDragLeave, isDragOve
               key={lead.id}
               lead={lead}
               onDragStart={onDragStart}
+              onTouchStart={onTouchStart}
               onClick={onCardClick}
             />
           ))}
@@ -160,9 +163,59 @@ export default function KanbanPage() {
 
   const [dragLeadId, setDragLeadId] = useState(null)
   const [dragOver, setDragOver] = useState(null)
+  const [touchTarget, setTouchTarget] = useState(null)
   const [leadSelecionado, setLeadSelecionado] = useState(null)
   const [movendo, setMovendo] = useState(false)
   const dragLead = useRef(null)
+  const touchStartY = useRef(0)
+
+  // ── Touch Drag (iOS Safari) ───────────────────────────────
+  const handleTouchStart = (e, lead) => {
+    dragLead.current = lead
+    setDragLeadId(lead.id)
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchMove = (e) => {
+    if (!dragLead.current) return
+    e.preventDefault()
+    const touch = e.touches[0]
+    const el = document.elementFromPoint(touch.clientX, touch.clientY)
+    // Procura a coluna mais próxima do ponto de toque
+    const colunaEl = el?.closest('[data-coluna]')
+    if (colunaEl) {
+      setTouchTarget(colunaEl.dataset.coluna)
+    }
+  }
+
+  const handleTouchEnd = async (e) => {
+    if (!dragLead.current || !touchTarget) {
+      dragLead.current = null
+      setDragLeadId(null)
+      setTouchTarget(null)
+      return
+    }
+
+    const lead = dragLead.current
+    const coluna = colunas.find(c => c.slug === touchTarget)
+    if (!coluna) { dragLead.current = null; setTouchTarget(null); return }
+
+    const slugAtual = lead.status_comercial?.slug?.toLowerCase() || lead.status?.toLowerCase() || 'novo'
+    if (slugAtual === coluna.slug) { dragLead.current = null; setTouchTarget(null); return }
+
+    setMovendo(true)
+    try {
+      const isUUID = typeof coluna.id === 'string' && coluna.id.length === 36 && coluna.id.includes('-')
+      await moverLead({ leadId: lead.id, novoStatusSlug: coluna.slug, novoStatusId: isUUID ? coluna.id : null, tenantId })
+    } catch (err) {
+      console.error('[Kanban Touch] Erro:', err.message)
+    } finally {
+      setMovendo(false)
+      dragLead.current = null
+      setDragLeadId(null)
+      setTouchTarget(null)
+    }
+  }
 
   const { data: colunas = COLUNAS_PADRAO } = useStatusColunas(tenantId)
 
@@ -251,8 +304,13 @@ export default function KanbanPage() {
       </AnimatePresence>
 
       {/* Board */}
-      <div className="px-6 lg:px-10 overflow-x-auto pb-4">
-        <div className="flex gap-4 min-w-max">
+      <div
+        className="px-4 lg:px-10 overflow-x-auto pb-6"
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ WebkitOverflowScrolling: 'touch' }}
+      >
+        <div className="flex gap-3 lg:gap-4" style={{ minWidth: 'max-content' }}>
           {colunas.map(coluna => (
             <Coluna
               key={coluna.slug}
@@ -262,8 +320,10 @@ export default function KanbanPage() {
               onDragOver={setDragOver}
               onDragLeave={() => setDragOver(null)}
               isDragOver={dragOver === coluna.slug}
+              touchTargetSlug={touchTarget}
               onCardClick={setLeadSelecionado}
               onDragStart={handleDragStart}
+              onTouchStart={handleTouchStart}
             />
           ))}
         </div>
