@@ -1,11 +1,17 @@
-// Polyfill navigator.locks — Supabase GoTrueClient precisa disso no Vercel
-if (typeof navigator !== 'undefined' && !navigator.locks) {
-  navigator.locks = {
-    request: async (_name, cb) => {
-      const release = () => {}
-      return cb({ name: _name, mode: 'exclusive', release })
-    },
-  }
+// Polyfill navigator.locks — Supabase GoTrueClient precisa disso
+// iOS 18.4+ tem navigator.locks nativo mas com bug de timeout (10s)
+// Sobrescrevemos sempre com implementação sem timeout
+if (typeof navigator !== 'undefined') {
+  try {
+    navigator.locks = {
+      request: async (_name, _opts, cb) => {
+        const callback = typeof _opts === 'function' ? _opts : cb
+        const release = () => {}
+        return callback({ name: _name, mode: 'exclusive', release })
+      },
+      query: async () => ({ held: [], pending: [] }),
+    }
+  } catch (_) {}
 }
 
 import React from 'react'

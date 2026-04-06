@@ -7,7 +7,6 @@
 // ============================================================
 
 import nodemailer from 'nodemailer'
-import { retryWithBackoff } from '../core/retry.js'
 
 let transporter = null
 
@@ -37,7 +36,8 @@ export function inicializarEmail() {
 async function enviarViaResend(to, subject, html) {
   const { Resend } = await import('resend')
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const from = process.env.RESEND_FROM || 'LeadCapture Pro <noreply@leadcapture.com.br>'
+  // Plano gratuito Resend: apenas onboarding@resend.dev funciona sem domínio verificado
+  const from = process.env.RESEND_FROM || 'LeadCapture Pro <onboarding@resend.dev>'
   const { data, error } = await resend.emails.send({ from, to, subject, html })
   if (error) throw new Error(error.message)
   return data
@@ -153,10 +153,7 @@ export async function notificarNovoLead(lead, marca) {
   const emoji = lead.categoria === 'hot' ? '🔥' : lead.categoria === 'warm' ? '🌤' : '❄️'
   const subject = `${emoji} Novo Lead: ${lead.nome} — ${marca.nome}`
   try {
-    await retryWithBackoff(
-      () => enviar(to, subject, templateNovoLead(lead, marca)),
-      { maxRetries: 3, baseDelay: 1000, label: 'Email/NovoLead' }
-    )
+    await enviar(to, subject, templateNovoLead(lead, marca))
     console.log('[Email] Novo lead enviado para:', to)
     return { success: true }
   } catch (err) {
@@ -173,10 +170,7 @@ export async function notificarLeadQuente(lead, marca, emailsDiretores = []) {
   const todos = [...new Set([notif, ...extras])]
   const subject = `🔥 LEAD QUENTE! ${lead.nome} — Score ${lead.score} — ${marca.nome}`
   try {
-    await retryWithBackoff(
-      () => enviar(todos.join(','), subject, templateLeadQuente(lead, marca)),
-      { maxRetries: 3, baseDelay: 1000, label: 'Email/LeadQuente' }
-    )
+    await enviar(todos.join(','), subject, templateLeadQuente(lead, marca))
     console.log('[Email] Lead quente enviado para:', todos.join(', '))
     return { success: true }
   } catch (err) {
