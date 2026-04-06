@@ -3,6 +3,8 @@
 // Integração com Evolution API para envio de mensagens
 // ============================================================
 
+import { retryWithBackoff } from '../core/retry.js'
+
 const EVOLUTION_API_URL    = process.env.EVOLUTION_API_URL    || 'http://localhost:8080'
 const EVOLUTION_API_KEY    = process.env.EVOLUTION_API_KEY    || ''
 const EVOLUTION_INSTANCE   = process.env.EVOLUTION_INSTANCE   || 'lead-pro'
@@ -31,30 +33,34 @@ export async function enviarMensagem(telefone, mensagem) {
     return { success: true, simulated: true }
   }
 
+  const numero = normalizarTelefone(telefone)
+
   try {
-    const numero = normalizarTelefone(telefone)
+    const data = await retryWithBackoff(async () => {
+      const response = await fetch(
+        `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`,
+        {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey':        EVOLUTION_API_KEY,
+          },
+          body: JSON.stringify({
+            number:  numero,
+            textMessage: { text: mensagem },
+            options: { delay: 1200 },
+          }),
+        }
+      )
 
-    const response = await fetch(
-      `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`,
-      {
-        method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey':        EVOLUTION_API_KEY,
-        },
-        body: JSON.stringify({
-          number:  numero,
-          textMessage: { text: mensagem },
-          options: { delay: 1200 },
-        }),
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.message || `HTTP ${response.status}`)
       }
-    )
 
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data?.message || `HTTP ${response.status}`)
-    }
+      return result
+    }, { maxRetries: 3, baseDelay: 1000, label: 'WhatsApp' })
 
     console.log('[Comunicacao/WhatsApp] Mensagem enviada para:', numero)
     return { success: true, data }

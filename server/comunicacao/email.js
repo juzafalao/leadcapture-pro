@@ -7,6 +7,7 @@
 // ============================================================
 
 import nodemailer from 'nodemailer'
+import { retryWithBackoff } from '../core/retry.js'
 
 let transporter = null
 
@@ -152,7 +153,10 @@ export async function notificarNovoLead(lead, marca) {
   const emoji = lead.categoria === 'hot' ? '🔥' : lead.categoria === 'warm' ? '🌤' : '❄️'
   const subject = `${emoji} Novo Lead: ${lead.nome} — ${marca.nome}`
   try {
-    await enviar(to, subject, templateNovoLead(lead, marca))
+    await retryWithBackoff(
+      () => enviar(to, subject, templateNovoLead(lead, marca)),
+      { maxRetries: 3, baseDelay: 1000, label: 'Email/NovoLead' }
+    )
     console.log('[Email] Novo lead enviado para:', to)
     return { success: true }
   } catch (err) {
@@ -169,7 +173,10 @@ export async function notificarLeadQuente(lead, marca, emailsDiretores = []) {
   const todos = [...new Set([notif, ...extras])]
   const subject = `🔥 LEAD QUENTE! ${lead.nome} — Score ${lead.score} — ${marca.nome}`
   try {
-    await enviar(todos.join(','), subject, templateLeadQuente(lead, marca))
+    await retryWithBackoff(
+      () => enviar(todos.join(','), subject, templateLeadQuente(lead, marca)),
+      { maxRetries: 3, baseDelay: 1000, label: 'Email/LeadQuente' }
+    )
     console.log('[Email] Lead quente enviado para:', todos.join(', '))
     return { success: true }
   } catch (err) {
