@@ -71,6 +71,7 @@ const PageFallback = () => (
 const LEVEL_CONSULTOR = 2;
 const LEVEL_GESTOR    = 3;
 const LEVEL_DIRETOR   = 4;
+const LEVEL_ADMIN     = 5;
 
 // Retrocompatibilidade: manter arrays de texto para migração gradual
 const ROLES_CONSULTOR = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
