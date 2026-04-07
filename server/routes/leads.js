@@ -9,7 +9,7 @@ import {
   normalizarTelefone,
   sanitizarTexto,
 } from '../core/validation.js'
-import { notificarNovoLead, notificarLeadQuente } from '../comunicacao/email.js'
+import { notificarNovoLead, notificarLeadQuente, enviarBoasVindasLead } from '../comunicacao/email.js'
 import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
 
@@ -109,14 +109,49 @@ router.post('/', validateLead, async (req, res) => {
       .map(u => u.email)
       .filter(e => e && e.includes('@') && !e.endsWith('.local') && !e.includes('demo-') && !e.includes('fake'))
 
-    // Notificação de novo lead — envia para NOTIFICATION_EMAIL + todos os diretores/gestores
-    notificarNovoLead(lead, marcaFallback, emailsNotif).catch(err =>
-      console.warn('[Leads] E-mail notificacao:', err.message)
+    // ── Notificações com retry automático ──────────────────
+    // Retry 3x com backoff exponencial (1s, 2s, 3s)
+    async function comRetry(fn, label, maxTentativas = 3) {
+      for (let t = 1; t <= maxTentativas; t++) {
+        try {
+          await fn()
+          return
+        } catch (err) {
+          console.warn(`[Leads] ${label} tentativa ${t}/${maxTentativas}: ${err.message}`)
+          if (t === maxTentativas) {
+            // Registra falha no banco para análise posterior
+            supabase.from('notification_failures').insert([{
+              lead_id:   lead.id,
+              tenant_id: lead.tenant_id,
+              tipo:      label,
+              erro:      err.message,
+              tentativas: maxTentativas,
+            }]).catch(() => {})
+          } else {
+            await new Promise(r => setTimeout(r, 1000 * t))
+          }
+        }
+      }
+    }
+
+    // Email de boas-vindas para o LEAD (confirmação de cadastro)
+    if (lead.email && lead.email.includes('@')) {
+      comRetry(
+        () => enviarBoasVindasLead(lead, marcaFallback),
+        'email-boas-vindas-lead'
+      )
+    }
+
+    // Notificação interna para equipe
+    comRetry(
+      () => notificarNovoLead(lead, marcaFallback, emailsNotif),
+      'email-notificacao-interna'
     )
 
     if (lead.score >= 65) {
-      notificarLeadQuente(lead, marcaFallback, emailsNotif).catch(err =>
-        console.warn('[Leads] E-mail lead quente:', err.message)
+      comRetry(
+        () => notificarLeadQuente(lead, marcaFallback, emailsNotif),
+        'email-lead-quente'
       )
     }
 

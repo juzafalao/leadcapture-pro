@@ -206,3 +206,79 @@ export async function notificarLeadQuente(lead, marca, emailsDiretores = []) {
     return { success: false, error: err.message }
   }
 }
+
+// ============================================================
+// EMAIL DE BOAS-VINDAS PARA O LEAD
+// Enviado ao lead quando preenche a landing page
+// ============================================================
+export async function enviarBoasVindasLead(lead, marca) {
+  if (!lead.email || !lead.email.includes('@')) return { success: false, motivo: 'sem email' }
+
+  const nomeFirst = (lead.nome || 'você').split(' ')[0]
+  const capital   = lead.capital_disponivel
+    ? 'R$ ' + Number(lead.capital_disponivel).toLocaleString('pt-BR')
+    : null
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:24px;background:#f8f9fa;font-family:Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+  <div style="background:linear-gradient(135deg,#ee7b4d,#f59e42);padding:32px;text-align:center;">
+    ${marca.logo_url
+      ? `<img src="${marca.logo_url}" alt="${marca.nome}" style="width:80px;height:80px;border-radius:16px;object-fit:cover;margin-bottom:16px;display:block;margin-left:auto;margin-right:auto;" />`
+      : `<div style="font-size:56px;margin-bottom:12px;">${marca.emoji || '🚀'}</div>`
+    }
+    <h1 style="color:#000;margin:0;font-size:24px;font-weight:900;">Recebemos seu interesse!</h1>
+    <p style="color:rgba(0,0,0,0.6);margin:8px 0 0;font-size:14px;">${marca.nome}</p>
+  </div>
+
+  <div style="padding:32px;">
+    <p style="font-size:16px;color:#1e293b;margin:0 0 20px;">Olá, <strong>${nomeFirst}</strong>! 👋</p>
+    <p style="font-size:14px;color:#475569;line-height:1.7;margin:0 0 20px;">
+      Recebemos suas informações e nossa equipe de consultores já foi notificada. 
+      Em breve alguém vai entrar em contato pelo WhatsApp para apresentar as melhores 
+      oportunidades de investimento da <strong>${marca.nome}</strong>.
+    </p>
+
+    <div style="background:#f8fafc;border-radius:12px;padding:20px;margin-bottom:24px;">
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.1em;margin:0 0 12px;">Seus dados cadastrados</p>
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr><td style="color:#64748b;padding:6px 0;width:40%;">Nome</td><td style="color:#1e293b;font-weight:600;">${lead.nome}</td></tr>
+        <tr><td style="color:#64748b;padding:6px 0;">WhatsApp</td><td style="color:#1e293b;font-weight:600;">${lead.telefone}</td></tr>
+        ${capital ? `<tr><td style="color:#64748b;padding:6px 0;">Capital</td><td style="color:#1e293b;font-weight:600;">${capital}</td></tr>` : ''}
+        ${lead.regiao_interesse ? `<tr><td style="color:#64748b;padding:6px 0;">Região</td><td style="color:#1e293b;font-weight:600;">${lead.regiao_interesse}</td></tr>` : ''}
+      </table>
+    </div>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin-bottom:24px;">
+      <p style="font-size:13px;color:#166534;margin:0;line-height:1.6;">
+        <strong>Próximos passos:</strong><br>
+        1. Nosso consultor vai entrar em contato via WhatsApp<br>
+        2. Apresentaremos as opções ideais para seu perfil<br>
+        3. Agendaremos uma reunião de apresentação
+      </p>
+    </div>
+
+    <p style="font-size:13px;color:#94a3b8;text-align:center;margin:0;">
+      Dúvidas? Responda este e-mail ou entre em contato pelo WhatsApp.
+    </p>
+  </div>
+
+  <div style="background:#f8fafc;padding:20px 32px;text-align:center;border-top:1px solid #e2e8f0;">
+    <p style="font-size:12px;color:#94a3b8;margin:0;">${marca.nome} · Powered by LeadCapture Pro</p>
+  </div>
+
+</div></body></html>`
+
+  const subject = `${marca.nome} — Recebemos seu interesse! 🎯`
+
+  try {
+    await enviar(lead.email, subject, html)
+    console.log(`[Email] Boas-vindas enviado para lead: ${lead.email}`)
+    return { success: true }
+  } catch (err) {
+    console.error('[Email] Falha boas-vindas lead:', err.message)
+    return { success: false, error: err.message }
+  }
+}
