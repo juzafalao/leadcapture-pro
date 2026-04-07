@@ -34,6 +34,8 @@ router.get('/status', async (_req, res) => {
   ])
 
   const [dbCheck, waCheck] = checks
+  const resendOk = !!process.env.RESEND_API_KEY
+  const smtpOk   = !!process.env.SMTP_USER && !!process.env.SMTP_PASS
 
   res.json({
     status:    'ok',
@@ -48,11 +50,48 @@ router.get('/status', async (_req, res) => {
         info:  waCheck.status === 'fulfilled' ? waCheck.value : { motivo: waCheck.reason?.message },
       },
       email: {
-        ok:         !!process.env.SMTP_USER,
-        configurado: !!process.env.SMTP_USER,
+        ok:                   resendOk || smtpOk,
+        resend_configured:    resendOk,
+        smtp_configured:      smtpOk,
+        from:                 process.env.RESEND_FROM || 'onboarding@resend.dev',
+        notification_email:   process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com',
+        provedor:             resendOk ? 'Resend' : smtpOk ? 'Gmail SMTP' : 'Não configurado',
       },
     },
   })
+})
+
+// ─────────────────────────────────────────────
+// POST /api/sistema/test-email
+// Envia email de teste para validar configuração
+// ─────────────────────────────────────────────
+router.post('/test-email', async (req, res) => {
+  const { email } = req.body
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ success: false, error: 'E-mail inválido' })
+  }
+
+  try {
+    const { notificarNovoLead } = await import('../comunicacao/email.js')
+    const leadFake = {
+      nome:               'Teste de Configuração',
+      email:              email,
+      telefone:           '11999999999',
+      score:              90,
+      categoria:          'hot',
+      capital_disponivel: 500000,
+      regiao_interesse:   'São Paulo - SP',
+      fonte:              'teste-manual',
+    }
+    const result = await notificarNovoLead(leadFake, { nome: 'LeadCapture Pro', emoji: '🚀' })
+    if (result.success) {
+      res.json({ success: true, message: `E-mail enviado para ${email}` })
+    } else {
+      res.status(500).json({ success: false, error: result.error || 'Falha no envio' })
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
 })
 
 // ─────────────────────────────────────────────
