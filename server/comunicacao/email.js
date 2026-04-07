@@ -42,17 +42,11 @@ async function enviarViaResend(to, subject, html) {
   // Para usar domínio próprio: verificar em resend.com/domains
   const from = process.env.RESEND_FROM || 'onboarding@resend.dev'
 
-  // Resend gratuito só envia para o email da conta registrada
-  // Se RESEND_VERIFIED=true, pode enviar para qualquer email
-  const destinatario = process.env.RESEND_VERIFIED === 'true'
-    ? to
-    : (process.env.RESEND_TEST_EMAIL || process.env.NOTIFICATION_EMAIL || to)
-
-  console.log(`[Email/Resend] Enviando para: ${destinatario} | from: ${from}`)
+  console.log(`[Email/Resend] Enviando para: ${to} | from: ${from}`)
 
   const { data, error } = await resend.emails.send({
     from,
-    to:      destinatario,
+    to,
     subject,
     html,
   })
