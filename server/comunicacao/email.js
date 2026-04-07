@@ -101,7 +101,10 @@ function templateNovoLead(lead, marca) {
 <body style="margin:0;padding:24px;background:#0d0d0f;font-family:Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#18181b;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
   <div style="background:linear-gradient(135deg,#ee7b4d,#f59e42);padding:28px 32px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:8px;">${marca.emoji || '🚀'}</div>
+    ${marca.logo_url
+      ? `<img src="${marca.logo_url}" alt="${marca.nome}" style="width:72px;height:72px;border-radius:16px;object-fit:cover;margin-bottom:12px;display:inline-block;" />`
+      : `<div style="font-size:48px;margin-bottom:8px;">${marca.emoji || '🚀'}</div>`
+    }
     <h1 style="color:#000;margin:0;font-size:20px;font-weight:900;">Novo Lead Capturado</h1>
     <p style="color:rgba(0,0,0,0.65);margin:4px 0 0;font-size:13px;">${marca.nome} — LeadCapture Pro</p>
   </div>
@@ -146,7 +149,10 @@ function templateLeadQuente(lead, marca) {
 <body style="margin:0;padding:24px;background:#0a0a0a;font-family:Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#18181b;border-radius:16px;overflow:hidden;border:2px solid #f97316;">
   <div style="background:linear-gradient(135deg,#f97316,#ea580c);padding:28px 32px;text-align:center;">
-    <div style="font-size:56px;margin-bottom:8px;">🔥</div>
+    ${marca.logo_url
+      ? `<img src="${marca.logo_url}" alt="${marca.nome}" style="width:64px;height:64px;border-radius:14px;object-fit:cover;margin-bottom:10px;display:inline-block;" />`
+      : `<div style="font-size:56px;margin-bottom:8px;">🔥</div>`
+    }
     <h1 style="color:#fff;margin:0;font-size:24px;font-weight:900;">Lead Quente Detectado!</h1>
     <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;font-size:13px;">${marca.nome} — LeadCapture Pro</p>
   </div>
@@ -170,13 +176,15 @@ function templateLeadQuente(lead, marca) {
 }
 
 // ── Exports ───────────────────────────────────────────────────
-export async function notificarNovoLead(lead, marca) {
-  const to      = process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com'
+export async function notificarNovoLead(lead, marca, emailsExtras = []) {
+  const base    = process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com'
+  const extras  = (emailsExtras || []).filter(e => e && e.includes('@') && !e.endsWith('.local'))
+  const todos   = [...new Set([base, ...extras])]
   const emoji   = lead.categoria === 'hot' ? '🔥' : lead.categoria === 'warm' ? '🌤' : '❄️'
   const subject = `${emoji} Novo Lead: ${lead.nome} — ${marca.nome}`
   try {
-    await enviar(to, subject, templateNovoLead(lead, marca))
-    console.log('[Email] Novo lead enviado para:', to)
+    await enviar(todos.join(','), subject, templateNovoLead(lead, marca))
+    console.log('[Email] Novo lead enviado para:', todos.join(', '))
     return { success: true }
   } catch (err) {
     console.error('[Email] Falha novo lead:', err.message)

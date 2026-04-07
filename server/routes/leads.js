@@ -94,22 +94,28 @@ router.post('/', validateLead, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
-    // ✅ Queries em paralelo — elimina N+1
-    const [{ data: marcaInfo }, { data: diretores }] = await Promise.all([
-      supabase.from('marcas').select('nome, emoji, tenant_id').eq('id', lead.id_marca).single(),
-      supabase.from('usuarios').select('email').eq('tenant_id', lead.tenant_id).eq('role', 'Diretor').eq('active', true),
+    // ✅ Queries em paralelo — logo da marca + todos os usuários que recebem notificação
+    const [{ data: marcaInfo }, { data: usuariosNotif }] = await Promise.all([
+      supabase.from('marcas').select('nome, emoji, logo_url, tenant_id').eq('id', lead.id_marca).single(),
+      supabase.from('usuarios')
+        .select('email, role')
+        .eq('tenant_id', lead.tenant_id)
+        .in('role', ['Diretor', 'Gestor', 'Administrador', 'admin'])
+        .eq('active', true),
     ])
 
-    const marcaFallback   = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
-    const emailsDiretores = (diretores || []).map(d => d.email).filter(e => e && !e.endsWith('.local'))
+    const marcaFallback   = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀', logo_url: null }
+    const emailsNotif     = (usuariosNotif || [])
+      .map(u => u.email)
+      .filter(e => e && e.includes('@') && !e.endsWith('.local') && !e.includes('demo-') && !e.includes('fake'))
 
-    // Notificações — sempre envia independente da marca
-    notificarNovoLead(lead, marcaFallback).catch(err =>
+    // Notificação de novo lead — envia para NOTIFICATION_EMAIL + todos os diretores/gestores
+    notificarNovoLead(lead, marcaFallback, emailsNotif).catch(err =>
       console.warn('[Leads] E-mail notificacao:', err.message)
     )
 
     if (lead.score >= 65) {
-      notificarLeadQuente(lead, marcaFallback, emailsDiretores).catch(err =>
+      notificarLeadQuente(lead, marcaFallback, emailsNotif).catch(err =>
         console.warn('[Leads] E-mail lead quente:', err.message)
       )
     }
