@@ -94,6 +94,12 @@ const IconAuditLog = () => (
   </svg>
 );
 
+const IconMonitoramento = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M2 12h2l3-9 4 18 3-9 2 5 2-5 2 4h2"/>
+  </svg>
+);
+
 const IconConfig = () => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <circle cx="12" cy="12" r="3"/>
@@ -170,7 +176,8 @@ const NAV_GROUPS = [
     label: 'Plataforma',
     items: [
       { path: '/leads-sistema', icon: <IconLeadsSistema />, label: 'Leads Sistema', show: (a) => a.isPlatformAdmin() },
-      { path: '/audit-log',     icon: <IconAuditLog />,     label: 'Audit Log',     show: (a) => a.isDiretor() },
+      { path: '/audit-log',      icon: <IconAuditLog />,       label: 'Audit Log',      show: (a) => a.isDiretor() },
+      { path: '/monitoramento',  icon: <IconMonitoramento />,  label: 'Monitoramento',  show: (a) => a.isAdmin() },
       { path: '/api-publica',   icon: <IconAPI />,          label: 'API Docs',      show: (a) => a.isDiretor(), badge: 'Novo' },
     ],
   },

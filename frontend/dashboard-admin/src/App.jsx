@@ -35,6 +35,7 @@ const CRMPage          = lazy(() => import('./pages/CRMPage'));
 const EmailMarketingPage = lazy(() => import('./pages/EmailMarketingPage'));
 const CanaisPage       = lazy(() => import('./pages/CanaisPage'));
 const APIPage          = lazy(() => import('./pages/APIPage'));
+const MonitoramentoPage = lazy(() => import('./pages/MonitoramentoPage'));
 import { AuthProvider, useAuth } from './components/AuthContext.jsx';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -183,6 +184,13 @@ function AppRoutes() {
         <Route path="/audit-log" element={
           <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
             <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* ✅ Monitoramento do Sistema (Admin / nível >= 5) */}
+        <Route path="/monitoramento" element={
+          <PrivateRoute minLevel={LEVEL_ADMIN} allowedRoles={['Administrador','admin']}>
+            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MonitoramentoPage /></Suspense></AnimatedPage></AuthenticatedLayout>
           </PrivateRoute>
         } />
 

@@ -109,22 +109,29 @@ router.post('/', validateLead, async (req, res) => {
       .map(u => u.email)
       .filter(e => e && e.includes('@') && !e.endsWith('.local') && !e.includes('demo-') && !e.includes('fake'))
 
-    // ── Notificações com retry automático ──────────────────
-    // Retry 3x com backoff exponencial (1s, 2s, 3s)
-    async function comRetry(fn, label, maxTentativas = 3) {
+    // ── Helper: retry com log no banco ───────────────────────
+    async function comRetry(fn, tipo, maxTentativas = 3) {
       for (let t = 1; t <= maxTentativas; t++) {
         try {
           await fn()
-          return
+          // Loga sucesso no banco
+          supabase.from('notification_logs').insert([{
+            lead_id:   lead.id,
+            tenant_id: lead.tenant_id,
+            tipo,
+            status:    'sucesso',
+            tentativas: t,
+          }]).catch(() => {})
+          return true
         } catch (err) {
-          console.warn(`[Leads] ${label} tentativa ${t}/${maxTentativas}: ${err.message}`)
+          console.warn(`[Leads] ${tipo} tentativa ${t}/${maxTentativas}: ${err.message}`)
           if (t === maxTentativas) {
-            // Registra falha no banco para análise posterior
-            supabase.from('notification_failures').insert([{
+            supabase.from('notification_logs').insert([{
               lead_id:   lead.id,
               tenant_id: lead.tenant_id,
-              tipo:      label,
-              erro:      err.message,
+              tipo,
+              status:    'erro',
+              erro:       err.message,
               tentativas: maxTentativas,
             }]).catch(() => {})
           } else {
@@ -132,28 +139,33 @@ router.post('/', validateLead, async (req, res) => {
           }
         }
       }
+      return false
     }
 
-    // Email de boas-vindas para o LEAD (confirmação de cadastro)
-    if (lead.email && lead.email.includes('@')) {
-      comRetry(
-        () => enviarBoasVindasLead(lead, marcaFallback),
-        'email-boas-vindas-lead'
+    // ── Dispara notificações em paralelo com await ────────────
+    const notifPromises = []
+
+    // 1. Boas-vindas para o LEAD (email dele)
+    if (lead.email?.includes('@')) {
+      notifPromises.push(
+        comRetry(() => enviarBoasVindasLead(lead, marcaFallback), 'email-boas-vindas-lead')
       )
     }
 
-    // Notificação interna para equipe
-    comRetry(
-      () => notificarNovoLead(lead, marcaFallback, emailsNotif),
-      'email-notificacao-interna'
+    // 2. Notificação interna para a equipe
+    notifPromises.push(
+      comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna')
     )
 
+    // 3. Lead quente para diretores
     if (lead.score >= 65) {
-      comRetry(
-        () => notificarLeadQuente(lead, marcaFallback, emailsNotif),
-        'email-lead-quente'
+      notifPromises.push(
+        comRetry(() => notificarLeadQuente(lead, marcaFallback, emailsNotif), 'email-lead-quente')
       )
     }
+
+    // Aguarda todas as notificações (garante que Vercel não encerra antes)
+    await Promise.allSettled(notifPromises)
 
     // WhatsApp: envia boas-vindas e inicia qualificacao por IA
     if (process.env.EVOLUTION_API_KEY) {
