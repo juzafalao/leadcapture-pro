@@ -63,9 +63,19 @@ router.get('/status', async (_req, res) => {
 
 // ─────────────────────────────────────────────
 // POST /api/sistema/test-email
-// Envia email de teste para validar configuração
+// Envia email de teste — requer token Supabase
 // ─────────────────────────────────────────────
 router.post('/test-email', async (req, res) => {
+  // Verifica token de autenticação
+  const authHeader = req.headers.authorization || ''
+  const token = authHeader.replace('Bearer ', '').trim()
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Token de autenticação obrigatório' })
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) {
+    return res.status(401).json({ success: false, error: 'Token inválido ou expirado' })
+  }
   const { email } = req.body
   if (!email || !email.includes('@')) {
     return res.status(400).json({ success: false, error: 'E-mail inválido' })

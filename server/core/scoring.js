@@ -4,6 +4,30 @@
 // ============================================================
 
 /**
+ * Mapa de slugs de capital (vindos do formulário) para valores numéricos
+ * Centralizado aqui para evitar duplicação em leads.js
+ */
+export const CAPITAL_MAP = {
+  'ate-100k':   80_000,
+  '100k-300k':  200_000,
+  '300k-500k':  400_000,
+  'acima-500k': 600_000,
+}
+
+/**
+ * Converte qualquer representação de capital para número
+ * Aceita: slug do mapa, número direto, string numérica
+ */
+export function resolverCapital(valor) {
+  if (!valor && valor !== 0) return null
+  if (typeof valor === 'number') return valor
+  const str = String(valor).trim()
+  if (CAPITAL_MAP[str] !== undefined) return CAPITAL_MAP[str]
+  const num = Number(str.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''))
+  return isNaN(num) || num <= 0 ? null : num
+}
+
+/**
  * Tabela de pontuação baseada no capital disponível (R$)
  */
 const SCORING_TABLE = [

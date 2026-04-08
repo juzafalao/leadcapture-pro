@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import supabase from '../core/database.js'
-import { processarCapital } from '../core/scoring.js'
+import { processarCapital, resolverCapital } from '../core/scoring.js'
 import {
   isEmailValido,
   isTelefoneValido,
@@ -14,25 +14,6 @@ import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
 
 const router = Router()
-
-const capitalMap = {
-  'ate-100k':   80000,
-  '100k-300k':  200000,
-  '300k-500k':  400000,
-  'acima-500k': 600000,
-}
-
-// Converte capital para numero — aceita chave do mapa OU numero direto
-function resolverCapital(valor) {
-  if (!valor) return null
-  if (typeof valor === 'number') return valor
-  const str = String(valor).trim()
-  // Tenta chave do mapa primeiro
-  if (capitalMap[str] !== undefined) return capitalMap[str]
-  // Tenta numero direto (ex: "200000" ou "200.000")
-  const num = Number(str.replace(/\./g, '').replace(',', '.'))
-  return isNaN(num) || num <= 0 ? null : num
-}
 
 router.post('/', validateLead, async (req, res) => {
   try {
@@ -295,7 +276,7 @@ router.get('/google-forms/health', (_req, res) => {
 router.post('/sistema', validateLeadSistema, async (req, res) => {
   try {
     console.log('[Leads/Sistema] Novo prospect do produto')
-    const { nome, email, telefone, companhia, cidade, estado, observacao } = req.body
+    const { nome, email, telefone, empresa, companhia, cidade, estado, observacao } = req.body
 
     const { valido, campoFaltando } = validarCamposObrigatorios(
       { nome, email, telefone }, ['nome', 'email', 'telefone']
@@ -313,13 +294,13 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
         nome:       sanitizarTexto(nome),
         email:      email.trim().toLowerCase(),
         telefone:   normalizarTelefone(telefone),
-        companhia:  sanitizarTexto(companhia || ''),
+        companhia:  sanitizarTexto(empresa || companhia || ''),
         cidade:     sanitizarTexto(cidade    || ''),
         estado:     sanitizarTexto(estado    || ''),
         observacao: sanitizarTexto(observacao || ''),
         fonte:      req.body.fonte || 'captacao-landing',
         status:     'novo',
-        tenant_id:  '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
+        tenant_id:  process.env.SISTEMA_TENANT_ID || '81cac3a4-caa3-43b2-be4d-d16557d7ef88',
       }])
       .select()
 

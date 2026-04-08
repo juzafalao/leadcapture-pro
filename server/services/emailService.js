@@ -102,8 +102,8 @@ export async function enviarNotificacaoNovoLead(lead, marca) {
           <p><strong>LeadCapture Pro</strong></p>
           <p>Sistema de Captura de Leads para Franquias</p>
           <p style="margin-top: 10px;">
-            <a href="http://localhost:4000/admin" style="color: #667eea;">
-              🔗 Acessar Admin
+            <a href="${process.env.DASHBOARD_URL || 'https://leadcapture-proprod.vercel.app'}" style="color: #667eea;">
+              🔗 Acessar Dashboard
             </a>
           </p>
         </div>

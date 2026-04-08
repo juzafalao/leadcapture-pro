@@ -27,6 +27,18 @@ import { join, dirname } from 'path'
 
 dotenv.config()
 
+// ─── Sentry — inicializa ANTES de qualquer handler ───────────
+if (process.env.SENTRY_DSN) {
+  import('@sentry/node').then(Sentry => {
+    Sentry.init({
+      dsn:              process.env.SENTRY_DSN,
+      environment:      process.env.NODE_ENV || 'production',
+      tracesSampleRate: 0.1,
+    })
+    console.log('[Sentry] Backend inicializado')
+  }).catch(err => console.warn('[Sentry] Falha ao inicializar:', err.message))
+}
+
 // Middlewares de segurança
 import { globalLimiter, webhookLimiter, statusLimiter } from './middleware/rateLimiter.js'
 
@@ -121,18 +133,16 @@ app.get('/dashboard/*', (_req, res) => {
   res.sendFile(join(__dirname, '../dashboard-build/index.html'))
 })
 
-// ─── LeadCapture Pro — Nova Landing Page SaaS ────────────────
-app.use('/landing', express.static(join(__dirname, '../landing')))
-
 // ─── Landing Pages Dinâmicas (tenant/marca) ──────────────────
-// Rota: /landing/:slug → renderiza landing page customizada por marca
+// IMPORTANTE: deve vir ANTES do express.static('/landing')
+// para que /landing/:slug seja tratado como rota dinâmica
 app.get('/landing/:slug', async (req, res) => {
   try {
     const { slug } = req.params
 
     const { data: marca, error } = await supabase
       .from('marcas')
-      .select('*')
+      .select('id, nome, slug, emoji, logo_url, tenant_id, invest_min, invest_max, cor_primaria, cor_secundaria, descricao')
       .eq('slug', slug)
       .single()
 
@@ -166,6 +176,10 @@ app.get('/landing/:slug', async (req, res) => {
     res.status(500).send('Erro ao carregar landing page')
   }
 })
+
+// ─── Assets estáticos da landing institucional ────────────────
+// Vem DEPOIS da rota dinâmica para não interceptar /landing/:slug
+app.use('/landing', express.static(join(__dirname, '../landing')))
 
 // ─── Fallback 404 ────────────────────────────────────────────
 app.use((_req, res) => {
