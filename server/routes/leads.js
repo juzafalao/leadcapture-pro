@@ -123,65 +123,69 @@ router.post('/', validateLead, async (req, res) => {
       return false
     }
 
-    // ── Dispara notificações em paralelo com await ────────────
-    const notifPromises = []
-
-    // 1. Boas-vindas para o LEAD (email dele)
-    if (lead.email?.includes('@')) {
-      notifPromises.push(
-        comRetry(() => enviarBoasVindasLead(lead, marcaFallback), 'email-boas-vindas-lead')
-      )
-    }
-
-    // 2. Notificação interna para a equipe
-    notifPromises.push(
-      comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna')
-    )
-
-    // 3. Lead quente para diretores
-    if (lead.score >= 65) {
-      notifPromises.push(
-        comRetry(() => notificarLeadQuente(lead, marcaFallback, emailsNotif), 'email-lead-quente')
-      )
-    }
-
-    // Aguarda todas as notificações (garante que Vercel não encerra antes)
-    await Promise.allSettled(notifPromises)
-
-    // WhatsApp: envia boas-vindas e inicia qualificacao por IA
-    if (process.env.EVOLUTION_API_KEY) {
-      enviarBoasVindas(lead, marcaFallback)
-        .then(r => r.simulated
-          ? console.log('[Leads] WhatsApp simulado (sem API key)')
-          : console.log(`[Leads] WhatsApp enviado para ${lead.telefone}`)
-        )
-        .catch(err => console.warn('[Leads] WhatsApp boas-vindas:', err.message))
-    }
-
-    // N8N webhook (opcional)
-    const n8nUrl = process.env.N8N_WEBHOOK_URL
-    if (n8nUrl) {
-      fetch(n8nUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          leadId:    lead.id,
-          nome:      lead.nome,
-          email:     lead.email,
-          telefone:  lead.telefone,
-          score:     lead.score,
-          categoria: lead.categoria,
-          capital:   lead.capital_disponivel,
-          regiao:    lead.regiao_interesse,
-          marca:     marcaFallback.nome,
-          tenant_id: lead.tenant_id,
-          fonte:     lead.fonte,
-          timestamp: new Date().toISOString(),
-        }),
-      }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
-    }
-
+    // ── Responde ao cliente IMEDIATAMENTE ─────────────────────
+    // Notificações disparam em background — não bloqueiam a resposta
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
+
+    // ── Dispara notificações em background (fire & forget seguro) ──
+    // setImmediate garante que o res.json já foi enviado antes de começar
+    setImmediate(async () => {
+      const notifPromises = []
+
+      // 1. Boas-vindas para o LEAD (email dele)
+      if (lead.email?.includes('@')) {
+        notifPromises.push(
+          comRetry(() => enviarBoasVindasLead(lead, marcaFallback), 'email-boas-vindas-lead')
+        )
+      }
+
+      // 2. Notificação interna para a equipe
+      notifPromises.push(
+        comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna')
+      )
+
+      // 3. Lead quente para diretores
+      if (lead.score >= 65) {
+        notifPromises.push(
+          comRetry(() => notificarLeadQuente(lead, marcaFallback, emailsNotif), 'email-lead-quente')
+        )
+      }
+
+      await Promise.allSettled(notifPromises)
+
+      // WhatsApp: envia boas-vindas e inicia qualificacao por IA
+      if (process.env.EVOLUTION_API_KEY) {
+        enviarBoasVindas(lead, marcaFallback)
+          .then(r => r.simulated
+            ? console.log('[Leads] WhatsApp simulado (sem API key)')
+            : console.log(`[Leads] WhatsApp enviado para ${lead.telefone}`)
+          )
+          .catch(err => console.warn('[Leads] WhatsApp boas-vindas:', err.message))
+      }
+
+      // N8N webhook (opcional)
+      const n8nUrl = process.env.N8N_WEBHOOK_URL
+      if (n8nUrl) {
+        fetch(n8nUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId:    lead.id,
+            nome:      lead.nome,
+            email:     lead.email,
+            telefone:  lead.telefone,
+            score:     lead.score,
+            categoria: lead.categoria,
+            capital:   lead.capital_disponivel,
+            regiao:    lead.regiao_interesse,
+            marca:     marcaFallback.nome,
+            tenant_id: lead.tenant_id,
+            fonte:     lead.fonte,
+            timestamp: new Date().toISOString(),
+          }),
+        }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
+      }
+    })
   } catch (err) {
     console.error('[Leads] Erro:', err.message)
     res.status(500).json({ success: false, error: 'Erro interno ao processar lead', detalhe: err.message })
