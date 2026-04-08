@@ -94,6 +94,11 @@ app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(express.static(path.join(__dirname, 'public')))
 
+// Sanitizacao XSS — remove tags HTML/script de todos os campos
+import('./middleware/sanitize.js').then(({ sanitizeMiddleware }) => {
+  app.use(sanitizeMiddleware)
+}).catch(() => {})
+
 // ─── Headers de Segurança ────────────────────────────────────
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')
