@@ -1,270 +1,299 @@
-// ============================================================
-// App.jsx — Tenant-Aware + Role-Level Based Routes
-// LeadCapture Pro — Zafalão Tech
-//
-// MUDANÇAS v3:
-// 1. PrivateRoute aceita minLevel (número) OU allowedRoles (texto, retrocompatível)
-// 2. PrivateRoute aceita platformOnly para rotas de Platform Admin
-// 3. Constantes ROLES_* substituídas por LEVEL_* numéricos
-// 4. leads-sistema usa platformOnly ao invés de ROLES_ADMIN
-// 5. ✅ NOVO: Rota /audit-log (Diretor+ / nível >= 4)
-// ============================================================
-
-import React, { useState, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import Sidebar from './components/Sidebar';
-import Header from './components/layout/Header';
-import ErrorBoundary from './components/ErrorBoundary';
-import ChatBot from './components/ChatBot';
-
-const DashboardPage    = lazy(() => import('./pages/DashboardPage'));
-const MarcasPage       = lazy(() => import('./pages/MarcasPage'));
-const SegmentosPage    = lazy(() => import('./pages/SegmentosPage'));
-const UsuariosPage     = lazy(() => import('./pages/UsuariosPage'));
-const SettingsPage     = lazy(() => import('./pages/SettingsPage'));
-const LeadsSistemaPage = lazy(() => import('./pages/LeadsSistemaPage'));
-const LoginPage        = lazy(() => import('./pages/LoginPage'));
-const LandingPage      = lazy(() => import('./pages/LandingPage'));
-const AnalyticsPage    = lazy(() => import('./pages/AnalyticsPage'));
-const RelatoriosPage   = lazy(() => import('./pages/RelatoriosPage'));
-const AutomacaoPage    = lazy(() => import('./pages/AutomacaoPage'));
-const AuditLogPage     = lazy(() => import('./pages/AuditLogPage'));
-const KanbanPage       = lazy(() => import('./pages/KanbanPage'));
-const CRMPage          = lazy(() => import('./pages/CRMPage'));
-const EmailMarketingPage = lazy(() => import('./pages/EmailMarketingPage'));
-const CanaisPage       = lazy(() => import('./pages/CanaisPage'));
-const APIPage          = lazy(() => import('./pages/APIPage'));
-const MonitoramentoPage = lazy(() => import('./pages/MonitoramentoPage'));
-import { AuthProvider, useAuth } from './components/AuthContext.jsx';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AuthProvider, useAuth } from './components/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 0,                        // sem retry — falhou, mostra erro imediatamente
-      refetchOnWindowFocus: false,     // não refetch ao focar janela
-      refetchOnReconnect: 'always',    // refetch quando voltar online
-      staleTime: 1000 * 60 * 5,       // dados válidos por 5min (era 3min)
-      gcTime:    1000 * 60 * 30,      // cache mantido 30min na memória (era 15min)
-      networkMode: 'offlineFirst',     // usa cache mesmo offline
-    },
-    mutations: {
-      retry: 0,                        // mutações não fazem retry
-      networkMode: 'always',
-    },
-  },
-});
+// ── Lazy imports ─────────────────────────────────────────────
+const DashboardPage     = lazy(() => import('./pages/DashboardPage'));
+const MarcasPage        = lazy(() => import('./pages/MarcasPage'));
+const SegmentosPage     = lazy(() => import('./pages/SegmentosPage'));
+const UsuariosPage      = lazy(() => import('./pages/UsuariosPage'));
+const SettingsPage      = lazy(() => import('./pages/SettingsPage'));
+const LeadsSistemaPage  = lazy(() => import('./pages/LeadsSistemaPage'));
+const LoginPage         = lazy(() => import('./pages/LoginPage'));
+const LandingPage       = lazy(() => import('./pages/LandingPage'));
+const AnalyticsPage     = lazy(() => import('./pages/AnalyticsPage'));
+const RelatoriosPage    = lazy(() => import('./pages/RelatoriosPage'));
+const AutomacaoPage     = lazy(() => import('./pages/AutomacaoPage'));
+const AuditLogPage      = lazy(() => import('./pages/AuditLogPage'));
+const KanbanPage        = lazy(() => import('./pages/KanbanPage'));
+const CRMPage           = lazy(() => import('./pages/CRMPage'));
+const EmailMarketingPage = lazy(() => import('./pages/EmailMarketingPage'));
+const CanaisPage        = lazy(() => import('./pages/CanaisPage'));
+const APIPage           = lazy(() => import('./pages/APIPage'));
+const MonitoramentoPage = lazy(() => import('./pages/MonitoramentoPage'));
+const RankingPage       = lazy(() => import('./pages/RankingPage'));
 
-const PageFallback = () => (
-  <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-    <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-  </div>
-);
-
-// ── Níveis de acesso (da tabela roles) ──────────────────────
-// 5 = Administrador (super admin)
-// 4 = Diretor
-// 3 = Gestor
-// 2 = Consultor
-// 1 = Cliente
+// ── Níveis de acesso ─────────────────────────────────────────
 const LEVEL_CONSULTOR = 2;
 const LEVEL_GESTOR    = 3;
 const LEVEL_DIRETOR   = 4;
 const LEVEL_ADMIN     = 5;
 
-// Retrocompatibilidade: manter arrays de texto para migração gradual
-const ROLES_CONSULTOR = ['Administrador', 'admin', 'Diretor', 'Gestor', 'Consultor'];
-const ROLES_GESTOR    = ['Administrador', 'admin', 'Diretor', 'Gestor'];
-const ROLES_DIRETOR   = ['Administrador', 'admin', 'Diretor'];
+const ROLES_CONSULTOR = ['Consultor', 'Operador', 'Gestor', 'Diretor', 'Administrador', 'admin'];
+const ROLES_GESTOR    = ['Gestor', 'Diretor', 'Administrador', 'admin'];
+const ROLES_DIRETOR   = ['Diretor', 'Administrador', 'admin'];
 const ROLES_ADMIN     = ['Administrador', 'admin'];
 
-/**
- * PrivateRoute — Controle de acesso por nível ou role
- */
-function PrivateRoute({ children, minLevel, allowedRoles, platformOnly }) {
-  const { usuario, loading, isAuthenticated, isPlatformAdmin, hasMinLevel } = useAuth();
+// ── Query Client ─────────────────────────────────────────────
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      gcTime:    1000 * 60 * 30,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+// ── Loading fallback ─────────────────────────────────────────
+function PageFallback() {
+  return (
+    <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin text-4xl mb-3">⏳</div>
+        <p className="text-gray-600 text-sm">Carregando...</p>
       </div>
-    );
-  }
-
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-  if (platformOnly && !isPlatformAdmin()) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (minLevel && !hasMinLevel(minLevel)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  if (allowedRoles && !allowedRoles.includes(usuario?.role)) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  return children;
+    </div>
+  );
 }
 
+// ── Animated page wrapper ─────────────────────────────────────
 function AnimatedPage({ children }) {
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.15 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2 }}
     >
       {children}
     </motion.div>
   );
 }
 
-function AppRoutes() {
-  const location = useLocation();
+// ── Layout autenticado (com Sidebar) ─────────────────────────
+const Sidebar = lazy(() => import('./components/Sidebar'));
+
+function AuthenticatedLayout({ children }) {
   return (
-    <AnimatePresence mode="sync">
+    <div className="flex min-h-screen bg-[#0B1220]">
+      <Suspense fallback={null}>
+        <Sidebar />
+      </Suspense>
+      <main className="flex-1 overflow-auto">
+        {children}
+      </main>
+    </div>
+  );
+}
+
+// ── PrivateRoute ─────────────────────────────────────────────
+function PrivateRoute({ children, minLevel = LEVEL_CONSULTOR, allowedRoles = ROLES_CONSULTOR }) {
+  const { usuario, loading, isAuthenticated } = useAuth();
+
+  if (loading) return <PageFallback />;
+  if (!isAuthenticated || !usuario) return <Navigate to="/login" replace />;
+
+  const userRole  = usuario.role || '';
+  const isSuperAdmin = usuario.is_super_admin === true || usuario.is_platform === true;
+
+  if (isSuperAdmin) return children;
+  if (!allowedRoles.includes(userRole)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+
+// ── App Routes ───────────────────────────────────────────────
+function AppRoutes() {
+  const { usuario, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <PageFallback />;
+
+  return (
+    <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Rotas públicas */}
-        <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
-        <Route path="/landing/:slug" element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
-        <Route path="/lp/:slug"      element={<AnimatedPage><Suspense fallback={<PageFallback />}><LandingPage /></Suspense></AnimatedPage>} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Rotas autenticadas — qualquer usuário */}
+        {/* Públicas */}
+        <Route path="/login" element={
+          <Suspense fallback={<PageFallback />}>
+            <AnimatedPage><LoginPage /></AnimatedPage>
+          </Suspense>
+        } />
+
+        <Route path="/lp/:slug" element={
+          <Suspense fallback={<PageFallback />}>
+            <AnimatedPage><LandingPage /></AnimatedPage>
+          </Suspense>
+        } />
+
+        {/* Consultor+ */}
         <Route path="/dashboard" element={
-          <PrivateRoute>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-
-        {/* Consultor+ (nível >= 2) */}
-        <Route path="/relatorios" element={
           <PrivateRoute minLevel={LEVEL_CONSULTOR} allowedRoles={ROLES_CONSULTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-
-        {/* Gestor+ (nível >= 3) */}
-        <Route path="/marcas" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MarcasPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/segmentos" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SegmentosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/usuarios" element={
-          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-
-        {/* Diretor+ (nível >= 4) */}
-        <Route path="/analytics" element={
-          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/automacao" element={
-          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-        <Route path="/configuracoes" element={
-          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-
-        {/* ✅ NOVO: Audit Log (Diretor+ / nível >= 4) */}
-        <Route path="/audit-log" element={
-          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage></AuthenticatedLayout>
-          </PrivateRoute>
-        } />
-
-        {/* ✅ Monitoramento do Sistema (Admin / nível >= 5) */}
-        <Route path="/monitoramento" element={
-          <PrivateRoute minLevel={LEVEL_ADMIN} allowedRoles={['Administrador','admin']}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><MonitoramentoPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><DashboardPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
 
         <Route path="/kanban" element={
-          <PrivateRoute minLevel={LEVEL_CONSULTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><KanbanPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+          <PrivateRoute minLevel={LEVEL_CONSULTOR} allowedRoles={ROLES_CONSULTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><KanbanPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
 
-        {/* Novas features P3 */}
-        <Route path="/crm" element={
-          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CRMPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+        <Route path="/configuracoes" element={
+          <PrivateRoute minLevel={LEVEL_CONSULTOR} allowedRoles={ROLES_CONSULTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><SettingsPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
+
+        {/* Ranking — visível para todos */}
+        <Route path="/ranking" element={
+          <PrivateRoute minLevel={LEVEL_CONSULTOR} allowedRoles={ROLES_CONSULTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><RankingPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Gestor+ */}
+        <Route path="/relatorios" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><RelatoriosPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
         <Route path="/email-marketing" element={
           <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><EmailMarketingPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><EmailMarketingPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
+
         <Route path="/canais" element={
           <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><CanaisPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><CanaisPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
-        <Route path="/api-publica" element={
+
+        <Route path="/marcas" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><MarcasPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/usuarios" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><UsuariosPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/automacao" element={
+          <PrivateRoute minLevel={LEVEL_GESTOR} allowedRoles={ROLES_GESTOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><AutomacaoPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Diretor+ */}
+        <Route path="/analytics" element={
           <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><APIPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><AnalyticsPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
 
-        {/* Platform Admin Only */}
-        <Route path="/leads-sistema" element={
-          <PrivateRoute platformOnly>
-            <AuthenticatedLayout><AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage></AuthenticatedLayout>
+        <Route path="/crm" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><CRMPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
           </PrivateRoute>
         } />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="/audit-log" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><AuditLogPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/segmentos" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><SegmentosPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/api-docs" element={
+          <PrivateRoute minLevel={LEVEL_DIRETOR} allowedRoles={ROLES_DIRETOR}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><APIPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Admin */}
+        <Route path="/leads" element={
+          <PrivateRoute minLevel={LEVEL_ADMIN} allowedRoles={ROLES_ADMIN}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><LeadsSistemaPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        <Route path="/monitoramento" element={
+          <PrivateRoute minLevel={LEVEL_ADMIN} allowedRoles={ROLES_ADMIN}>
+            <AuthenticatedLayout>
+              <AnimatedPage><Suspense fallback={<PageFallback />}><MonitoramentoPage /></Suspense></AnimatedPage>
+            </AuthenticatedLayout>
+          </PrivateRoute>
+        } />
+
+        {/* Redirects */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+
       </Routes>
     </AnimatePresence>
   );
 }
 
-function AuthenticatedLayout({ children }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  return (
-    <div className="flex bg-[#0F172A] min-h-screen font-sans text-[#F8FAFC]">
-      <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
-      <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
-        <Header onMenuClick={() => setMobileMenuOpen(true)} />
-        <div className="flex-1">{children}</div>
-        <footer className="border-t border-[#1F2937] py-4 text-center bg-[#0F172A]">
-          <p className="text-[9px] text-[#CBD5E1]/30 font-bold uppercase tracking-[0.2em]">
-            Desenvolvido por — <span className="text-[#10B981]">Zafalão Tech</span>
-          </p>
-        </footer>
-      </main>
-      <ChatBot />
-    </div>
-  );
-}
-
+// ── Root ─────────────────────────────────────────────────────
 export default function App() {
   return (
     <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <AppRoutes />
-        </Router>
-      </AuthProvider>
-    </QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
