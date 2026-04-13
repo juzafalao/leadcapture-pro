@@ -1,181 +1,336 @@
-import { useState, useEffect } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+// ============================================================
+// Sidebar  Tenant-Aware + Role-Based Visibility
+// LeadCapture Pro  Zafalao Tech
+//
+// v4  adiciona Ranking no grupo Principal
+// Mantm identidade visual original 100%
+// ============================================================
+
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import LogoIcon from './LogoIcon';
+import ConfirmModal from './shared/ConfirmModal';
 
-// ── Icones SVG inline ─────────────────────────────────────────
-function IconDash()    { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> }
-function IconKanban()  { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg> }
-function IconRanking() { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg> }
-function IconRel()     { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M9 17H5a2 2 0 00-2 2v0a2 2 0 002 2h14a2 2 0 002-2v0a2 2 0 00-2-2h-4M9 17V7m0 10h6m0 0V7m0 10V7M9 7H5m4 0h6m0 0h4"/></svg> }
-function IconEmail()   { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> }
-function IconCanais()  { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg> }
-function IconCRM()     { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg> }
-function IconAuto()    { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M20 12h-2M17.66 17.66l-1.41-1.41M12 20v-2M6.34 17.66l1.41-1.41M4 12h2M6.34 6.34l1.41 1.41"/></svg> }
-function IconMarcas()  { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg> }
-function IconUsuarios(){ return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> }
-function IconAnalytics(){ return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> }
-function IconAuditLog(){ return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> }
-function IconMonitoramento(){ return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> }
-function IconLeads()   { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg> }
-function IconAPI()     { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg> }
-function IconConfig()  { return <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M20 12h-2M17.66 17.66l-1.41-1.41M12 20v-2M6.34 17.66l1.41-1.41M4 12h2M6.34 6.34l1.41 1.41"/></svg> }
+// -- SVG Icon components --------------------------------------
+const IconLeads = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="8"/>
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+  </svg>
+);
 
-export default function Sidebar() {
-  const { usuario, logout, isAuthenticated, isAdmin, isGestor, isDiretor } = useAuth();
-  const navigate  = useNavigate();
-  const location  = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+const IconAnalytics = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="3" y="12" width="4" height="9"/>
+    <rect x="10" y="7" width="4" height="14"/>
+    <rect x="17" y="3" width="4" height="18"/>
+  </svg>
+);
 
-  const role = usuario?.role || '';
-  const isSuperAdmin = usuario?.is_super_admin === true || usuario?.is_platform === true;
+const IconRelatorios = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="4" y="2" width="16" height="20" rx="2"/>
+    <path d="M8 7h8M8 12h8M8 17h5"/>
+  </svg>
+);
 
-  const adminCheck  = () => isSuperAdmin || ['Administrador','admin'].includes(role);
-  const diretorCheck= () => adminCheck() || role === 'Diretor';
-  const gestorCheck = () => diretorCheck() || role === 'Gestor';
-  const consultorCheck = () => gestorCheck() || ['Consultor','Operador'].includes(role);
+const IconAutomacao = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+  </svg>
+);
 
-  const menuItems = [
-    // Consultor+
-    { path: '/dashboard',      icon: <IconDash />,          label: 'Leads',          show: consultorCheck() },
-    { path: '/kanban',         icon: <IconKanban />,         label: 'Kanban',         show: consultorCheck() },
-    { path: '/ranking',        icon: <IconRanking />,        label: 'Ranking',        show: consultorCheck() },
-    // Gestor+
-    { path: '/relatorios',     icon: <IconRel />,            label: 'Relatórios',     show: gestorCheck() },
-    { path: '/email-marketing',icon: <IconEmail />,          label: 'Email',          show: gestorCheck() },
-    { path: '/canais',         icon: <IconCanais />,         label: 'Canais',         show: gestorCheck() },
-    { path: '/marcas',         icon: <IconMarcas />,         label: 'Marcas',         show: gestorCheck() },
-    { path: '/usuarios',       icon: <IconUsuarios />,       label: 'Usuários',       show: gestorCheck() },
-    { path: '/automacao',      icon: <IconAuto />,           label: 'Automação',      show: gestorCheck() },
-    // Diretor+
-    { path: '/analytics',      icon: <IconAnalytics />,      label: 'Analytics',      show: diretorCheck() },
-    { path: '/crm',            icon: <IconCRM />,            label: 'CRM',            show: diretorCheck() },
-    { path: '/audit-log',      icon: <IconAuditLog />,       label: 'Audit Log',      show: diretorCheck() },
-    { path: '/api-docs',       icon: <IconAPI />,            label: 'API Docs',       show: diretorCheck() },
-    // Admin
-    { path: '/leads',          icon: <IconLeads />,          label: 'Leads Sistema',  show: adminCheck() },
-    { path: '/monitoramento',  icon: <IconMonitoramento />,  label: 'Monitoramento',  show: adminCheck() },
-    // Sempre
-    { path: '/configuracoes',  icon: <IconConfig />,         label: 'Configurações',  show: consultorCheck() },
-  ].filter(item => item.show);
+const IconMarcas = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M3 21V7l9-4 9 4v14"/>
+    <path d="M9 21V12h6v9"/>
+    <path d="M3 10h18"/>
+  </svg>
+);
 
-  async function handleLogout() {
-    await logout();
-    navigate('/login');
-  }
+const IconSegmentos = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 3v9l6.36 6.36"/>
+    <path d="M12 12L5.64 18.36"/>
+  </svg>
+);
 
-  // Fecha menu mobile ao navegar
-  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+const IconTeam = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="9" cy="7" r="3"/>
+    <circle cx="17" cy="8" r="2.5"/>
+    <path d="M2 21c0-4 3-6 7-6s7 2 7 6"/>
+    <path d="M17 14c2.5 0 5 1.5 5 4"/>
+  </svg>
+);
 
-  const sidebarContent = (
-    <div className={`flex flex-col h-full bg-[#0A0F1E] border-r border-white/5 transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}>
+const IconLeadsSistema = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M12 2L8.5 8.5 2 9.27l5 4.87-1.18 6.88L12 17.77l6.18 3.25L17 14.14l5-4.87-6.5-.77L12 2z"/>
+  </svg>
+);
 
-      {/* Logo */}
-      <div className={`flex items-center gap-3 px-4 py-5 border-b border-white/5 ${collapsed ? 'justify-center px-2' : ''}`}>
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#EE7B4D] to-[#F59E0B] flex items-center justify-center shrink-0 text-black font-black text-sm">
-          L
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-white font-black text-sm leading-tight truncate">LeadCapture</p>
-            <p className="text-[#F59E0B] text-[9px] font-black uppercase tracking-widest">PRO</p>
-          </div>
-        )}
-      </div>
+const IconKanban = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="5" height="18" rx="1"/>
+    <rect x="10" y="3" width="5" height="12" rx="1"/>
+    <rect x="17" y="3" width="5" height="15" rx="1"/>
+  </svg>
+);
 
-      {/* Menu */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-0.5">
-        {menuItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all group ${
-                isActive
-                  ? 'bg-[#EE7B4D]/15 text-[#EE7B4D] border border-[#EE7B4D]/20'
-                  : 'text-gray-500 hover:text-white hover:bg-white/5'
-              } ${collapsed ? 'justify-center px-2' : ''}`
-            }
-            title={collapsed ? item.label : undefined}
-          >
-            <span className="shrink-0">{item.icon}</span>
-            {!collapsed && <span className="truncate">{item.label}</span>}
-          </NavLink>
-        ))}
-      </nav>
+const IconRanking = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2z"/>
+    <path d="M13 5h-2a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/>
+    <path d="M20 2h-2a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+  </svg>
+);
 
-      {/* Usuário + Logout */}
-      <div className={`px-2 py-3 border-t border-white/5 space-y-1`}>
-        {!collapsed && usuario && (
-          <div className="px-3 py-2 rounded-xl bg-white/3">
-            <p className="text-white text-xs font-bold truncate">{usuario.nome}</p>
-            <p className="text-gray-600 text-[10px] truncate">{usuario.role}</p>
-          </div>
-        )}
-        <button
-          onClick={handleLogout}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all ${collapsed ? 'justify-center' : ''}`}
-          title={collapsed ? 'Sair' : undefined}
-        >
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-          </svg>
-          {!collapsed && 'Sair'}
-        </button>
-        <button
-          onClick={() => setCollapsed(c => !c)}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-gray-600 hover:text-white hover:bg-white/5 transition-all ${collapsed ? 'justify-center' : ''}`}
-        >
-          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            {collapsed
-              ? <path d="M9 5l7 7-7 7"/>
-              : <path d="M15 19l-7-7 7-7"/>}
-          </svg>
-          {!collapsed && 'Recolher'}
-        </button>
-      </div>
-    </div>
-  );
+const IconAuditLog = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+    <rect x="9" y="3" width="6" height="4" rx="1"/>
+    <path d="M9 12l2 2 4-4"/>
+  </svg>
+);
+
+const IconMonitoramento = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M2 12h2l3-9 4 18 3-9 2 5 2-5 2 4h2"/>
+  </svg>
+);
+
+const IconConfig = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.5-2.3.7A7 7 0 0 0 14.6 4l-.6-2h-4l-.6 2A7 7 0 0 0 7.5 6.1l-2.3-.7-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .5.1 1 .2 1.6l-2 1.5 2 3.5 2.3-.7A7 7 0 0 0 9.4 20l.6 2h4l.6-2a7 7 0 0 0 1.9-2.1l2.3.7 2-3.5-2-1.5c.1-.6.2-1.1.2-1.6z"/>
+  </svg>
+);
+
+const IconLogoff = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+    <polyline points="16 17 21 12 16 7"/>
+    <line x1="21" y1="12" x2="9" y2="12"/>
+  </svg>
+);
+
+const IconEmail = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <rect x="2" y="4" width="20" height="16" rx="2"/>
+    <path d="M22 7l-10 7L2 7"/>
+  </svg>
+);
+
+const IconCanais = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+  </svg>
+);
+
+const IconCRM = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const IconAPI = () => (
+  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+    <polyline points="16 18 22 12 16 6"/>
+    <polyline points="8 6 2 12 8 18"/>
+  </svg>
+);
+
+// -- Definicao da navegacao por grupos ------------------------
+const NAV_GROUPS = [
+  {
+    label: 'Principal',
+    items: [
+      { path: '/dashboard', icon: <IconLeads />,   label: 'Leads',   show: () => true },
+      { path: '/kanban',    icon: <IconKanban />,  label: 'Funil',   show: () => true },
+      { path: '/ranking',   icon: <IconRanking />, label: 'Ranking', show: () => true, badge: 'Novo' },
+    ],
+  },
+  {
+    label: 'Inteligencia',
+    items: [
+      { path: '/analytics',  icon: <IconAnalytics />,  label: 'Analytics',  show: (a) => a.isDiretor() },
+      { path: '/relatorios', icon: <IconRelatorios />, label: 'Relatorios', show: (a) => a.isConsultor() },
+    ],
+  },
+  {
+    label: 'Operacao',
+    items: [
+      { path: '/automacao',       icon: <IconAutomacao />, label: 'Automacao',  show: (a) => a.isDiretor() },
+      { path: '/email-marketing', icon: <IconEmail />,     label: 'Email Mktg', show: (a) => a.isGestor(), badge: 'Novo' },
+      { path: '/canais',          icon: <IconCanais />,    label: 'Canais',     show: (a) => a.isGestor(), badge: 'Novo' },
+      { path: '/crm',             icon: <IconCRM />,       label: 'CRM',        show: (a) => a.isDiretor(), badge: 'Em breve' },
+      { path: '/marcas',          icon: <IconMarcas />,    label: 'Marcas',     show: (a) => a.isGestor() },
+      { path: '/segmentos',       icon: <IconSegmentos />, label: 'Segmentos',  show: (a) => a.isGestor() },
+      { path: '/usuarios',        icon: <IconTeam />,      label: 'Time',       show: (a) => a.isGestor() },
+    ],
+  },
+  {
+    label: 'Plataforma',
+    items: [
+      { path: '/leads',          icon: <IconLeadsSistema />,  label: 'Leads Sist.',   show: (a) => a.isPlatformAdmin() },
+      { path: '/audit-log',      icon: <IconAuditLog />,      label: 'Audit Log',     show: (a) => a.isDiretor() },
+      { path: '/monitoramento',  icon: <IconMonitoramento />, label: 'Monitor.',      show: (a) => a.isAdmin() },
+      { path: '/api-docs',       icon: <IconAPI />,           label: 'API Docs',      show: (a) => a.isDiretor(), badge: 'Novo' },
+    ],
+  },
+  {
+    label: 'Sistema',
+    items: [
+      { path: '/configuracoes', icon: <IconConfig />, label: 'Config', show: (a) => a.isDiretor() },
+    ],
+  },
+];
+
+export default function Sidebar({ mobileOpen, setMobileOpen }) {
+  const auth     = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [confirmLogoff, setConfirmLogoff] = useState(false);
+
+  const handleNavClick = () => {
+    if (mobileOpen) setMobileOpen(false);
+  };
+
+  const handleLogoffConfirm = async () => {
+    setConfirmLogoff(false);
+    await auth.logout();
+    navigate('/login', { replace: true });
+  };
+
+  const isActive = (path) => location.pathname === path;
 
   return (
     <>
-      {/* Desktop */}
-      <div className="hidden lg:flex h-screen sticky top-0">
-        {sidebarContent}
-      </div>
+      {/* Overlay mobile */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      {/* Mobile — botão hamburguer */}
-      <div className="lg:hidden">
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="fixed top-4 left-4 z-50 w-10 h-10 bg-[#0F172A] border border-white/10 rounded-xl flex items-center justify-center text-white"
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed left-0 top-0 h-full
+          bg-[#0F172A] border-r border-white/5
+          flex flex-col items-center py-8
+          z-50 w-32
+          transition-transform duration-300 ease-in-out
+          ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}
+      >
+        {/* Logo oficial */}
+        <Link
+          to="/dashboard"
+          onClick={handleNavClick}
+          className="mb-10 px-3"
+          title="LeadCapture Pro"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-        </button>
+          <LogoIcon size={104} />
+        </Link>
 
-        {/* Overlay mobile */}
-        <AnimatePresence>
-          {mobileOpen && (
-            <>
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-                onClick={() => setMobileOpen(false)}
-              />
-              <motion.div
-                initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="fixed left-0 top-0 z-50 h-full"
-              >
-                {sidebarContent}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div>
+        {/* Nav por grupos */}
+        <nav className="flex flex-col gap-1 w-full px-3 flex-1 overflow-y-auto scrollbar-none">
+          {NAV_GROUPS.map((group) => {
+            const visibleItems = group.items.filter(item => item.show(auth));
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={group.label} className="mb-4">
+                <p className="text-[7px] font-black uppercase tracking-[0.18em] text-gray-700 text-center mb-2 px-1">
+                  {group.label}
+                </p>
+                {visibleItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={handleNavClick}
+                    title={item.label}
+                    className={`
+                      flex flex-col items-center gap-1.5
+                      p-3 rounded-2xl mb-1
+                      transition-all duration-150
+                      ${isActive(item.path)
+                        ? 'bg-[#10B981] text-black shadow-md shadow-[#10B981]/20'
+                        : 'text-gray-600 hover:bg-white/5 hover:text-gray-400'
+                      }
+                    `}
+                  >
+                    <span className="text-lg leading-none">{item.icon}</span>
+                    <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
+                      {item.label}
+                    </span>
+                    {item.badge && (
+                      <span className={`text-[5px] font-black uppercase px-1 py-0.5 rounded-full leading-none ${
+                        item.badge === 'Em breve'
+                          ? 'bg-[#F59E0B]/20 text-[#F59E0B]'
+                          : 'bg-[#10B981]/20 text-[#10B981]'
+                      }`}>
+                        {item.badge === 'Em breve' ? 'breve' : 'novo'}
+                      </span>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Logoff + Avatar */}
+        <div className="mt-auto pt-4 border-t border-white/5 w-full px-3">
+          <button
+            onClick={() => setConfirmLogoff(true)}
+            title="Sair do sistema"
+            className="flex flex-col items-center gap-1.5 p-3 rounded-2xl mb-2 w-full transition-all duration-150 text-gray-600 hover:bg-red-500/10 hover:text-red-400"
+          >
+            <span className="text-lg leading-none"><IconLogoff /></span>
+            <span className="text-[6.5px] font-black uppercase tracking-widest leading-none">
+              Logoff
+            </span>
+          </button>
+
+          {/* Avatar com role_emoji e tenant name */}
+          <div className="flex flex-col items-center pb-2 gap-1">
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+              style={{
+                background: auth.usuario?.role_color
+                  ? `linear-gradient(135deg, ${auth.usuario.role_color}, ${auth.usuario.role_color}88)`
+                  : 'linear-gradient(135deg, #10B981, #059669)',
+                color: '#000',
+              }}
+              title={`${auth.usuario?.nome || '?'}  ${auth.usuario?.role || ''}  ${auth.tenant?.name || ''}`}
+            >
+              {auth.usuario?.role_emoji || auth.usuario?.nome?.charAt(0).toUpperCase() || '?'}
+            </div>
+            <span className="text-[6px] font-bold uppercase tracking-wider text-gray-700 text-center leading-tight max-w-full truncate px-1">
+              {auth.tenant?.name || ''}
+            </span>
+          </div>
+        </div>
+      </aside>
+
+      <ConfirmModal
+        isOpen={confirmLogoff}
+        title="Sair do sistema"
+        message="Tem certeza que deseja encerrar sua sessao?"
+        onConfirm={handleLogoffConfirm}
+        onClose={() => setConfirmLogoff(false)}
+      />
     </>
   );
 }
