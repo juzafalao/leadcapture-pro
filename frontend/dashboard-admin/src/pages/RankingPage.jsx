@@ -223,9 +223,9 @@ export default function RankingPage() {
 
   const medalhas = ['🥇','🥈','🥉']
   const bgPodio  = [
-    'from-[#F59E0B] to-[#EE7B4D]',
-    'from-[#CBD5E1] to-[#94A3B8]',
-    'from-[#B45309] to-[#92400E]',
+    'from-[#EE7B4D] to-[#EE7B4D]',
+    'from-[#94A3B8] to-[#64748B]',
+    'from-[#6B7280] to-[#4B5563]',
   ]
   const altPodio = [140, 100, 80]
 
@@ -237,10 +237,10 @@ export default function RankingPage() {
       <div className="px-6 lg:px-10 pt-8 pb-6">
         <motion.div initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }}>
           <h1 className="text-2xl lg:text-3xl font-light text-white mb-1">
-            Ranking <span className="text-[#F59E0B] font-bold">de Consultores</span>
+            Ranking <span className="text-[#EE7B4D] font-bold">de Consultores</span>
           </h1>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-0.5 bg-[#F59E0B] rounded-full" />
+            <div className="w-12 h-0.5 bg-[#EE7B4D] rounded-full" />
             <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               Performance mensal · comissões · metas · premiação
             </p>
@@ -254,7 +254,7 @@ export default function RankingPage() {
           {meses.map(m => (
             <button key={m.v} onClick={() => setMes(m.v)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold capitalize transition-all ${
-                mes === m.v ? 'bg-[#F59E0B] text-black' : 'text-gray-500 hover:text-white'
+                mes === m.v ? 'bg-[#EE7B4D] text-black' : 'text-gray-500 hover:text-white'
               }`}>
               {m.l.substring(0,3)}
             </button>
@@ -264,7 +264,7 @@ export default function RankingPage() {
           {anos.map(a => (
             <button key={a} onClick={() => setAno(a)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                ano === a ? 'bg-[#F59E0B] text-black' : 'text-gray-500 hover:text-white'
+                ano === a ? 'bg-[#EE7B4D] text-black' : 'text-gray-500 hover:text-white'
               }`}>
               {a}
             </button>
@@ -284,7 +284,7 @@ export default function RankingPage() {
           ].map(a => (
             <button key={a.id} onClick={() => setAba(a.id)}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-                aba === a.id ? 'bg-[#F59E0B] text-black' : 'text-gray-500 hover:text-white'
+                aba === a.id ? 'bg-[#EE7B4D] text-black' : 'text-gray-500 hover:text-white'
               }`}>
               {a.label}
             </button>
@@ -310,7 +310,7 @@ export default function RankingPage() {
               {/* KPIs gerais */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
                 {[
-                  { label:'Total em vendas (mês)', valor:fmtR(totalGeral),  cor:'text-[#F59E0B]', icon:'💰' },
+                  { label:'Total em vendas (mês)', valor:fmtR(totalGeral),  cor:'text-[#EE7B4D]', icon:'💰' },
                   { label:'Consultores ativos',    valor:ranking.length,    cor:'text-white',      icon:'👥' },
                   { label:'Leads convertidos',     valor:leads.length,      cor:'text-[#10B981]',  icon:'🎯' },
                   { label:'Ticket médio',          valor:leads.length > 0 ? fmtR(totalGeral / leads.length) : 'R$ —', cor:'text-[#8B5CF6]', icon:'📈' },
@@ -338,7 +338,7 @@ export default function RankingPage() {
                   {/* PÓDIO */}
                   {top3.length >= 1 && (
                     <div className="mb-10">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-[#F59E0B] mb-6 text-center">
+                      <p className="text-[9px] font-black uppercase tracking-widest text-[#EE7B4D] mb-6 text-center">
                         Pódio do mês — {labelMes(ano, mes)}
                       </p>
                       <div className="flex items-end justify-center gap-4 lg:gap-8">
@@ -358,7 +358,7 @@ export default function RankingPage() {
                                 <div className="absolute -top-3 -right-1 text-xl">{medalhas[pos]}</div>
                               </div>
                               <p className="text-white font-bold text-sm text-center leading-tight">{c.nome?.split(' ')[0]}</p>
-                              <p className="text-[#F59E0B] font-black text-base">{fmtR(c.totalVendas)}</p>
+                              <p className="text-[#EE7B4D] font-black text-base">{fmtR(c.totalVendas)}</p>
                               <p className="text-gray-500 text-[10px]">{c.qtdLeads} lead{c.qtdLeads !== 1 ? 's' : ''}</p>
                               {/* Barra de pódio */}
                               <div className={`mt-3 w-24 lg:w-32 rounded-t-xl bg-gradient-to-t ${bgPodio[pos]}`}
@@ -385,7 +385,7 @@ export default function RankingPage() {
                     {ranking.map((c, i) => (
                       <motion.div key={c.id} initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:i*0.04 }}
                         className={`px-5 py-4 grid grid-cols-12 gap-2 items-center border-b border-white/5 last:border-0 hover:bg-white/2 transition-colors ${
-                          i === 0 ? 'bg-[#F59E0B]/5' : i === 1 ? 'bg-white/3' : i === 2 ? 'bg-[#B45309]/5' : ''
+                          i === 0 ? 'bg-[#EE7B4D]/5' : i === 1 ? 'bg-white/3' : i === 2 ? 'bg-[#B45309]/5' : ''
                         }`}>
                         <div className="col-span-1 flex items-center">
                           <span className="text-lg">{i < 3 ? medalhas[i] : <span className="text-gray-600 text-sm font-black">{i+1}</span>}</span>
@@ -400,7 +400,7 @@ export default function RankingPage() {
                           </div>
                         </div>
                         <div className="col-span-2 text-right">
-                          <p className="text-[#F59E0B] font-black text-sm">{fmtR(c.totalVendas)}</p>
+                          <p className="text-[#EE7B4D] font-black text-sm">{fmtR(c.totalVendas)}</p>
                         </div>
                         <div className="col-span-2 text-right">
                           <p className="text-[#10B981] font-bold text-sm">
@@ -414,11 +414,11 @@ export default function RankingPage() {
                         <div className="col-span-1 text-right">
                           {c.pctMeta !== null ? (
                             <div>
-                              <p className={`text-xs font-black ${c.pctMeta >= 100 ? 'text-[#10B981]' : c.pctMeta >= 70 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
+                              <p className={`text-xs font-black ${c.pctMeta >= 100 ? 'text-[#10B981]' : c.pctMeta >= 70 ? 'text-[#EE7B4D]' : 'text-[#EF4444]'}`}>
                                 {c.pctMeta}%
                               </p>
                               <div className="w-full h-1 bg-white/10 rounded-full mt-0.5">
-                                <div className={`h-1 rounded-full ${c.pctMeta >= 100 ? 'bg-[#10B981]' : c.pctMeta >= 70 ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`}
+                                <div className={`h-1 rounded-full ${c.pctMeta >= 100 ? 'bg-[#10B981]' : c.pctMeta >= 70 ? 'bg-[#EE7B4D]' : 'bg-[#EF4444]'}`}
                                   style={{ width:`${c.pctMeta}%` }} />
                               </div>
                             </div>
@@ -459,7 +459,7 @@ export default function RankingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-[#F59E0B] font-black text-xl">{fmtR(c.totalVendas)}</p>
+                      <p className="text-[#EE7B4D] font-black text-xl">{fmtR(c.totalVendas)}</p>
                       <p className="text-gray-500 text-xs">{c.qtdLeads} lead{c.qtdLeads !== 1 ? 's' : ''} convertido{c.qtdLeads !== 1 ? 's' : ''}</p>
                     </div>
                   </div>
@@ -468,7 +468,7 @@ export default function RankingPage() {
                     {[
                       { l:'Comissão (%)',  v: c.comissao.pct > 0 ? fmtR(c.totalVendas * c.comissao.pct / 100) : '—', sub: c.comissao.pct > 0 ? `${c.comissao.pct}% sobre vendas` : 'Sem faixa ativa', cor:'text-[#10B981]' },
                       { l:'Bônus fixo',    v: c.comissao.bonus > 0 ? fmtR(c.comissao.bonus) : '—', sub: c.comissao.faixa?.label || '', cor:'text-[#8B5CF6]' },
-                      { l:'Total a receber', v: c.comissao.total > 0 ? fmtR(c.comissao.total) : '—', sub:'comissão + bônus', cor:'text-[#F59E0B]' },
+                      { l:'Total a receber', v: c.comissao.total > 0 ? fmtR(c.comissao.total) : '—', sub:'comissão + bônus', cor:'text-[#EE7B4D]' },
                       { l:'Ticket médio',  v: c.qtdLeads > 0 ? fmtR(c.totalVendas / c.qtdLeads) : '—', sub:'por lead convertido', cor:'text-white' },
                     ].map((m, mi) => (
                       <div key={mi} className="bg-[#0B1220] rounded-xl p-3">
@@ -484,13 +484,13 @@ export default function RankingPage() {
                     <div>
                       <div className="flex justify-between text-[10px] mb-1">
                         <span className="text-gray-500">Meta: {fmtR(c.metaValor)}</span>
-                        <span className={`font-black ${c.pctMeta >= 100 ? 'text-[#10B981]' : c.pctMeta >= 70 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
+                        <span className={`font-black ${c.pctMeta >= 100 ? 'text-[#10B981]' : c.pctMeta >= 70 ? 'text-[#EE7B4D]' : 'text-[#EF4444]'}`}>
                           {c.pctMeta}% atingido
                         </span>
                       </div>
                       <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
                         <motion.div initial={{ width:0 }} animate={{ width:`${c.pctMeta}%` }} transition={{ delay:0.3 + i*0.05, duration:0.8 }}
-                          className={`h-2 rounded-full ${c.pctMeta >= 100 ? 'bg-[#10B981]' : c.pctMeta >= 70 ? 'bg-[#F59E0B]' : 'bg-[#EF4444]'}`} />
+                          className={`h-2 rounded-full ${c.pctMeta >= 100 ? 'bg-[#10B981]' : c.pctMeta >= 70 ? 'bg-[#EE7B4D]' : 'bg-[#EF4444]'}`} />
                       </div>
                     </div>
                   )}
@@ -508,7 +508,7 @@ export default function RankingPage() {
                               <p className="text-white text-xs font-bold">{l.nome}</p>
                               <p className="text-gray-600 text-[10px]">{new Date(l.created_at).toLocaleDateString('pt-BR')}</p>
                             </div>
-                            <p className="text-[#F59E0B] font-bold text-xs">{fmtR(estimarCapital(l.capital_disponivel))}</p>
+                            <p className="text-[#EE7B4D] font-bold text-xs">{fmtR(estimarCapital(l.capital_disponivel))}</p>
                           </div>
                         ))}
                       </div>
@@ -546,7 +546,7 @@ export default function RankingPage() {
                     a.download = `ranking-${ano}-${String(mes+1).padStart(2,'0')}.csv`
                     a.click()
                   }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#F59E0B]/10 text-[#F59E0B] border border-[#F59E0B]/20 hover:bg-[#F59E0B]/20 transition-all">
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-[#EE7B4D]/10 text-[#EE7B4D] border border-[#EE7B4D]/20 hover:bg-[#EE7B4D]/20 transition-all">
                   📥 Exportar CSV
                 </button>
               </div>
@@ -563,18 +563,18 @@ export default function RankingPage() {
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {ranking.map((c, i) => (
-                      <tr key={c.id} className={`hover:bg-white/2 transition-colors ${i === 0 ? 'bg-[#F59E0B]/5' : ''}`}>
+                      <tr key={c.id} className={`hover:bg-white/2 transition-colors ${i === 0 ? 'bg-[#EE7B4D]/5' : ''}`}>
                         <td className="px-4 py-3 text-center">{i < 3 ? medalhas[i] : <span className="text-gray-600">{i+1}</span>}</td>
                         <td className="px-4 py-3 text-white font-bold">{c.nome}</td>
                         <td className="px-4 py-3 text-gray-300">{c.qtdLeads}</td>
-                        <td className="px-4 py-3 text-[#F59E0B] font-bold">{fmtR(c.totalVendas)}</td>
+                        <td className="px-4 py-3 text-[#EE7B4D] font-bold">{fmtR(c.totalVendas)}</td>
                         <td className="px-4 py-3 text-gray-300">{c.comissao.pct > 0 ? `${c.comissao.pct}%` : '—'}</td>
                         <td className="px-4 py-3 text-[#10B981] font-bold">{c.comissao.pct > 0 ? fmtR(c.totalVendas * c.comissao.pct / 100) : '—'}</td>
                         <td className="px-4 py-3 text-[#8B5CF6] font-bold">{c.comissao.bonus > 0 ? fmtR(c.comissao.bonus) : '—'}</td>
                         <td className="px-4 py-3 text-white font-black">{c.comissao.total > 0 ? fmtR(c.comissao.total) : '—'}</td>
                         <td className="px-4 py-3">
                           {c.pctMeta !== null ? (
-                            <span className={`font-black ${c.pctMeta >= 100 ? 'text-[#10B981]' : c.pctMeta >= 70 ? 'text-[#F59E0B]' : 'text-[#EF4444]'}`}>
+                            <span className={`font-black ${c.pctMeta >= 100 ? 'text-[#10B981]' : c.pctMeta >= 70 ? 'text-[#EE7B4D]' : 'text-[#EF4444]'}`}>
                               {c.pctMeta}%
                             </span>
                           ) : <span className="text-gray-700">—</span>}
@@ -585,7 +585,7 @@ export default function RankingPage() {
                     <tr className="bg-[#0B1220] border-t-2 border-white/10">
                       <td colSpan={2} className="px-4 py-3 text-white font-black text-xs uppercase tracking-wider">TOTAL GERAL</td>
                       <td className="px-4 py-3 text-white font-black">{leads.length}</td>
-                      <td className="px-4 py-3 text-[#F59E0B] font-black">{fmtR(totalGeral)}</td>
+                      <td className="px-4 py-3 text-[#EE7B4D] font-black">{fmtR(totalGeral)}</td>
                       <td colSpan={2} className="px-4 py-3 text-[#10B981] font-black">
                         {fmtR(ranking.reduce((s,c) => s + c.totalVendas * c.comissao.pct / 100, 0))}
                       </td>
@@ -637,21 +637,21 @@ export default function RankingPage() {
                     <motion.div key={i} initial={{ opacity:0 }} animate={{ opacity:1 }}
                       className="grid grid-cols-10 gap-2 items-center bg-[#0B1220] rounded-xl p-3">
                       <input type="number" value={f.de} onChange={e => setEditFaixas(fs => fs.map((x,xi) => xi===i ? {...x, de: e.target.value} : x))}
-                        className="col-span-2 bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]/50"
+                        className="col-span-2 bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#EE7B4D]/50"
                         placeholder="0" min="0" />
                       <input type="number" value={f.ate ?? ''} onChange={e => setEditFaixas(fs => fs.map((x,xi) => xi===i ? {...x, ate: e.target.value || null} : x))}
-                        className="col-span-2 bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]/50"
+                        className="col-span-2 bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#EE7B4D]/50"
                         placeholder="Sem limite" min="0" />
                       <div className="col-span-2 flex items-center gap-1">
                         <input type="number" value={f.pct} onChange={e => setEditFaixas(fs => fs.map((x,xi) => xi===i ? {...x, pct: e.target.value} : x))}
-                          className="w-full bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-[#10B981] font-bold focus:outline-none focus:border-[#F59E0B]/50"
+                          className="w-full bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-[#10B981] font-bold focus:outline-none focus:border-[#EE7B4D]/50"
                           placeholder="5" min="0" max="100" step="0.5" />
                         <span className="text-gray-600 text-xs">%</span>
                       </div>
                       <div className="col-span-2 flex items-center gap-1">
                         <span className="text-gray-600 text-xs">R$</span>
                         <input type="number" value={f.bonus} onChange={e => setEditFaixas(fs => fs.map((x,xi) => xi===i ? {...x, bonus: e.target.value} : x))}
-                          className="w-full bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-[#8B5CF6] font-bold focus:outline-none focus:border-[#F59E0B]/50"
+                          className="w-full bg-transparent border border-white/10 rounded-lg px-2 py-1.5 text-xs text-[#8B5CF6] font-bold focus:outline-none focus:border-[#EE7B4D]/50"
                           placeholder="0" min="0" />
                       </div>
                       <button onClick={() => setEditFaixas(fs => fs.filter((_, xi) => xi !== i))}
@@ -690,9 +690,9 @@ export default function RankingPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-600 text-sm">R$</span>
                     <input type="number" value={metaGlobal} onChange={e => setMetaGlobal(e.target.value)}
-                      className="flex-1 bg-[#0B1220] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#F59E0B]/50"
+                      className="flex-1 bg-[#0B1220] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#EE7B4D]/50"
                       placeholder="Ex: 200000" min="0" />
-                    {metaGlobal && <span className="text-[#F59E0B] text-xs font-bold">{fmtR(parseFloat(metaGlobal))}</span>}
+                    {metaGlobal && <span className="text-[#EE7B4D] text-xs font-bold">{fmtR(parseFloat(metaGlobal))}</span>}
                   </div>
                 </div>
 
@@ -702,14 +702,14 @@ export default function RankingPage() {
                     <div className="space-y-2">
                       {consultores.map(c => (
                         <div key={c.id} className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#F59E0B] to-[#EE7B4D] flex items-center justify-center text-black font-black text-xs shrink-0">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#EE7B4D] to-[#EE7B4D] flex items-center justify-center text-black font-black text-xs shrink-0">
                             {c.nome?.charAt(0)}
                           </div>
                           <p className="text-gray-300 text-xs flex-1 truncate">{c.nome}</p>
                           <div className="flex items-center gap-1">
                             <span className="text-gray-600 text-xs">R$</span>
                             <input type="number" value={editMetas[c.id] || ''} onChange={e => setEditMetas(m => ({...m, [c.id]: e.target.value}))}
-                              className="w-32 bg-[#0B1220] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#F59E0B]/50"
+                              className="w-32 bg-[#0B1220] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#EE7B4D]/50"
                               placeholder={metaGlobal || 'Global'} min="0" />
                           </div>
                         </div>
@@ -721,7 +721,7 @@ export default function RankingPage() {
 
               {/* Botão salvar */}
               <button onClick={salvarParametros} disabled={salvando}
-                className="w-full py-4 rounded-2xl text-sm font-black bg-[#F59E0B] text-black hover:bg-[#D97706] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                className="w-full py-4 rounded-2xl text-sm font-black bg-[#EE7B4D] text-black hover:bg-[#D97706] transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {salvando ? (
                   <><span className="animate-spin">⏳</span> Salvando...</>
                 ) : salvoOk ? (
@@ -731,8 +731,8 @@ export default function RankingPage() {
                 )}
               </button>
 
-              <div className="bg-[#0F172A] border border-[#F59E0B]/20 rounded-2xl p-4">
-                <p className="text-[9px] font-black uppercase text-[#F59E0B] mb-2">SQL necessário no Supabase</p>
+              <div className="bg-[#0F172A] border border-[#EE7B4D]/20 rounded-2xl p-4">
+                <p className="text-[9px] font-black uppercase text-[#EE7B4D] mb-2">SQL necessário no Supabase</p>
                 <pre className="text-[10px] text-gray-500 font-mono overflow-x-auto whitespace-pre-wrap">{`CREATE TABLE IF NOT EXISTS ranking_config (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   tenant_id UUID NOT NULL,

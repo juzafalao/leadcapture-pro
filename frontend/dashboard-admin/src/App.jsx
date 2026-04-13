@@ -53,10 +53,7 @@ const queryClient = new QueryClient({
 function PageFallback() {
   return (
     <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin text-4xl mb-3">⏳</div>
-        <p className="text-gray-600 text-sm">Carregando...</p>
-      </div>
+      <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
