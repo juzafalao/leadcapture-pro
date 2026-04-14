@@ -27,10 +27,7 @@ function normalizarTelefone(telefone) {
  */
 export async function enviarMensagem(telefone, mensagem) {
   if (!EVOLUTION_API_KEY) {
-    console.warn('[Comunicacao/WhatsApp] EVOLUTION_API_KEY não configurada — modo simulado')
-    console.log('[Comunicacao/WhatsApp] [SIMULADO] Para:', telefone)
-    console.log('[Comunicacao/WhatsApp] [SIMULADO] Mensagem:', mensagem)
-    return { success: true, simulated: true }
+    throw new Error('EVOLUTION_API_KEY não configurada. Não é possível enviar mensagens via WhatsApp.')
   }
 
   const numero = normalizarTelefone(telefone)
@@ -92,7 +89,7 @@ _LeadCapture Pro · Zafalão Tech_`
  */
 export async function verificarConexao() {
   if (!EVOLUTION_API_KEY) {
-    return { conectado: false, motivo: 'API key não configurada' }
+    return { conectado: false, motivo: 'EVOLUTION_API_KEY não configurada' }
   }
 
   try {

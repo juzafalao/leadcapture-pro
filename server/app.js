@@ -44,6 +44,7 @@ import { globalLimiter, webhookLimiter, statusLimiter } from './middleware/rateL
 
 // Serviços
 import { inicializarEmail } from './comunicacao/email.js'
+import { verificarConexao } from './comunicacao/whatsapp.js'
 
 // Roteadores
 import leadsRouter   from './routes/leads.js'
@@ -62,6 +63,20 @@ const __dirname  = dirname(__filename)
 const app = express()
 app.set('trust proxy', 1) // Vercel/proxy reverso
 inicializarEmail()
+
+// Verifica a conexão com a Evolution API do WhatsApp na inicialização
+if (process.env.EVOLUTION_API_KEY) {
+  verificarConexao().then(status => {
+    if (status.conectado) {
+      console.log(`[WhatsApp] Conectado à Evolution API (instância: ${status.instancia}, status: ${status.status})`)
+    } else {
+      console.warn(`[WhatsApp] Falha na conexão com a Evolution API: ${status.motivo}`)
+      console.warn('Verifique as variáveis de ambiente EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.')
+    }
+  }).catch(err => console.error('[WhatsApp] Erro ao verificar conexão:', err.message))
+} else {
+  console.warn('[WhatsApp] EVOLUTION_API_KEY não configurada. O serviço de WhatsApp operará em modo simulado.')
+}
 
 // ─── CORS Restritivo ─────────────────────────────────────────
 const allowedOrigins = [

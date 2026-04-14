@@ -324,4 +324,92 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
   }
 })
 
+router.put("/:id/assign-consultant", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { consultantId } = req.body;
+
+    // 1. Autenticação e Autorização
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.replace("Bearer ", "").trim();
+    if (!token) {
+      return res.status(401).json({ success: false, error: "Token de autenticação obrigatório" });
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return res.status(401).json({ success: false, error: "Token inválido ou expirado" });
+    }
+
+    // Verificar se o usuário tem permissão para atribuir consultores
+    const { data: userData, error: userError } = await supabase
+      .from("usuarios")
+      .select("role, is_super_admin, tenant_id")
+      .eq("id", user.id)
+      .single();
+
+    if (userError || !userData) {
+      return res.status(403).json({ success: false, error: "Usuário não autorizado ou não encontrado" });
+    }
+
+    const allowedRoles = ["Diretor", "Gestor", "Administrador", "admin"];
+    const hasPermission = allowedRoles.includes(userData.role) || userData.is_super_admin;
+
+    if (!hasPermission) {
+      return res.status(403).json({ success: false, error: "Permissão negada. Apenas Diretores, Gestores e Administradores podem atribuir consultores." });
+    }
+
+    // 2. Validar Lead e Consultor
+    const { data: lead, error: leadError } = await supabase
+      .from("leads")
+      .select("id, tenant_id")
+      .eq("id", id)
+      .single();
+
+    if (leadError || !lead) {
+      return res.status(404).json({ success: false, error: "Lead não encontrado" });
+    }
+
+    // Garantir que o usuário só pode atribuir leads do seu próprio tenant (a menos que seja super admin)
+    if (!userData.is_super_admin && lead.tenant_id !== userData.tenant_id) {
+      return res.status(403).json({ success: false, error: "Permissão negada. Você só pode atribuir leads do seu próprio tenant." });
+    }
+
+    // Validar se o consultantId é um usuário válido e consultor/gestor/diretor
+    const { data: consultantData, error: consultantError } = await supabase
+      .from("usuarios")
+      .select("id, role, tenant_id")
+      .eq("id", consultantId)
+      .single();
+
+    if (consultantError || !consultantData) {
+      return res.status(400).json({ success: false, error: "Consultor inválido ou não encontrado" });
+    }
+
+    const validConsultantRoles = ["Consultor", "Gestor", "Diretor", "Administrador"];
+    if (!validConsultantRoles.includes(consultantData.role)) {
+      return res.status(400).json({ success: false, error: "O ID fornecido não corresponde a um consultor, gestor ou diretor válido." });
+    }
+
+    // Garantir que o consultor pertence ao mesmo tenant do lead (a menos que seja super admin)
+    if (!userData.is_super_admin && consultantData.tenant_id !== lead.tenant_id) {
+      return res.status(403).json({ success: false, error: "Não é possível atribuir um consultor de outro tenant." });
+    }
+
+    // 3. Atribuir Consultor
+    const { error: updateError } = await supabase
+      .from("leads")
+      .update({ operador_id: consultantId, updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (updateError) throw updateError;
+
+    console.log(`[Leads] Lead ${id} atribuído ao consultor ${consultantId} por ${user.email}`);
+    res.json({ success: true, message: "Consultor atribuído com sucesso!" });
+
+  } catch (err) {
+    console.error("[Leads/AssignConsultant] Erro:", err.message);
+    res.status(500).json({ success: false, error: "Erro interno ao atribuir consultor", detalhe: err.message });
+  }
+});
+
 export default router
