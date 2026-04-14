@@ -7,7 +7,7 @@ import { useAuth } from '../components/AuthContext'
 import {
   useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO,
 } from '../hooks/useKanban'
-import LeadModal from '../components/LeadModal'
+import LeadModal from '../components/leads/LeadModal'
 
 //  Helpers 
 const fmtCapital = (v) => {
