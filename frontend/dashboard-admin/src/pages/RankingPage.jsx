@@ -95,18 +95,36 @@ function RankRow({ consultor, pos, meta }) {
   )
 }
 
-//  Pgina principal 
+// Pagina principal
 export default function RankingPage() {
   const { usuario } = useAuth()
-  const tenantId    = usuario?.is_super_admin ? null : usuario?.tenant_id
-  const isDiretor   = ['Diretor','Administrador','admin'].includes(usuario?.role) || usuario?.is_super_admin === true || usuario?.is_platform === true
 
-  const [aba, setAba]           = useState('ranking')
-  const [periodo, setPeriodo]   = useState({ ano: ANO, mes: MES })
-  const [consultores, setConsultores] = useState([])
-  const [meta, setMeta]         = useState(30)
-  const [loading, setLoading]   = useState(true)
-  const [config, setConfig]     = useState([])
+  // Admin pode ver qualquer tenant via seletor
+  const isAdmin   = ['Administrador','admin'].includes(usuario?.role)
+    || usuario?.is_super_admin === true || usuario?.is_platform === true
+  const isDiretor = isAdmin || ['Diretor'].includes(usuario?.role)
+
+  const [tenants,          setTenants]          = useState([])
+  const [tenantSelecionado,setTenantSelecionado] = useState('')
+  const tenantId = tenantSelecionado || usuario?.tenant_id
+
+  // Admin: carrega lista de tenants e pre-seleciona o primeiro
+  useEffect(() => {
+    if (!isAdmin) return
+    supabase.from('tenants').select('id, name').order('name').then(({ data }) => {
+      if (data?.length) {
+        setTenants(data)
+        if (!tenantSelecionado) setTenantSelecionado(data[0].id)
+      }
+    })
+  }, [isAdmin])
+
+  const [aba,          setAba]          = useState('ranking')
+  const [periodo,      setPeriodo]      = useState({ ano: ANO, mes: MES })
+  const [consultores,  setConsultores]  = useState([])
+  const [meta,         setMeta]         = useState(30)
+  const [loading,      setLoading]      = useState(true)
+  const [config,       setConfig]       = useState([])
 
   // Carrega dados reais
   useEffect(() => {
@@ -136,19 +154,6 @@ export default function RankingPage() {
         const { data: users, error: usersError } = await qUsers
 
         if (usersError) console.error('[Ranking] Erro usuarios:', usersError)
-
-        // Se nao achar por tenant, tenta sem filtro (fallback para superadmin)
-        if (!users?.length && !tenantId) {
-          const { data: allUsers } = await supabase
-            .from('usuarios')
-            .select('id, nome, role, role_emoji, role_color')
-            .limit(50)
-          if (allUsers?.length) {
-            setConsultores(allUsers.map(u => ({ ...u, total_leads: 0, leads_hot: 0, convertidos: 0, capital_total: 0 })))
-            setLoading(false)
-            return
-          }
-        }
 
         if (!users?.length) { setConsultores([]); setLoading(false); return }
 
@@ -200,7 +205,7 @@ export default function RankingPage() {
       setLoading(false)
     }
     carregar()
-  }, [tenantId, periodo, isDiretor])
+  }, [tenantId, tenantSelecionado, periodo, isDiretor])
 
   const top3 = consultores.slice(0, 3)
 
@@ -241,8 +246,20 @@ export default function RankingPage() {
               </p>
             </div>
           </div>
-          {/* Seletor de ms */}
-          <div className="flex items-center gap-2">
+          {/* Seletores: tenant (admin) + mes */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Seletor de tenant -- visivel apenas para admins */}
+            {isAdmin && tenants.length > 0 && (
+              <select
+                value={tenantSelecionado}
+                onChange={e => setTenantSelecionado(e.target.value)}
+                className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none focus:border-[#10B981]/60"
+              >
+                {tenants.map(t => (
+                  <option key={t.id} value={t.id}>{t.name || t.id.slice(0,8)}</option>
+                ))}
+              </select>
+            )}
             <select
               value={`${periodo.ano}-${periodo.mes}`}
               onChange={e => {
