@@ -1,344 +1,274 @@
-// ============================================================
-// KanbanPage.jsx — Funil visual de leads (drag & drop)
-// LeadCapture Pro — Zafalao Tech
-// ============================================================
-
-import { useState, useRef } from 'react'
+// KanbanPage  Funil de Vendas
+// Performance: optimistic updates, realtime, sem re-renders desnecessarios
+// Paleta: #0F172A fundo, #10B981 ativo, cores de coluna por config
+import { useState, useRef, memo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
-import { useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO } from '../hooks/useKanban'
-import LeadModal from '../components/leads/LeadModal'
-import LoadingSpinner from '../components/shared/LoadingSpinner'
+import {
+  useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO,
+} from '../hooks/useKanban'
+import LeadModal from '../components/LeadModal'
 
-// ── Card de lead no Kanban ────────────────────────────────────
-function LeadCard({ lead, onDragStart, onTouchStart, onClick }) {
-  const cat = (lead.categoria || '').toLowerCase()
-  const catColor = cat === 'hot' ? '#EF4444' : cat === 'warm' ? '#F59E0B' : '#6366F1'
-  const catLabel = cat === 'hot' ? '🔥 Hot' : cat === 'warm' ? '🌤 Warm' : '❄️ Cold'
+//  Helpers 
+const fmtCapital = (v) => {
+  if (!v) return ''
+  const n = parseFloat(v)
+  if (n >= 1_000_000) return `R$ ${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000)     return `R$ ${(n / 1_000).toFixed(0)}K`
+  return `R$ ${n.toLocaleString('pt-BR')}`
+}
 
+const catCor = { hot: '#EF4444', warm: '#F59E0B', cold: '#6B7280' }
+const catLabel = { hot: '', warm: '', cold: '' }
+
+//  Card do lead  memo para evitar re-renders 
+const LeadCard = memo(function LeadCard({ lead, onDragStart, onDragEnd, onClick }) {
   return (
     <motion.div
       layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.15 }}
       draggable
-      onDragStart={e => onDragStart(e, lead)}
-      onTouchStart={e => onTouchStart && onTouchStart(e, lead)}
+      onDragStart={(e) => onDragStart(e, lead)}
+      onDragEnd={onDragEnd}
       onClick={() => onClick(lead)}
-      className="bg-[#0F172A] border border-white/5 rounded-2xl p-4 cursor-grab active:cursor-grabbing hover:border-white/10 transition-all group"
-      style={{ userSelect: 'none', touchAction: 'none' }}
-      whileHover={{ y: -1 }}
+      className="bg-[#0B1220] border border-white/[0.07] rounded-xl p-3 cursor-grab active:cursor-grabbing
+        hover:border-white/20 hover:shadow-lg hover:shadow-black/30 transition-all select-none"
     >
-      {/* Score + categoria */}
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: catColor }}>
-          {catLabel}
+      {/* Header: nome + categoria */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-white text-[12px] font-bold leading-tight truncate">
+          {lead.nome}
+        </p>
+        <span className="text-[13px] shrink-0" title={lead.categoria}>
+          {catLabel[lead.categoria] || ''}
         </span>
-        {lead.score > 0 && (
-          <span className="text-[10px] font-bold text-gray-500">
-            Score {lead.score}
+      </div>
+
+      {/* Score bar */}
+      <div className="mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[9px] font-black uppercase tracking-wider text-gray-600">Score</span>
+          <span className="text-[10px] font-black" style={{ color: catCor[lead.categoria] || '#6B7280' }}>
+            {lead.score ?? 0}
+          </span>
+        </div>
+        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${Math.min(lead.score ?? 0, 100)}%`,
+              background: catCor[lead.categoria] || '#6B7280',
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Meta */}
+      <div className="flex items-center justify-between">
+        {lead.marca && (
+          <span className="text-[9px] text-gray-600 truncate max-w-[70%]">
+            {lead.marca.emoji} {lead.marca.nome}
+          </span>
+        )}
+        {lead.capital_disponivel && (
+          <span className="text-[9px] font-bold text-[#10B981] shrink-0">
+            {fmtCapital(lead.capital_disponivel)}
           </span>
         )}
       </div>
-
-      {/* Nome */}
-      <p className="text-sm font-semibold text-white leading-tight mb-1 line-clamp-1">
-        {lead.nome}
-      </p>
-
-      {/* Marca */}
-      {lead.marca && (
-        <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-          <span>{lead.marca.emoji}</span>
-          <span>{lead.marca.nome}</span>
-        </p>
-      )}
-
-      {/* Capital */}
-      {lead.capital_disponivel > 0 && (
-        <div className="text-xs text-gray-400 mb-2">
-          R$ {Number(lead.capital_disponivel).toLocaleString('pt-BR')}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-        <span className="text-[10px] text-gray-600">
-          {lead.regiao_interesse || lead.fonte || 'landing-page'}
-        </span>
-        <span className="text-[10px] text-gray-700">
-          {new Date(lead.created_at).toLocaleDateString('pt-BR')}
-        </span>
-      </div>
-
-      {/* Operador atribuido */}
-      {lead.operador && (
-        <div className="mt-2 flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded-full bg-[#10B981]/20 flex items-center justify-center text-[8px] text-[#10B981] font-bold">
-            {lead.operador.nome?.[0]}
-          </div>
-          <span className="text-[10px] text-gray-600 truncate">{lead.operador.nome}</span>
-        </div>
-      )}
     </motion.div>
   )
-}
+})
 
-// ── Coluna do Kanban ─────────────────────────────────────────
-function Coluna({ coluna, leads = [], onDrop, onDragOver, onDragLeave, isDragOver, onCardClick, onDragStart, onTouchStart, touchTargetSlug }) {
+//  Coluna do Kanban 
+const Coluna = memo(function Coluna({ coluna, leads, onDragStart, onDragEnd, onDrop, dragOver, onLeadClick }) {
+  const isOver = dragOver === coluna.slug
+
   return (
     <div
-      className="flex flex-col min-w-[240px] max-w-[260px] lg:min-w-[260px] lg:max-w-[280px] flex-shrink-0"
-      data-coluna={coluna.slug}
-      onDragOver={e => { e.preventDefault(); onDragOver(coluna.slug) }}
-      onDragLeave={onDragLeave}
-      onDrop={e => onDrop(e, coluna)}
+      className="flex flex-col h-full min-w-0"
+      onDragOver={(e) => { e.preventDefault(); onDrop('over', coluna.slug) }}
+      onDragLeave={() => onDrop('leave', coluna.slug)}
+      onDrop={(e) => onDrop('drop', coluna.slug, e)}
     >
       {/* Header da coluna */}
-      <div className="flex items-center justify-between px-2 mb-3">
+      <div className="flex items-center justify-between px-3 py-3 mb-2 rounded-xl bg-[#0F172A] border border-white/[0.06]">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 rounded-full" style={{ background: coluna.cor }} />
-          <span className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: coluna.cor }} />
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-300">
             {coluna.label}
           </span>
         </div>
-        <span className="text-xs font-bold text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
+        <span className="text-[10px] font-black text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
           {leads.length}
         </span>
       </div>
 
-      {/* Zona de drop */}
+      {/* Drop zone */}
       <div
-        className="flex-1 min-h-[120px] rounded-2xl transition-all duration-200 p-2 space-y-2"
-        style={{
-          background: (isDragOver || touchTargetSlug === coluna.slug)
-            ? `${coluna.cor}12`
-            : 'rgba(255,255,255,0.02)',
-          border: (isDragOver || touchTargetSlug === coluna.slug)
-            ? `1.5px dashed ${coluna.cor}60`
-            : '1.5px dashed transparent',
-        }}
+        className={`flex-1 rounded-xl p-2 space-y-2 min-h-[120px] transition-all duration-150
+          ${isOver ? 'bg-[#10B981]/5 border border-dashed border-[#10B981]/30' : 'bg-transparent border border-transparent'}`}
       >
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {leads.map(lead => (
             <LeadCard
               key={lead.id}
               lead={lead}
               onDragStart={onDragStart}
-              onTouchStart={onTouchStart}
-              onClick={onCardClick}
+              onDragEnd={onDragEnd}
+              onClick={onLeadClick}
             />
           ))}
         </AnimatePresence>
-
-        {leads.length === 0 && !isDragOver && (
-          <div className="flex items-center justify-center h-20 text-xs text-gray-700">
-            Arraste leads aqui
+        {leads.length === 0 && (
+          <div className="h-16 flex items-center justify-center">
+            <p className="text-[9px] text-gray-700 uppercase tracking-wider">Arraste um lead</p>
           </div>
-        )}
-
-        {isDragOver && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="h-12 rounded-xl border border-dashed flex items-center justify-center text-xs"
-            style={{ borderColor: coluna.cor, color: coluna.cor, background: `${coluna.cor}08` }}
-          >
-            Soltar aqui
-          </motion.div>
         )}
       </div>
     </div>
   )
-}
+})
 
-// ── Página principal do Kanban ────────────────────────────────
+//  KanbanPage 
 export default function KanbanPage() {
-  const { usuario, isPlatformAdmin } = useAuth()
-  // Platform Admin (is_super_admin + is_platform) vê TODOS os leads
-  // Qualquer outro usuário vê apenas o próprio tenant
-  const isPlataforma = isPlatformAdmin()
-  const tenantId = isPlataforma ? null : (usuario?.tenant_id || null)
+  const { usuario } = useAuth()
+  const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
 
-  const [dragLeadId, setDragLeadId] = useState(null)
-  const [dragOver, setDragOver] = useState(null)
-  const [touchTarget, setTouchTarget] = useState(null)
-  const [leadSelecionado, setLeadSelecionado] = useState(null)
-  const [movendo, setMovendo] = useState(false)
+  const [dragOver, setDragOver]         = useState(null)
+  const [dragLeadId, setDragLeadId]     = useState(null)
+  const [leadSelecionado, setLead]      = useState(null)
   const dragLead = useRef(null)
-  const touchStartY = useRef(0)
 
-  // ── Touch Drag (iOS Safari) ───────────────────────────────
-  const handleTouchStart = (e, lead) => {
-    dragLead.current = lead
-    setDragLeadId(lead.id)
-    touchStartY.current = e.touches[0].clientY
-  }
+  const { data: colunas = COLUNAS_PADRAO }    = useStatusColunas(tenantId)
+  const { data: kanbanData = {}, isLoading }   = useKanbanLeads({ tenantId, colunas })
+  const { mutateAsync: moverLead }             = useMoverLead()
 
-  const handleTouchMove = (e) => {
-    if (!dragLead.current) return
-    e.preventDefault()
-    const touch = e.touches[0]
-    const el = document.elementFromPoint(touch.clientX, touch.clientY)
-    // Procura a coluna mais próxima do ponto de toque
-    const colunaEl = el?.closest('[data-coluna]')
-    if (colunaEl) {
-      setTouchTarget(colunaEl.dataset.coluna)
-    }
-  }
+  const totalLeads = Object.values(kanbanData).reduce((a, b) => a + b.length, 0)
+  const totalConv  = kanbanData['convertido']?.length ?? 0
+  const txConv     = totalLeads > 0 ? ((totalConv / totalLeads) * 100).toFixed(0) : 0
 
-  const handleTouchEnd = async (e) => {
-    if (!dragLead.current || !touchTarget) {
-      dragLead.current = null
-      setDragLeadId(null)
-      setTouchTarget(null)
-      return
-    }
-
-    const lead = dragLead.current
-    const coluna = colunas.find(c => c.slug === touchTarget)
-    if (!coluna) { dragLead.current = null; setTouchTarget(null); return }
-
-    const slugAtual = lead.status_comercial?.slug?.toLowerCase() || lead.status?.toLowerCase() || 'novo'
-    if (slugAtual === coluna.slug) { dragLead.current = null; setTouchTarget(null); return }
-
-    setMovendo(true)
-    try {
-      const isUUID = typeof coluna.id === 'string' && coluna.id.length === 36 && coluna.id.includes('-')
-      await moverLead({ leadId: lead.id, novoStatusSlug: coluna.slug, novoStatusId: isUUID ? coluna.id : null, tenantId })
-    } catch (err) {
-      console.error('[Kanban Touch] Erro:', err.message)
-    } finally {
-      setMovendo(false)
-      dragLead.current = null
-      setDragLeadId(null)
-      setTouchTarget(null)
-    }
-  }
-
-  const { data: colunas = COLUNAS_PADRAO } = useStatusColunas(tenantId)
-
-  const { data: kanbanData = {}, isLoading } = useKanbanLeads({
-    tenantId,
-    colunas,
-  })
-
-  const { mutateAsync: moverLead } = useMoverLead()
-
-  const handleDragStart = (e, lead) => {
+  //  Drag handlers 
+  const handleDragStart = useCallback((e, lead) => {
     dragLead.current = lead
     setDragLeadId(lead.id)
     e.dataTransfer.effectAllowed = 'move'
-  }
+  }, [])
 
-  const handleDrop = async (e, coluna) => {
-    e.preventDefault()
+  const handleDragEnd = useCallback(() => {
+    setDragLeadId(null)
     setDragOver(null)
+    dragLead.current = null
+  }, [])
 
+  const handleDrop = useCallback(async (action, slug, e) => {
+    if (action === 'over')  { setDragOver(slug); return }
+    if (action === 'leave') { if (dragOver === slug) setDragOver(null); return }
+
+    // drop
+    e?.preventDefault()
+    setDragOver(null)
     const lead = dragLead.current
     if (!lead) return
 
     const slugAtual = lead.status_comercial?.slug?.toLowerCase() || lead.status?.toLowerCase() || 'novo'
-    if (slugAtual === coluna.slug) return
+    if (slugAtual === slug) { dragLead.current = null; setDragLeadId(null); return }
 
-    setMovendo(true)
+    const coluna  = colunas.find(c => c.slug === slug)
+    const isUUID  = typeof coluna?.id === 'string' && coluna.id.length === 36 && coluna.id.includes('-')
+
     try {
-      // UUID válido tem 36 chars com hifens (formato xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-      const isUUID = typeof coluna.id === 'string' && coluna.id.length === 36 && coluna.id.includes('-')
       await moverLead({
-        leadId:          lead.id,
-        novoStatusSlug:  coluna.slug,
-        novoStatusId:    isUUID ? coluna.id : null,
-        tenantId,        // necessário para optimistic update
+        leadId:         lead.id,
+        novoStatusSlug: slug,
+        novoStatusId:   isUUID ? coluna.id : null,
+        tenantId,
       })
     } catch (err) {
-      console.error('[Kanban] Erro ao mover lead:', err.message)
+      console.error('[Kanban] Erro ao mover:', err.message)
     } finally {
-      setMovendo(false)
       dragLead.current = null
       setDragLeadId(null)
     }
-  }
+  }, [colunas, dragOver, moverLead, tenantId])
 
-  const totalLeads = Object.values(kanbanData).reduce((acc, arr) => acc + arr.length, 0)
-
+  //  Loading 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0B1220]">
-        <LoadingSpinner />
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1220] pb-16">
+    <div className="min-h-screen bg-[#0F172A] flex flex-col">
+
       {/* Header */}
-      <div className="px-6 lg:px-10 pt-8 pb-6">
-        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl lg:text-3xl font-light text-white mb-1">
-            Funil de <span className="text-[#10B981] font-bold">Vendas</span>
-          </h1>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-0.5 bg-[#10B981] rounded-full" />
-            <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
-              {totalLeads} leads no funil · arraste para mover entre etapas
-            </p>
+      <div className="px-6 lg:px-8 pt-7 pb-5 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-light text-white">
+              Funil de <span className="text-[#10B981] font-bold">Vendas</span>
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-8 h-0.5 bg-[#10B981] rounded-full" />
+              <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
+                Pipeline em tempo real
+              </p>
+            </div>
           </div>
-        </motion.div>
+
+          {/* KPIs rpidos */}
+          <div className="flex items-center gap-3">
+            <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2 text-center">
+              <p className="text-[9px] font-black uppercase tracking-wider text-gray-600">Total</p>
+              <p className="text-xl font-black text-white">{totalLeads}</p>
+            </div>
+            <div className="bg-[#0B1220] border border-[#10B981]/20 rounded-xl px-4 py-2 text-center">
+              <p className="text-[9px] font-black uppercase tracking-wider text-gray-600">Convertidos</p>
+              <p className="text-xl font-black text-[#10B981]">{totalConv}</p>
+            </div>
+            <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2 text-center">
+              <p className="text-[9px] font-black uppercase tracking-wider text-gray-600">Conversao</p>
+              <p className="text-xl font-black text-white">{txConv}%</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Indicador de movendo */}
-      <AnimatePresence>
-        {movendo && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="mx-6 lg:mx-10 mb-4 px-4 py-2 bg-[#10B981]/10 border border-[#10B981]/20 rounded-xl text-xs text-[#10B981] flex items-center gap-2"
-          >
-            <div className="w-3 h-3 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-            Atualizando status do lead...
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Board */}
-      <div
-        className="px-4 lg:px-10 overflow-x-auto pb-6"
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{ WebkitOverflowScrolling: 'touch' }}
-      >
-        <div className="flex gap-3 lg:gap-4" style={{ minWidth: 'max-content' }}>
+      {/* Board  scroll horizontal */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+        <div
+          className="flex gap-3 h-full px-6 lg:px-8 py-5"
+          style={{ minWidth: `${colunas.length * 240}px` }}
+        >
           {colunas.map(coluna => (
-            <Coluna
-              key={coluna.slug}
-              coluna={coluna}
-              leads={kanbanData[coluna.slug] || []}
-              onDrop={handleDrop}
-              onDragOver={setDragOver}
-              onDragLeave={() => setDragOver(null)}
-              isDragOver={dragOver === coluna.slug}
-              touchTargetSlug={touchTarget}
-              onCardClick={setLeadSelecionado}
-              onDragStart={handleDragStart}
-              onTouchStart={handleTouchStart}
-            />
+            <div key={coluna.slug} className="flex flex-col w-56 shrink-0">
+              <Coluna
+                coluna={coluna}
+                leads={kanbanData[coluna.slug] ?? []}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDrop={handleDrop}
+                dragOver={dragOver}
+                onLeadClick={setLead}
+              />
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Modal de detalhes do lead */}
-      <AnimatePresence>
-        {leadSelecionado && (
-          <LeadModal
-            lead={leadSelecionado}
-            onClose={() => setLeadSelecionado(null)}
-            statusReadOnly={true}
-          />
-        )}
-      </AnimatePresence>
+      {/* Modal de lead */}
+      {leadSelecionado && (
+        <LeadModal
+          lead={leadSelecionado}
+          onClose={() => setLead(null)}
+        />
+      )}
     </div>
   )
 }
