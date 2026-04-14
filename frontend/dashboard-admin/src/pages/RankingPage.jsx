@@ -126,79 +126,40 @@ export default function RankingPage() {
   const [loading,      setLoading]      = useState(true)
   const [config,       setConfig]       = useState([])
 
-  // Carrega dados reais
+  // Carrega dados via API backend (service role -- bypassa RLS para admins)
   useEffect(() => {
     async function carregar() {
+      if (!tenantId) return
       setLoading(true)
       try {
-        // Busca leads do mes com id_operador_responsavel
-        const inicio = new Date(periodo.ano, periodo.mes - 1, 1).toISOString()
-        const fim    = new Date(periodo.ano, periodo.mes,     0, 23, 59, 59).toISOString()
+        const { data: { session } } = await supabase.auth.getSession()
+        const token = session?.access_token || ''
+        const API_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
 
-        let qLeads = supabase
-          .from('leads')
-          .select('id, score, categoria, capital_disponivel, id_operador_responsavel, operador_id, status, created_at')
-          .gte('created_at', inicio)
-          .lte('created_at', fim)
-          .is('deleted_at', null)
+        // Busca consultores + leads do mes via API backend
+        const res = await fetch(
+          `${API_URL}/api/ranking/usuarios?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        const json = await res.json()
 
-        if (tenantId) qLeads = qLeads.eq('tenant_id', tenantId)
-        const { data: leads } = await qLeads
-
-        // Busca TODOS os usuarios do tenant (sem filtrar por role -- roles podem variar)
-        let qUsers = supabase
-          .from('usuarios')
-          .select('id, nome, role, role_emoji, role_color')
-          .neq('role', 'Cliente')  // exclui apenas clientes finais
-        if (tenantId) qUsers = qUsers.eq('tenant_id', tenantId)
-        const { data: users, error: usersError } = await qUsers
-
-        if (usersError) console.error('[Ranking] Erro usuarios:', usersError)
-
-        if (!users?.length) { setConsultores([]); setLoading(false); return }
-
-        // Agrupa leads por consultor -- tenta id_operador_responsavel e operador_id (alias)
-        const mapaLeads = {}
-        for (const lead of (leads || [])) {
-          const uid = lead.id_operador_responsavel || lead.operador_id
-          if (!uid) continue
-          if (!mapaLeads[uid]) mapaLeads[uid] = { total: 0, hot: 0, convertido: 0, capital: 0 }
-          mapaLeads[uid].total++
-          if (lead.categoria === 'hot')     mapaLeads[uid].hot++
-          if (lead.status === 'convertido') mapaLeads[uid].convertido++
-          mapaLeads[uid].capital += parseFloat(lead.capital_disponivel || 0)
+        if (!res.ok) {
+          console.error('[Ranking] API error:', json.error)
+          setConsultores([])
+          setLoading(false)
+          return
         }
 
-        const ranking = users
-          .map(u => ({
-            ...u,
-            total_leads:  mapaLeads[u.id]?.total     ?? 0,
-            leads_hot:    mapaLeads[u.id]?.hot        ?? 0,
-            convertidos:  mapaLeads[u.id]?.convertido ?? 0,
-            capital_total:mapaLeads[u.id]?.capital    ?? 0,
-          }))
-          .sort((a, b) => b.total_leads - a.total_leads || b.capital_total - a.capital_total)
+        setConsultores(json.consultores || [])
 
-        setConsultores(ranking)
+        // Busca meta
+        const resMeta = await fetch(
+          `${API_URL}/api/ranking/meta?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        const metaJson = await resMeta.json()
+        if (metaJson.meta) setMeta(metaJson.meta)
 
-        // Busca meta do ms
-        const { data: metaData } = await supabase
-          .from('ranking_metas')
-          .select('meta_valor')
-          .eq('ano', periodo.ano)
-          .eq('mes', periodo.mes)
-          .is('consultor_id', null)
-          .maybeSingle()
-
-        if (metaData?.meta_valor) setMeta(metaData.meta_valor)
-
-        // Busca config de faixas
-        if (isDiretor) {
-          let qCfg = supabase.from('ranking_config').select('*').eq('ativo', true).order('de')
-          if (tenantId) qCfg = qCfg.eq('tenant_id', tenantId)
-          const { data: cfgData } = await qCfg
-          setConfig(cfgData || [])
-        }
       } catch (err) {
         console.error('[Ranking]', err)
       }

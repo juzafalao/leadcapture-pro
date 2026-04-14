@@ -25,6 +25,7 @@ import fs      from 'fs'
 import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
 
+
 dotenv.config()
 
 // ─── Sentry — inicializa ANTES de qualquer handler ───────────
@@ -52,6 +53,7 @@ import marcasRouter  from './routes/marcas.js'
 import sistemaRouter from './routes/sistema.js'
 import chatRouter      from './routes/chat.js'
 import whatsappRouter  from './routes/whatsapp.js'
+import rankingRouter from './routes/ranking.js'
 
 // Supabase (usado diretamente aqui apenas para landing page dinâmica)
 import supabase from './core/database.js'
@@ -144,6 +146,7 @@ app.get('/health', statusLimiter, (_req, res) => res.json({
   timestamp: new Date().toISOString(),
 }))
 app.use('/api/sistema', statusLimiter, sistemaRouter)
+app.use('/api/ranking', statusLimiter, rankingRouter)
 app.use('/api/chat',      chatRouter)
 app.use('/api/whatsapp', whatsappRouter)
 
