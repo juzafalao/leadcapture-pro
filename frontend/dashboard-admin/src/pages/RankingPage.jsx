@@ -1,5 +1,5 @@
 // RankingPage  Ranking de Consultores
-// Paleta oficial: #0F172A fundo, #10B981 verde, #F59E0B badge, cinzas
+// Paleta oficial: #0F172A fundo, #10B981 verde/ativo, cinzas
 import { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
@@ -41,7 +41,7 @@ function PodioCard({ rank, consultor, cor, ring, label, size }) {
       transition={{ delay: rank * 0.08 }}
       className={`flex flex-col items-center gap-2 ${rank === 1 ? 'mb-0' : 'mt-6'}`}
     >
-      <div className={`${size} rounded-full ring-2 ${ring} flex items-center justify-center font-black text-white bg-[#0B1220]`}
+      <div className={`${size} rounded-full ring-2 ${ring} flex items-center justify-center font-black text-white bg-white/[0.04]`}
         style={{ background: `linear-gradient(135deg, ${cor}22, ${cor}11)` }}>
         {consultor.role_emoji || consultor.nome?.charAt(0) || '?'}
       </div>
@@ -71,7 +71,7 @@ function RankRow({ consultor, pos, meta }) {
       <span className="w-6 text-center font-black text-[11px] shrink-0" style={{ color: cor }}>
         {pos <= 3 ? ['','',''][pos-1] : pos}
       </span>
-      <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm bg-[#0B1220] border border-white/10 shrink-0" style={{ color: cor }}>
+      <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm bg-white/[0.04] border border-white/10 shrink-0" style={{ color: cor }}>
         {consultor.role_emoji || consultor.nome?.charAt(0) || '?'}
       </div>
       <div className="flex-1 min-w-0">
@@ -99,7 +99,7 @@ function RankRow({ consultor, pos, meta }) {
 export default function RankingPage() {
   const { usuario } = useAuth()
   const tenantId    = usuario?.is_super_admin ? null : usuario?.tenant_id
-  const isDiretor   = ['Diretor','Administrador','admin'].includes(usuario?.role)
+  const isDiretor   = ['Diretor','Administrador','admin'].includes(usuario?.role) || usuario?.is_super_admin === true || usuario?.is_platform === true
 
   const [aba, setAba]           = useState('ranking')
   const [periodo, setPeriodo]   = useState({ ano: ANO, mes: MES })
@@ -247,7 +247,7 @@ export default function RankingPage() {
 
       {/* Abas */}
       <div className="px-6 lg:px-10 pt-5 mb-5">
-        <div className="flex gap-1 bg-[#0B1220] border border-white/[0.06] rounded-xl p-1 w-fit">
+        <div className="flex gap-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-1 w-fit">
           {[
             { id: 'ranking',  label: ' Ranking' },
             { id: 'relatorio',label: ' Relatrio' },
@@ -271,7 +271,7 @@ export default function RankingPage() {
           <div className="space-y-6">
             {/* Pdio */}
             {consultores.length > 0 && (
-              <div className="bg-[#0B1220] border border-white/[0.06] rounded-2xl p-6">
+              <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-6">
                 <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-6">Pdio</p>
                 <div className="flex items-end justify-center gap-8">
                   {/* Ordem visual: 2, 1, 3 */}
@@ -283,7 +283,7 @@ export default function RankingPage() {
             )}
 
             {/* Lista completa */}
-            <div className="bg-[#0B1220] border border-white/[0.06] rounded-2xl overflow-hidden">
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
                 <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">
                   Todos os consultores  Meta: {meta} leads
@@ -315,7 +315,7 @@ export default function RankingPage() {
                  Exportar CSV
               </button>
             </div>
-            <div className="bg-[#0B1220] border border-white/[0.06] rounded-2xl overflow-hidden">
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden">
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
@@ -348,7 +348,7 @@ export default function RankingPage() {
         {aba === 'config' && isDiretor && (
           <div className="max-w-lg space-y-5">
             {/* Meta mensal */}
-            <div className="bg-[#0B1220] border border-white/[0.06] rounded-2xl p-5">
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5">
               <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-3">Meta Mensal Global</p>
               <div className="flex items-center gap-3">
                 <input
@@ -373,7 +373,7 @@ export default function RankingPage() {
             </div>
 
             {/* Faixas de comisso */}
-            <div className="bg-[#0B1220] border border-white/[0.06] rounded-2xl p-5">
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5">
               <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-3">
                 Faixas de Comisso  {config.length} configuradas
               </p>
@@ -391,7 +391,7 @@ export default function RankingPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-[11px] font-bold text-[#10B981]">{faixa.pct}%</span>
                         {faixa.bonus > 0 && (
-                          <span className="text-[10px] text-[#F59E0B]">+{fmtMoeda(faixa.bonus)}</span>
+                          <span className="text-[10px] text-[#10B981]">+{fmtMoeda(faixa.bonus)}</span>
                         )}
                       </div>
                     </div>

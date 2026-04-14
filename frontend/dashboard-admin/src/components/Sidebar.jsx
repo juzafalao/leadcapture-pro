@@ -109,7 +109,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const bar = (
     <aside
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
-      className={`flex flex-col h-full bg-[#0F172A] border-r border-white/[0.06]
+      className={`flex flex-col h-screen bg-[#0F172A] border-r border-white/[0.06]
         transition-all duration-250 ease-in-out
         ${collapsed ? 'w-16' : 'w-[200px]'}`}
     >
@@ -214,7 +214,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
       )}
 
       {/* Desktop - sticky */}
-      <div className="hidden lg:flex h-screen sticky top-0 shrink-0">{bar}</div>
+      <div className="hidden lg:flex h-screen sticky top-0 shrink-0 overflow-hidden">{bar}</div>
 
       {/* Mobile drawer */}
       {mobileOpen && (
