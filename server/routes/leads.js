@@ -1,4 +1,4 @@
-import { Router } from 'express'
+﻿import { Router } from 'express'
 import supabase from '../core/database.js'
 import { processarCapital, resolverCapital } from '../core/scoring.js'
 import {
@@ -75,7 +75,7 @@ router.post('/', validateLead, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
-    // ✅ Queries em paralelo — logo da marca + todos os usuários que recebem notificação
+    // âœ… Queries em paralelo â€” logo da marca + todos os usuÃ¡rios que recebem notificaÃ§Ã£o
     const [{ data: marcaInfo }, { data: usuariosNotif }] = await Promise.all([
       supabase.from('marcas').select('nome, emoji, logo_url, tenant_id').eq('id', lead.id_marca).single(),
       supabase.from('usuarios')
@@ -85,12 +85,12 @@ router.post('/', validateLead, async (req, res) => {
         .eq('active', true),
     ])
 
-    const marcaFallback   = marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀', logo_url: null }
+    const marcaFallback   = marcaInfo || { nome: 'LeadCapture Pro', emoji: 'ðŸš€', logo_url: null }
     const emailsNotif     = (usuariosNotif || [])
       .map(u => u.email)
       .filter(e => e && e.includes('@') && !e.endsWith('.local') && !e.includes('demo-') && !e.includes('fake'))
 
-    // ── Helper: retry com log no banco ───────────────────────
+    // â”€â”€ Helper: retry com log no banco â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     async function comRetry(fn, tipo, maxTentativas = 3) {
       for (let t = 1; t <= maxTentativas; t++) {
         try {
@@ -123,12 +123,12 @@ router.post('/', validateLead, async (req, res) => {
       return false
     }
 
-    // ── Responde ao cliente IMEDIATAMENTE ─────────────────────
-    // Notificações disparam em background — não bloqueiam a resposta
+    // â”€â”€ Responde ao cliente IMEDIATAMENTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // NotificaÃ§Ãµes disparam em background â€” nÃ£o bloqueiam a resposta
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
 
-    // ── Dispara notificações em background (fire & forget seguro) ──
-    // setImmediate garante que o res.json já foi enviado antes de começar
+    // â”€â”€ Dispara notificaÃ§Ãµes em background (fire & forget seguro) â”€â”€
+    // setImmediate garante que o res.json jÃ¡ foi enviado antes de comeÃ§ar
     setImmediate(async () => {
       const notifPromises = []
 
@@ -139,7 +139,7 @@ router.post('/', validateLead, async (req, res) => {
         )
       }
 
-      // 2. Notificação interna para a equipe
+      // 2. NotificaÃ§Ã£o interna para a equipe
       notifPromises.push(
         comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna')
       )
@@ -313,7 +313,7 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads/Sistema] Prospect salvo: ${lead.id} | ${lead.nome}`)
 
-    notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err =>
+    notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: 'ðŸš€' }).catch(err =>
       console.warn('[Leads/Sistema] E-mail nao enviado:', err.message)
     )
 
@@ -329,18 +329,18 @@ router.put("/:id/assign-consultant", async (req, res) => {
     const { id } = req.params;
     const { consultantId } = req.body;
 
-    // 1. Autenticação e Autorização
+    // 1. AutenticaÃ§Ã£o e AutorizaÃ§Ã£o
     const authHeader = req.headers.authorization || "";
     const token = authHeader.replace("Bearer ", "").trim();
     if (!token) {
-      return res.status(401).json({ success: false, error: "Token de autenticação obrigatório" });
+      return res.status(401).json({ success: false, error: "Token de autenticaÃ§Ã£o obrigatÃ³rio" });
     }
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) {
-      return res.status(401).json({ success: false, error: "Token inválido ou expirado" });
+      return res.status(401).json({ success: false, error: "Token invÃ¡lido ou expirado" });
     }
 
-    // Verificar se o usuário tem permissão para atribuir consultores
+    // Verificar se o usuÃ¡rio tem permissÃ£o para atribuir consultores
     const { data: userData, error: userError } = await supabase
       .from("usuarios")
       .select("role, is_super_admin, tenant_id")
@@ -348,14 +348,14 @@ router.put("/:id/assign-consultant", async (req, res) => {
       .single();
 
     if (userError || !userData) {
-      return res.status(403).json({ success: false, error: "Usuário não autorizado ou não encontrado" });
+      return res.status(403).json({ success: false, error: "UsuÃ¡rio nÃ£o autorizado ou nÃ£o encontrado" });
     }
 
     const allowedRoles = ["Diretor", "Gestor", "Administrador", "admin"];
     const hasPermission = allowedRoles.includes(userData.role) || userData.is_super_admin;
 
     if (!hasPermission) {
-      return res.status(403).json({ success: false, error: "Permissão negada. Apenas Diretores, Gestores e Administradores podem atribuir consultores." });
+      return res.status(403).json({ success: false, error: "PermissÃ£o negada. Apenas Diretores, Gestores e Administradores podem atribuir consultores." });
     }
 
     // 2. Validar Lead e Consultor
@@ -366,15 +366,15 @@ router.put("/:id/assign-consultant", async (req, res) => {
       .single();
 
     if (leadError || !lead) {
-      return res.status(404).json({ success: false, error: "Lead não encontrado" });
+      return res.status(404).json({ success: false, error: "Lead nÃ£o encontrado" });
     }
 
-    // Garantir que o usuário só pode atribuir leads do seu próprio tenant (a menos que seja super admin)
+    // Garantir que o usuÃ¡rio sÃ³ pode atribuir leads do seu prÃ³prio tenant (a menos que seja super admin)
     if (!userData.is_super_admin && lead.tenant_id !== userData.tenant_id) {
-      return res.status(403).json({ success: false, error: "Permissão negada. Você só pode atribuir leads do seu próprio tenant." });
+      return res.status(403).json({ success: false, error: "PermissÃ£o negada. VocÃª sÃ³ pode atribuir leads do seu prÃ³prio tenant." });
     }
 
-    // Validar se o consultantId é um usuário válido e consultor/gestor/diretor
+    // Validar se o consultantId Ã© um usuÃ¡rio vÃ¡lido e consultor/gestor/diretor
     const { data: consultantData, error: consultantError } = await supabase
       .from("usuarios")
       .select("id, role, tenant_id")
@@ -382,17 +382,17 @@ router.put("/:id/assign-consultant", async (req, res) => {
       .single();
 
     if (consultantError || !consultantData) {
-      return res.status(400).json({ success: false, error: "Consultor inválido ou não encontrado" });
+      return res.status(400).json({ success: false, error: "Consultor invÃ¡lido ou nÃ£o encontrado" });
     }
 
     const validConsultantRoles = ["Consultor", "Gestor", "Diretor", "Administrador"];
     if (!validConsultantRoles.includes(consultantData.role)) {
-      return res.status(400).json({ success: false, error: "O ID fornecido não corresponde a um consultor, gestor ou diretor válido." });
+      return res.status(400).json({ success: false, error: "O ID fornecido nÃ£o corresponde a um consultor, gestor ou diretor vÃ¡lido." });
     }
 
     // Garantir que o consultor pertence ao mesmo tenant do lead (a menos que seja super admin)
     if (!userData.is_super_admin && consultantData.tenant_id !== lead.tenant_id) {
-      return res.status(403).json({ success: false, error: "Não é possível atribuir um consultor de outro tenant." });
+      return res.status(403).json({ success: false, error: "NÃ£o Ã© possÃ­vel atribuir um consultor de outro tenant." });
     }
 
     // 3. Atribuir Consultor
@@ -403,13 +403,113 @@ router.put("/:id/assign-consultant", async (req, res) => {
 
     if (updateError) throw updateError;
 
-    console.log(`[Leads] Lead ${id} atribuído ao consultor ${consultantId} por ${user.email}`);
-    res.json({ success: true, message: "Consultor atribuído com sucesso!" });
+    console.log(`[Leads] Lead ${id} atribuÃ­do ao consultor ${consultantId} por ${user.email}`);
+    res.json({ success: true, message: "Consultor atribuÃ­do com sucesso!" });
 
   } catch (err) {
     console.error("[Leads/AssignConsultant] Erro:", err.message);
     res.status(500).json({ success: false, error: "Erro interno ao atribuir consultor", detalhe: err.message });
   }
 });
+
+// PATCH para server/routes/leads.js
+// Adicione este bloco ANTES de "export default router" no final do arquivo
+// ============================================================
+// PUT /api/leads/:id/assign-consultant
+// Atribui um consultor a um lead
+// Permissao: Gestor, Diretor, Administrador, super_admin
+// ============================================================
+
+router.put('/:id/assign-consultant', async (req, res) => {
+  // Autenticacao obrigatoria
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Token obrigatorio' })
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) {
+    return res.status(401).json({ success: false, error: 'Token invalido' })
+  }
+
+  // Busca usuario logado
+  const { data: usuarioLogado } = await supabase
+    .from('usuarios')
+    .select('id, role, tenant_id, is_super_admin, is_platform')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (!usuarioLogado) {
+    return res.status(403).json({ success: false, error: 'Usuario nao encontrado' })
+  }
+
+  const podeAtribuir = ['Gestor','Diretor','Administrador','admin'].includes(usuarioLogado.role)
+    || usuarioLogado.is_super_admin
+    || usuarioLogado.is_platform
+
+  if (!podeAtribuir) {
+    return res.status(403).json({ success: false, error: 'Sem permissao para atribuir consultores' })
+  }
+
+  const leadId = req.params.id
+  const { consultantId } = req.body
+
+  if (!consultantId) {
+    return res.status(400).json({ success: false, error: 'consultantId obrigatorio' })
+  }
+
+  // Verifica se o lead existe e pertence ao tenant
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, tenant_id, nome')
+    .eq('id', leadId)
+    .maybeSingle()
+
+  if (!lead) {
+    return res.status(404).json({ success: false, error: 'Lead nao encontrado' })
+  }
+
+  // Verifica isolamento de tenant (admin pode cruzar tenants)
+  const tenantOk = usuarioLogado.is_super_admin || usuarioLogado.is_platform
+    || lead.tenant_id === usuarioLogado.tenant_id
+
+  if (!tenantOk) {
+    return res.status(403).json({ success: false, error: 'Lead pertence a outro tenant' })
+  }
+
+  // Verifica se o consultor existe
+  const { data: consultor } = await supabase
+    .from('usuarios')
+    .select('id, nome, role')
+    .eq('id', consultantId)
+    .maybeSingle()
+
+  if (!consultor) {
+    return res.status(404).json({ success: false, error: 'Consultor nao encontrado' })
+  }
+
+  // Atualiza o lead com o operador
+  const { error: updateError } = await supabase
+    .from('leads')
+    .update({
+      id_operador_responsavel: consultantId,
+      operador_id:             consultantId,
+      updated_at:              new Date().toISOString(),
+    })
+    .eq('id', leadId)
+
+  if (updateError) {
+    console.error('[assign-consultant]', updateError)
+    return res.status(500).json({ success: false, error: updateError.message })
+  }
+
+  // Log de auditoria
+  console.log(`[Assign] Lead "${lead.nome}" atribuido a "${consultor.nome}" por ${usuarioLogado.role}`)
+
+  res.json({
+    success: true,
+    message: `Consultor ${consultor.nome} atribuido com sucesso!`,
+  })
+})
 
 export default router
