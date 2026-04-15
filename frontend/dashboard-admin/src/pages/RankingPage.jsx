@@ -1,7 +1,5 @@
-// RankingPage.jsx — Ranking de Consultores
+// RankingPage  Ranking de Consultores
 // Paleta oficial: #0F172A fundo, #10B981 verde/ativo, cinzas
-// v1.9.1 — Melhorias em logging e error handling
-
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
@@ -20,11 +18,11 @@ function fmtMoeda(v) {
   return `R$ ${n.toLocaleString('pt-BR')}`
 }
 
-// Medalhas do pódio
+//  Medalhas do pdio 
 const PODIO = [
-  { pos: 1, cor: '#10B981', ring: 'ring-[#10B981]', label: '🥇', size: 'w-20 h-20 text-3xl' },
-  { pos: 2, cor: '#94A3B8', ring: 'ring-[#94A3B8]', label: '🥈', size: 'w-16 h-16 text-2xl' },
-  { pos: 3, cor: '#6B7280', ring: 'ring-[#6B7280]', label: '🥉', size: 'w-14 h-14 text-xl' },
+  { pos: 1, cor: '#10B981', ring: 'ring-[#10B981]', label: '1', size: 'w-20 h-20 text-3xl' },
+  { pos: 2, cor: '#94A3B8', ring: 'ring-[#94A3B8]', label: '2', size: 'w-16 h-16 text-2xl' },
+  { pos: 3, cor: '#6B7280', ring: 'ring-[#6B7280]', label: '3', size: 'w-14 h-14 text-xl' },
 ]
 
 function PodioCard({ rank, consultor, cor, ring, label, size }) {
@@ -59,7 +57,7 @@ function PodioCard({ rank, consultor, cor, ring, label, size }) {
   )
 }
 
-// Linha da tabela
+//  Linha da tabela 
 function RankRow({ consultor, pos, meta }) {
   const pct  = meta > 0 ? Math.min(Math.round((consultor.total_leads / meta) * 100), 100) : 0
   const cor  = pos === 1 ? '#10B981' : pos === 2 ? '#94A3B8' : pos === 3 ? '#6B7280' : '#475569'
@@ -71,7 +69,7 @@ function RankRow({ consultor, pos, meta }) {
       className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-0"
     >
       <span className="w-6 text-center font-black text-[11px] shrink-0" style={{ color: cor }}>
-        {pos <= 3 ? ['🥇','🥈','🥉'][pos-1] : pos}
+        {pos <= 3 ? ['','',''][pos-1] : pos}
       </span>
       <div className="w-8 h-8 rounded-full flex items-center justify-center font-black text-sm bg-white/[0.04] border border-white/10 shrink-0" style={{ color: cor }}>
         {consultor.role_emoji || consultor.nome?.charAt(0) || '?'}
@@ -97,7 +95,7 @@ function RankRow({ consultor, pos, meta }) {
   )
 }
 
-// Página principal
+// Pagina principal
 export default function RankingPage() {
   const { usuario } = useAuth()
 
@@ -113,10 +111,8 @@ export default function RankingPage() {
   // Admin: carrega lista de tenants e pre-seleciona o primeiro
   useEffect(() => {
     if (!isAdmin) return
-    console.log('[Ranking] Admin detectado, carregando lista de tenants...')
     supabase.from('tenants').select('id, name').order('name').then(({ data }) => {
       if (data?.length) {
-        console.log('[Ranking] Tenants carregados:', data.length)
         setTenants(data)
         if (!tenantSelecionado) setTenantSelecionado(data[0].id)
       }
@@ -133,102 +129,48 @@ export default function RankingPage() {
   // Carrega dados via API backend (service role -- bypassa RLS para admins)
   useEffect(() => {
     async function carregar() {
-      if (!tenantId) {
-        console.warn('[Ranking] tenantId nao definido')
-        setLoading(false)
-        return
-      }
-      
+      if (!tenantId) return
       setLoading(true)
       try {
         const { data: { session } } = await supabase.auth.getSession()
         const token = session?.access_token || ''
         const API_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
 
-        // Logs detalhados para debug
-        console.log('[Ranking] ========== INICIANDO FETCH ==========')
-        console.log('[Ranking] Fetching from:', `${API_URL}/api/ranking/usuarios`)
-        console.log('[Ranking] tenant_id:', tenantId)
-        console.log('[Ranking] periodo:', periodo)
-        console.log('[Ranking] token presente:', !!token)
-
         // Busca consultores + leads do mes via API backend
         const res = await fetch(
           `${API_URL}/api/ranking/usuarios?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
-          { 
-            method: 'GET',
-            headers: { 
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         )
-
-        console.log('[Ranking] Response status:', res.status)
-        console.log('[Ranking] Response headers:', {
-          'content-type': res.headers.get('content-type'),
-          'x-powered-by': res.headers.get('x-powered-by')
-        })
+        const json = await res.json()
 
         if (!res.ok) {
-          const json = await res.json()
-          console.error('[Ranking] API error (HTTP ' + res.status + '):', json)
-          
-          // Fallback em desenvolvimento
-          if (import.meta.env.DEV) {
-            console.warn('[Ranking] DEV mode - mostrando dados vazios')
-            setConsultores([])
-            setMeta(30)
-            setLoading(false)
-            return
-          }
-
+          console.error('[Ranking] API error:', json.error)
           setConsultores([])
           setLoading(false)
           return
         }
 
-        const json = await res.json()
-        console.log('[Ranking] Data received successfully:', json)
-        console.log('[Ranking] Total consultores:', json.consultores?.length)
-        console.log('[Ranking] Total leads:', json.total_leads)
-
         setConsultores(json.consultores || [])
 
         // Busca meta
-        try {
-          console.log('[Ranking] Fetching meta...')
-          const resMeta = await fetch(
-            `${API_URL}/api/ranking/meta?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
-            { 
-              headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
-          )
-          const metaJson = await resMeta.json()
-          console.log('[Ranking] Meta received:', metaJson.meta)
-          if (metaJson.meta) setMeta(metaJson.meta)
-        } catch (metaErr) {
-          console.warn('[Ranking] Error fetching meta:', metaErr.message)
-        }
-
-        console.log('[Ranking] ========== FETCH COMPLETO ==========')
+        const resMeta = await fetch(
+          `${API_URL}/api/ranking/meta?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        const metaJson = await resMeta.json()
+        if (metaJson.meta) setMeta(metaJson.meta)
 
       } catch (err) {
-        console.error('[Ranking] Erro crítico:', err)
-        console.error('[Ranking] Stack:', err.stack)
+        console.error('[Ranking]', err)
       }
       setLoading(false)
     }
-    
     carregar()
   }, [tenantId, tenantSelecionado, periodo, isDiretor])
 
   const top3 = consultores.slice(0, 3)
 
-  // CSV Export
+  //  CSV Export 
   function exportCSV() {
     const header = 'Posicao,Nome,Leads,HOT,Convertidos,Capital\n'
     const rows   = consultores.map((c, i) =>
@@ -244,10 +186,7 @@ export default function RankingPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-      <div className="text-center">
-        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-400 text-sm">[Ranking] Carregando dados...</p>
-      </div>
+      <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -286,7 +225,6 @@ export default function RankingPage() {
               value={`${periodo.ano}-${periodo.mes}`}
               onChange={e => {
                 const [a, m] = e.target.value.split('-')
-                console.log('[Ranking] Período alterado para:', a, m)
                 setPeriodo({ ano: parseInt(a), mes: parseInt(m) })
               }}
               className="bg-[#0B1220] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#10B981]/50"
@@ -306,9 +244,9 @@ export default function RankingPage() {
       <div className="px-6 lg:px-10 pt-5 mb-5">
         <div className="flex gap-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-1 w-fit">
           {[
-            { id: 'ranking',  label: '🏆 Ranking' },
-            { id: 'relatorio',label: '📊 Relatório' },
-            ...(isDiretor ? [{ id: 'config', label: '⚙️ Config' }] : []),
+            { id: 'ranking',  label: ' Ranking' },
+            { id: 'relatorio',label: ' Relatrio' },
+            ...(isDiretor ? [{ id: 'config', label: ' Config' }] : []),
           ].map(tab => (
             <button key={tab.id} onClick={() => setAba(tab.id)}
               className={`px-4 py-2 rounded-lg text-[11px] font-bold transition-all ${
@@ -326,10 +264,10 @@ export default function RankingPage() {
         {/*  ABA: RANKING  */}
         {aba === 'ranking' && (
           <div className="space-y-6">
-            {/* Pódio */}
+            {/* Pdio */}
             {consultores.length > 0 && (
               <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-6">
-                <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-6">🏅 Pódio</p>
+                <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-6">Pdio</p>
                 <div className="flex items-end justify-center gap-8">
                   {/* Ordem visual: 2, 1, 3 */}
                   <PodioCard rank={2} consultor={top3[1]} {...PODIO[1]} />
@@ -343,17 +281,17 @@ export default function RankingPage() {
             <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden">
               <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
                 <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">
-                  📋 Todos os consultores  |  Meta: {meta} leads
+                  Todos os consultores  Meta: {meta} leads
                 </p>
                 <span className="text-[10px] font-bold text-[#10B981]">{consultores.length} consultores</span>
               </div>
               {consultores.length === 0 ? (
                 <div className="py-16 text-center">
-                  <p className="text-gray-500 text-2xl mb-3">❓</p>
-                  <p className="text-white text-sm font-bold mb-2">Nenhum usuário encontrado</p>
+                  <p className="text-gray-500 text-2xl mb-3">?</p>
+                  <p className="text-white text-sm font-bold mb-2">Nenhum usuario encontrado</p>
                   <p className="text-gray-600 text-xs max-w-xs mx-auto leading-relaxed">
-                    Verifique se há usuários cadastrados em <strong className="text-gray-400">/usuarios</strong>.
-                    Todos os usuários aparecem no ranking. Leads sem operador atribuído ficam com 0.
+                    Verifique se ha usuarios cadastrados em <strong className="text-gray-400">/usuarios</strong>.
+                    Todos os usuarios aparecem no ranking. Leads sem operador atribuido ficam com 0.
                   </p>
                 </div>
               ) : (
@@ -365,20 +303,20 @@ export default function RankingPage() {
           </div>
         )}
 
-        {/*  ABA: RELATÓRIO  */}
+        {/*  ABA: RELATRIO  */}
         {aba === 'relatorio' && (
           <div className="space-y-4">
             <div className="flex justify-end">
               <button onClick={exportCSV}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold bg-[#10B981]/10 text-[#10B981] border border-[#10B981]/20 hover:bg-[#10B981]/20 transition-all">
-                📥 Exportar CSV
+                 Exportar CSV
               </button>
             </div>
             <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden">
               <table className="w-full text-[11px]">
                 <thead>
                   <tr className="border-b border-white/[0.06]">
-                    {['#','Consultor','Leads','🔥 HOT','✅ Convertidos','💰 Capital'].map(h => (
+                    {['#','Consultor','Leads','HOT','Convertidos','Capital'].map(h => (
                       <th key={h} className="text-left px-4 py-3 text-[9px] font-black uppercase tracking-wider text-gray-600">{h}</th>
                     ))}
                   </tr>
@@ -408,7 +346,7 @@ export default function RankingPage() {
           <div className="max-w-lg space-y-5">
             {/* Meta mensal */}
             <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5">
-              <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-3">⏹️ Meta Mensal Global</p>
+              <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-3">Meta Mensal Global</p>
               <div className="flex items-center gap-3">
                 <input
                   type="number" value={meta} min={1}
@@ -417,31 +355,24 @@ export default function RankingPage() {
                 />
                 <button
                   onClick={async () => {
-                    console.log('[Ranking] Salvando meta:', meta)
                     const { error } = await supabase.from('ranking_metas').upsert({
                       tenant_id: tenantId, ano: periodo.ano, mes: periodo.mes,
                       consultor_id: null, meta_valor: meta,
                     }, { onConflict: 'tenant_id,ano,mes,consultor_id' })
-                    if (!error) {
-                      console.log('[Ranking] Meta salva com sucesso!')
-                      alert('✅ Meta salva com sucesso!')
-                    } else {
-                      console.error('[Ranking] Erro ao salvar meta:', error)
-                      alert('❌ Erro ao salvar meta')
-                    }
+                    if (!error) alert('Meta salva!')
                   }}
                   className="px-4 py-2.5 rounded-xl text-[11px] font-bold bg-[#10B981] text-black hover:bg-[#059669] transition-all"
                 >
-                  💾 Salvar
+                  Salvar
                 </button>
               </div>
-              <p className="text-[10px] text-gray-600 mt-2">Quantidade de leads por consultor no mês</p>
+              <p className="text-[10px] text-gray-600 mt-2">Quantidade de leads por consultor no ms</p>
             </div>
 
-            {/* Faixas de comissão */}
+            {/* Faixas de comisso */}
             <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5">
               <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-3">
-                💰 Faixas de Comissão — {config.length} configuradas
+                Faixas de Comisso  {config.length} configuradas
               </p>
               {config.length === 0 ? (
                 <p className="text-gray-600 text-xs">
@@ -452,7 +383,7 @@ export default function RankingPage() {
                   {config.map((faixa, i) => (
                     <div key={i} className="flex items-center justify-between py-2 border-b border-white/[0.04] last:border-0">
                       <span className="text-[11px] text-gray-400">
-                        {fmtMoeda(faixa.de)}  {faixa.ate ? ' - ' + fmtMoeda(faixa.ate) : ''}
+                        {fmtMoeda(faixa.de)}  {faixa.ate ? fmtMoeda(faixa.ate) : ''}
                       </span>
                       <div className="flex items-center gap-3">
                         <span className="text-[11px] font-bold text-[#10B981]">{faixa.pct}%</span>

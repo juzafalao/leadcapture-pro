@@ -363,5 +363,103 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
     })
   }
 })
+// PATCH para server/routes/leads.js
+// Adicione este bloco ANTES de "export default router" no final do arquivo
+// ============================================================
+// PUT /api/leads/:id/assign-consultant
+// Atribui um consultor a um lead
+// Permissao: Gestor, Diretor, Administrador, super_admin
+// ============================================================
 
+router.put('/:id/assign-consultant', async (req, res) => {
+  // Autenticacao obrigatoria
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Token obrigatorio' })
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) {
+    return res.status(401).json({ success: false, error: 'Token invalido' })
+  }
+
+  // Busca usuario logado
+  const { data: usuarioLogado } = await supabase
+    .from('usuarios')
+    .select('id, role, tenant_id, is_super_admin, is_platform')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (!usuarioLogado) {
+    return res.status(403).json({ success: false, error: 'Usuario nao encontrado' })
+  }
+
+  const podeAtribuir = ['Gestor','Diretor','Administrador','admin'].includes(usuarioLogado.role)
+    || usuarioLogado.is_super_admin
+    || usuarioLogado.is_platform
+
+  if (!podeAtribuir) {
+    return res.status(403).json({ success: false, error: 'Sem permissao para atribuir consultores' })
+  }
+
+  const leadId = req.params.id
+  const { consultantId } = req.body
+
+  if (!consultantId) {
+    return res.status(400).json({ success: false, error: 'consultantId obrigatorio' })
+  }
+
+  // Verifica se o lead existe e pertence ao tenant
+  const { data: lead } = await supabase
+    .from('leads')
+    .select('id, tenant_id, nome')
+    .eq('id', leadId)
+    .maybeSingle()
+
+  if (!lead) {
+    return res.status(404).json({ success: false, error: 'Lead nao encontrado' })
+  }
+
+  // Verifica isolamento de tenant (admin pode cruzar tenants)
+  const tenantOk = usuarioLogado.is_super_admin || usuarioLogado.is_platform
+    || lead.tenant_id === usuarioLogado.tenant_id
+
+  if (!tenantOk) {
+    return res.status(403).json({ success: false, error: 'Lead pertence a outro tenant' })
+  }
+
+  // Verifica se o consultor existe
+  const { data: consultor } = await supabase
+    .from('usuarios')
+    .select('id, nome, role')
+    .eq('id', consultantId)
+    .maybeSingle()
+
+  if (!consultor) {
+    return res.status(404).json({ success: false, error: 'Consultor nao encontrado' })
+  }
+
+  // Atualiza o lead com o operador
+  const { error: updateError } = await supabase
+    .from('leads')
+    .update({
+      id_operador_responsavel: consultantId,
+      operador_id:             consultantId,
+      updated_at:              new Date().toISOString(),
+    })
+    .eq('id', leadId)
+
+  if (updateError) {
+    console.error('[assign-consultant]', updateError)
+    return res.status(500).json({ success: false, error: updateError.message })
+  }
+
+  // Log de auditoria
+  console.log(`[Assign] Lead "${lead.nome}" atribuido a "${consultor.nome}" por ${usuarioLogado.role}`)
+
+  res.json({
+    success: true,
+    message: `Consultor ${consultor.nome} atribuido com sucesso!`,
+  })
+})
 export default router
