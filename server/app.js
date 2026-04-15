@@ -53,6 +53,7 @@ import marcasRouter  from './routes/marcas.js'
 import sistemaRouter from './routes/sistema.js'
 import chatRouter      from './routes/chat.js'
 import whatsappRouter  from './routes/whatsapp.js'
+import rankingRouter   from './routes/ranking.js'
 
 // Supabase (usado diretamente aqui apenas para landing page dinÃ¢mica)
 import supabase from './core/database.js'
@@ -225,3 +226,4 @@ function _pagina404(slug) {
 </body>
 </html>`
 }
+
