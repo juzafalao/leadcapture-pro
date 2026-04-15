@@ -1,20 +1,20 @@
-// ============================================================
-// LeadCapture Pro — Servidor Principal
-// Zafalão Tech · 2026
+﻿// ============================================================
+// LeadCapture Pro â€” Servidor Principal
+// ZafalÃ£o Tech Â· 2026
 //
-// MUDANÇAS v1.9.0 (Fase A — Hardening):
-// 1. ✅ Rate limiting: global + webhook + status
-// 2. ✅ CORS restritivo (lista de domínios permitidos)
-// 3. ✅ Validação Zod no POST /api/leads (via middleware)
-// 4. ✅ Headers de segurança (X-Content-Type-Options, etc.)
-// 5. ✅ Request logging básico
+// MUDANÃ‡AS v1.9.0 (Fase A â€” Hardening):
+// 1. âœ… Rate limiting: global + webhook + status
+// 2. âœ… CORS restritivo (lista de domÃ­nios permitidos)
+// 3. âœ… ValidaÃ§Ã£o Zod no POST /api/leads (via middleware)
+// 4. âœ… Headers de seguranÃ§a (X-Content-Type-Options, etc.)
+// 5. âœ… Request logging bÃ¡sico
 //
-// Arquitetura de módulos:
-//   core/         → banco de dados, scoring, validação
-//   comunicacao/  → email e WhatsApp
-//   routes/       → roteadores Express por domínio
-//   middleware/   → rate limiting, validação Zod
-//   captacao/     → landing page institucional do produto
+// Arquitetura de mÃ³dulos:
+//   core/         â†’ banco de dados, scoring, validaÃ§Ã£o
+//   comunicacao/  â†’ email e WhatsApp
+//   routes/       â†’ roteadores Express por domÃ­nio
+//   middleware/   â†’ rate limiting, validaÃ§Ã£o Zod
+//   captacao/     â†’ landing page institucional do produto
 // ============================================================
 
 import express from 'express'
@@ -28,7 +28,7 @@ import { join, dirname } from 'path'
 
 dotenv.config()
 
-// ─── Sentry — inicializa ANTES de qualquer handler ───────────
+// â”€â”€â”€ Sentry â€” inicializa ANTES de qualquer handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (process.env.SENTRY_DSN) {
   import('@sentry/node').then(Sentry => {
     Sentry.init({
@@ -40,10 +40,10 @@ if (process.env.SENTRY_DSN) {
   }).catch(err => console.warn('[Sentry] Falha ao inicializar:', err.message))
 }
 
-// Middlewares de segurança
+// Middlewares de seguranÃ§a
 import { globalLimiter, webhookLimiter, statusLimiter } from './middleware/rateLimiter.js'
 
-// Serviços
+// ServiÃ§os
 import { inicializarEmail } from './comunicacao/email.js'
 import { verificarConexao } from './comunicacao/whatsapp.js'
 
@@ -54,32 +54,32 @@ import sistemaRouter from './routes/sistema.js'
 import chatRouter      from './routes/chat.js'
 import whatsappRouter  from './routes/whatsapp.js'
 
-// Supabase (usado diretamente aqui apenas para landing page dinâmica)
+// Supabase (usado diretamente aqui apenas para landing page dinÃ¢mica)
 import supabase from './core/database.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname  = dirname(__filename)
 
-// ─── Inicialização ───────────────────────────────────────────
+// â”€â”€â”€ InicializaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const app = express()
 app.set('trust proxy', 1) // Vercel/proxy reverso
 inicializarEmail()
 
-// Verifica a conexão com a Evolution API do WhatsApp na inicialização
+// Verifica a conexÃ£o com a Evolution API do WhatsApp na inicializaÃ§Ã£o
 if (process.env.EVOLUTION_API_KEY) {
   verificarConexao().then(status => {
     if (status.conectado) {
-      console.log(`[WhatsApp] Conectado à Evolution API (instância: ${status.instancia}, status: ${status.status})`)
+      console.log(`[WhatsApp] Conectado Ã  Evolution API (instÃ¢ncia: ${status.instancia}, status: ${status.status})`)
     } else {
-      console.warn(`[WhatsApp] Falha na conexão com a Evolution API: ${status.motivo}`)
-      console.warn('Verifique as variáveis de ambiente EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.')
+      console.warn(`[WhatsApp] Falha na conexÃ£o com a Evolution API: ${status.motivo}`)
+      console.warn('Verifique as variÃ¡veis de ambiente EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.')
     }
-  }).catch(err => console.error('[WhatsApp] Erro ao verificar conexão:', err.message))
+  }).catch(err => console.error('[WhatsApp] Erro ao verificar conexÃ£o:', err.message))
 } else {
-  console.warn('[WhatsApp] EVOLUTION_API_KEY não configurada. O serviço de WhatsApp operará em modo simulado.')
+  console.warn('[WhatsApp] EVOLUTION_API_KEY nÃ£o configurada. O serviÃ§o de WhatsApp operarÃ¡ em modo simulado.')
 }
 
-// ─── CORS Restritivo ─────────────────────────────────────────
+// â”€â”€â”€ CORS Restritivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const allowedOrigins = [
   'https://leadcapture-pro.vercel.app',
   'https://www.leadcapture-pro.vercel.app',
@@ -99,13 +99,13 @@ app.use(cors({
     // Permitir requests sem origin (curl, Postman, webhooks server-to-server)
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)
-    callback(new Error(`Origem não permitida pelo CORS: ${origin}`))
+    callback(new Error(`Origem nÃ£o permitida pelo CORS: ${origin}`))
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
 }))
 
-// ─── Middlewares Globais ─────────────────────────────────────
+// â”€â”€â”€ Middlewares Globais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(express.static(path.join(__dirname, 'public')))
@@ -113,15 +113,15 @@ app.use('/api/ranking', statusLimiter, rankingRouter)
 app.use('/api/chat',      chatRouter)
 app.use('/api/whatsapp', whatsappRouter)
 
-// ─── Dashboard (SPA React) ───────────────────────────────────
+// â”€â”€â”€ Dashboard (SPA React) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
 app.get('/dashboard/*', (_req, res) => {
   res.sendFile(join(__dirname, '../dashboard-build/index.html'))
 })
 
-// ─── Landing Pages Dinâmicas (tenant/marca) ──────────────────
+// â”€â”€â”€ Landing Pages DinÃ¢micas (tenant/marca) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // IMPORTANTE: deve vir ANTES do express.static('/landing')
-// para que /landing/:slug seja tratado como rota dinâmica
+// para que /landing/:slug seja tratado como rota dinÃ¢mica
 app.get('/landing/:slug', async (req, res) => {
   try {
     const { slug } = req.params
@@ -143,11 +143,11 @@ app.get('/landing/:slug', async (req, res) => {
 
     const logoBlock = marca.logo_url
       ? `<img src="${escapeHtml(marca.logo_url)}" alt="${escapeHtml(marca.nome)}" class="lp-logo" />`
-      : `<span class="lp-emoji">${escapeHtml(marca.emoji || '🏢')}</span>`
+      : `<span class="lp-emoji">${escapeHtml(marca.emoji || 'ðŸ¢')}</span>`
 
     html = html
       .replace(/{{MARCA_LOGO_BLOCK}}/g, logoBlock)
-      .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || '🏢'))
+      .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || 'ðŸ¢'))
       .replace(/{{MARCA_NOME}}/g,     escapeHtml(marca.nome))
       .replace(/{{MARCA_ID}}/g,       escapeHtml(marca.id))
       .replace(/{{TENANT_ID}}/g,      escapeHtml(marca.tenant_id))
@@ -163,23 +163,23 @@ app.get('/landing/:slug', async (req, res) => {
   }
 })
 
-// ─── Assets estáticos da landing institucional ────────────────
-// Vem DEPOIS da rota dinâmica para não interceptar /landing/:slug
+// â”€â”€â”€ Assets estÃ¡ticos da landing institucional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Vem DEPOIS da rota dinÃ¢mica para nÃ£o interceptar /landing/:slug
 app.use('/landing', express.static(join(__dirname, '../landing')))
 
-// ─── Fallback 404 ────────────────────────────────────────────
+// â”€â”€â”€ Fallback 404 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use((_req, res) => {
-  res.status(404).json({ success: false, error: 'Rota não encontrada' })
+  res.status(404).json({ success: false, error: 'Rota nÃ£o encontrada' })
 })
 
-// ─── Error Handler Global ────────────────────────────────────
+// â”€â”€â”€ Error Handler Global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 app.use((err, req, res, _next) => {
   // CORS error
   if (err.message?.includes('CORS')) {
-    return res.status(403).json({ success: false, error: 'Origem não permitida' })
+    return res.status(403).json({ success: false, error: 'Origem nÃ£o permitida' })
   }
 
-  // Envia para Sentry se DSN configurada (sem await — fire and forget)
+  // Envia para Sentry se DSN configurada (sem await â€” fire and forget)
   if (process.env.SENTRY_DSN) {
     import('@sentry/node').then(Sentry => {
       Sentry.withScope(scope => {
@@ -191,20 +191,20 @@ app.use((err, req, res, _next) => {
     }).catch(() => {})
   }
 
-  console.error('[App] Erro não tratado:', err)
+  console.error('[App] Erro nÃ£o tratado:', err)
   res.status(500).json({ success: false, error: 'Erro interno do servidor' })
 })
 
 export default app
 
-// ─── Helpers ─────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function _pagina404(slug) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Página não encontrada · LeadCapture Pro</title>
+  <title>PÃ¡gina nÃ£o encontrada Â· LeadCapture Pro</title>
   <style>
     body { display:flex; align-items:center; justify-content:center; min-height:100vh;
            font-family:sans-serif; background:#0a0a0b; color:#f4f4f5; margin:0; }
@@ -217,10 +217,10 @@ function _pagina404(slug) {
 </head>
 <body>
   <div class="box">
-    <h1>🔍</h1>
-    <h2>Landing page não encontrada</h2>
-    <p>A página solicitada não existe no sistema.</p>
-    <p><a href="/landing">Conheça o LeadCapture Pro →</a></p>
+    <h1>ðŸ”</h1>
+    <h2>Landing page nÃ£o encontrada</h2>
+    <p>A pÃ¡gina solicitada nÃ£o existe no sistema.</p>
+    <p><a href="/landing">ConheÃ§a o LeadCapture Pro â†’</a></p>
   </div>
 </body>
 </html>`
