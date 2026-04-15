@@ -1,34 +1,52 @@
 // server/routes/ranking.js
-// Rota de ranking de consultores -- usa service role para bypassar RLS
-// Permite que admins vejam qualquer tenant
+// Rota de ranking -- usa service role para bypassar RLS
 import { Router } from 'express'
 import { createClient } from '@supabase/supabase-js'
 
 const router = Router()
 
-// Service role client -- bypassa RLS completamente
 function getAdminClient() {
   const url = process.env.SUPABASE_URL
+  // Tenta service role primeiro, cai no anon como fallback
   const key = process.env.SUPABASE_SERVICE_KEY
     || process.env.SUPABASE_SERVICE_ROLE_KEY
-    || process.env.SUPABASE_ANON_KEY // fallback (sem bypass)
+    || process.env.SUPABASE_ANON_KEY
   if (!url || !key) throw new Error('Supabase nao configurado')
   return createClient(url, key, { auth: { persistSession: false } })
 }
 
-// Verifica token Bearer do usuario
+// Verifica token e retorna usuario -- usa token do proprio usuario para buscar seus dados (respeita RLS)
 async function verificarToken(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
   if (!token) return null
-  const sb = getAdminClient()
-  const { data: { user }, error } = await sb.auth.getUser(token)
-  if (error || !user) return null
-  // Busca usuario no banco
-  const { data } = await sb.from('usuarios')
-    .select('id, nome, role, tenant_id, is_super_admin, is_platform')
-    .eq('auth_id', user.id)
-    .maybeSingle()
-  return data
+
+  try {
+    // Usa cliente autenticado COM o token do usuario para buscar seus proprios dados
+    const url = process.env.SUPABASE_URL
+    const anonKey = process.env.SUPABASE_ANON_KEY
+    if (!url || !anonKey) return null
+
+    const sbUser = createClient(url, anonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    })
+
+    // Verifica se o token e valido
+    const { data: { user }, error } = await sbUser.auth.getUser()
+    if (error || !user) return null
+
+    // Busca dados do usuario -- agora com o JWT dele, o RLS deixa passar
+    const { data } = await sbUser
+      .from('usuarios')
+      .select('id, nome, role, tenant_id, is_super_admin, is_platform')
+      .eq('auth_id', user.id)
+      .maybeSingle()
+
+    return data
+  } catch (err) {
+    console.error('[ranking] verificarToken erro:', err.message)
+    return null
+  }
 }
 
 // GET /api/ranking/usuarios?tenant_id=xxx&ano=2026&mes=4
@@ -37,11 +55,10 @@ router.get('/usuarios', async (req, res) => {
     const usuario = await verificarToken(req)
     if (!usuario) return res.status(401).json({ error: 'Nao autorizado' })
 
-    const isAdmin = ['Administrador','admin','Diretor'].includes(usuario.role)
+    const isAdmin = ['Administrador','admin','Diretor','Gestor'].includes(usuario.role)
       || usuario.is_super_admin || usuario.is_platform
 
-    // Determina qual tenant usar
-    // Admin pode passar tenant_id via query, outros usam o proprio
+    // Admin pode ver qualquer tenant via query param
     const tenantId = (isAdmin && req.query.tenant_id)
       ? req.query.tenant_id
       : usuario.tenant_id
@@ -51,9 +68,9 @@ router.get('/usuarios', async (req, res) => {
     const ano = parseInt(req.query.ano) || new Date().getFullYear()
     const mes = parseInt(req.query.mes) || (new Date().getMonth() + 1)
 
+    // Usa service role para bypassar RLS na leitura dos dados do outro tenant
     const sb = getAdminClient()
 
-    // Busca todos os usuarios do tenant (sem filtro de role)
     const { data: users, error: usersErr } = await sb
       .from('usuarios')
       .select('id, nome, role, role_emoji, role_color')
@@ -70,7 +87,6 @@ router.get('/usuarios', async (req, res) => {
       return res.json({ consultores: [], tenantId })
     }
 
-    // Busca leads do mes com operador
     const inicio = new Date(ano, mes - 1, 1).toISOString()
     const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
 
@@ -82,7 +98,6 @@ router.get('/usuarios', async (req, res) => {
       .lte('created_at', fim)
       .is('deleted_at', null)
 
-    // Agrupa por operador
     const mapa = {}
     for (const lead of (leads || [])) {
       const uid = lead.id_operador_responsavel || lead.operador_id
@@ -96,15 +111,15 @@ router.get('/usuarios', async (req, res) => {
 
     const consultores = users
       .map(u => ({
-        id:           u.id,
-        nome:         u.nome,
-        role:         u.role,
-        role_emoji:   u.role_emoji,
-        role_color:   u.role_color,
-        total_leads:  mapa[u.id]?.total     ?? 0,
-        leads_hot:    mapa[u.id]?.hot        ?? 0,
-        convertidos:  mapa[u.id]?.convertido ?? 0,
-        capital_total:mapa[u.id]?.capital    ?? 0,
+        id:            u.id,
+        nome:          u.nome,
+        role:          u.role,
+        role_emoji:    u.role_emoji,
+        role_color:    u.role_color,
+        total_leads:   mapa[u.id]?.total     ?? 0,
+        leads_hot:     mapa[u.id]?.hot        ?? 0,
+        convertidos:   mapa[u.id]?.convertido ?? 0,
+        capital_total: mapa[u.id]?.capital    ?? 0,
       }))
       .sort((a, b) => b.total_leads - a.total_leads || b.capital_total - a.capital_total)
 
