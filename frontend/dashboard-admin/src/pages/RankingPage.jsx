@@ -143,6 +143,21 @@ export default function RankingPage() {
         )
         const json = await res.json()
 
+        if (res.status === 404) {
+          // Rota backend nao registrada ainda -- fallback direto Supabase
+          console.warn('[Ranking] /api/ranking nao encontrado -- usando Supabase direto')
+          const { data: users } = await supabase
+            .from('usuarios')
+            .select('id, nome, role, role_emoji, role_color')
+            .eq('tenant_id', tenantId)
+            .neq('role', 'Cliente')
+          setConsultores((users || []).map(u => ({
+            ...u, total_leads: 0, leads_hot: 0, convertidos: 0, capital_total: 0
+          })))
+          setLoading(false)
+          return
+        }
+
         if (!res.ok) {
           console.error('[Ranking] API error:', json.error)
           setConsultores([])

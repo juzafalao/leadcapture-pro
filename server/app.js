@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
 import rankingRouter from './routes/ranking.js'
 
+
 dotenv.config()
 
 // ─── Sentry — inicializa ANTES de qualquer handler ───────────
@@ -111,6 +112,7 @@ app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(express.static(path.join(__dirname, 'public')))
 app.use('/api/ranking', statusLimiter, rankingRouter)
+
 // Sanitizacao XSS — remove tags HTML/script de todos os campos
 import('./middleware/sanitize.js').then(({ sanitizeMiddleware }) => {
   app.use(sanitizeMiddleware)
