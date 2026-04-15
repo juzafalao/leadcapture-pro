@@ -1,75 +1,93 @@
-// server/routes/ranking.js -- v5 DEFINITIVO
-// Decodifica JWT localmente para pegar auth_id -- zero dependencia de service key
+// server/routes/ranking.js -- v6 com debug endpoint
 import { Router } from 'express'
 import { createClient } from '@supabase/supabase-js'
 
 const router = Router()
 
-// Decodifica JWT sem verificacao (Supabase ja verificou ao emitir)
-// Retorna o payload: { sub: auth_id, email, role, ... }
 function decodeJWT(token) {
   try {
-    const payload = token.split('.')[1]
-    const decoded = Buffer.from(payload, 'base64url').toString('utf8')
-    return JSON.parse(decoded)
-  } catch {
-    try {
-      const payload = token.split('.')[1]
-      const decoded = Buffer.from(payload, 'base64').toString('utf8')
-      return JSON.parse(decoded)
-    } catch {
-      return null
-    }
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    // Adiciona padding se necessario
+    let b64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    while (b64.length % 4) b64 += '='
+    return JSON.parse(Buffer.from(b64, 'base64').toString('utf8'))
+  } catch (e) {
+    console.error('[ranking] decodeJWT erro:', e.message)
+    return null
   }
 }
 
-// Cliente autenticado com JWT do usuario (para queries RLS-aware)
-function clienteJWT(token) {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY,
-    {
-      auth: { persistSession: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    }
-  )
-}
-
-// Cliente admin (service role -- bypassa RLS)
 function clienteAdmin() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY,
-    { auth: { persistSession: false } }
-  )
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_KEY
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || process.env.SUPABASE_ANON_KEY
+  return createClient(url, key, { auth: { persistSession: false } })
 }
 
-// Verifica token e retorna dados do usuario
 async function verificarToken(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
   if (!token) return null
 
-  // Decodifica JWT para pegar o auth_id (sub)
   const jwt = decodeJWT(token)
-  if (!jwt?.sub) return null
+  if (!jwt?.sub) {
+    console.error('[ranking] JWT decode falhou ou sub ausente')
+    return null
+  }
 
   try {
-    // Usa service role para buscar usuario pelo auth_id -- ignora RLS
     const sb = clienteAdmin()
-    const { data } = await sb
+    const { data, error } = await sb
       .from('usuarios')
       .select('id, nome, role, tenant_id, is_super_admin, is_platform')
       .eq('auth_id', jwt.sub)
       .maybeSingle()
 
+    if (error) console.error('[ranking] query usuarios erro:', error.message)
+    if (!data)  console.error('[ranking] usuario nao encontrado para auth_id:', jwt.sub)
     return data || null
   } catch (err) {
-    console.error('[ranking] verificarToken:', err.message)
+    console.error('[ranking] verificarToken excecao:', err.message)
     return null
   }
 }
 
-// GET /api/ranking/usuarios?tenant_id=xxx&ano=2026&mes=4
+// DEBUG -- retorna info do token e usuario (remover em producao)
+router.get('/debug', async (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) return res.json({ erro: 'sem token' })
+
+  const jwt = decodeJWT(token)
+  const sb  = clienteAdmin()
+
+  const urlKey  = process.env.SUPABASE_URL ? 'ok' : 'AUSENTE'
+  const svcKey  = process.env.SUPABASE_SERVICE_KEY ? 'ok' : 'AUSENTE'
+  const anonKey = process.env.SUPABASE_ANON_KEY ? 'ok' : 'AUSENTE'
+
+  let usuario = null
+  let erroQuery = null
+  if (jwt?.sub) {
+    const { data, error } = await sb
+      .from('usuarios')
+      .select('id, nome, role, tenant_id')
+      .eq('auth_id', jwt.sub)
+      .maybeSingle()
+    usuario    = data
+    erroQuery  = error?.message
+  }
+
+  res.json({
+    jwt_sub:    jwt?.sub || null,
+    jwt_email:  jwt?.email || null,
+    jwt_exp:    jwt?.exp ? new Date(jwt.exp * 1000).toISOString() : null,
+    env: { SUPABASE_URL: urlKey, SUPABASE_SERVICE_KEY: svcKey, SUPABASE_ANON_KEY: anonKey },
+    usuario,
+    erroQuery,
+  })
+})
+
+// GET /api/ranking/usuarios
 router.get('/usuarios', async (req, res) => {
   try {
     const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
@@ -90,7 +108,6 @@ router.get('/usuarios', async (req, res) => {
     const ano = parseInt(req.query.ano) || new Date().getFullYear()
     const mes = parseInt(req.query.mes) || (new Date().getMonth() + 1)
 
-    // Usa service role para buscar dados de qualquer tenant
     const sb = clienteAdmin()
 
     const { data: users, error: usersErr } = await sb
@@ -100,14 +117,8 @@ router.get('/usuarios', async (req, res) => {
       .neq('role', 'Cliente')
       .order('nome')
 
-    if (usersErr) {
-      console.error('[Ranking] usuarios:', usersErr.message)
-      return res.status(500).json({ error: usersErr.message })
-    }
-
-    if (!users?.length) {
-      return res.json({ consultores: [], tenantId })
-    }
+    if (usersErr) return res.status(500).json({ error: usersErr.message })
+    if (!users?.length) return res.json({ consultores: [], tenantId })
 
     const inicio = new Date(ano, mes - 1, 1).toISOString()
     const fim    = new Date(ano, mes, 0, 23, 59, 59).toISOString()
@@ -152,7 +163,7 @@ router.get('/usuarios', async (req, res) => {
   }
 })
 
-// GET /api/ranking/meta?tenant_id=xxx&ano=2026&mes=4
+// GET /api/ranking/meta
 router.get('/meta', async (req, res) => {
   try {
     const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
