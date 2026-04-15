@@ -462,4 +462,3 @@ router.put('/:id/assign-consultant', async (req, res) => {
     message: `Consultor ${consultor.nome} atribuido com sucesso!`,
   })
 })
-export default router
