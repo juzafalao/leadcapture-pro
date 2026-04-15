@@ -24,7 +24,6 @@ import path    from 'path'
 import fs      from 'fs'
 import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
-import rankingRouter from './routes/ranking.js'
 
 
 dotenv.config()
@@ -54,7 +53,6 @@ import marcasRouter  from './routes/marcas.js'
 import sistemaRouter from './routes/sistema.js'
 import chatRouter      from './routes/chat.js'
 import whatsappRouter  from './routes/whatsapp.js'
-import rankingRouter from './routes/ranking.js'
 
 // Supabase (usado diretamente aqui apenas para landing page dinâmica)
 import supabase from './core/database.js'
@@ -111,43 +109,6 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 app.use(express.static(path.join(__dirname, 'public')))
-app.use('/api/ranking', statusLimiter, rankingRouter)
-
-// Sanitizacao XSS — remove tags HTML/script de todos os campos
-import('./middleware/sanitize.js').then(({ sanitizeMiddleware }) => {
-  app.use(sanitizeMiddleware)
-}).catch(() => {})
-
-// ─── Headers de Segurança ────────────────────────────────────
-app.use((_req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('X-XSS-Protection', '1; mode=block')
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  next()
-})
-
-// ─── Rate Limiting Global ────────────────────────────────────
-app.use(globalLimiter)
-
-// ─── Request Logging ─────────────────────────────────────────
-app.use((req, _res, next) => {
-  if (req.path !== '/health') {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
-  }
-  next()
-})
-
-// ─── Roteadores ──────────────────────────────────────────────
-app.use('/api/leads',   webhookLimiter, leadsRouter)
-app.use('/api/marcas',  marcasRouter)
-app.get('/health', statusLimiter, (_req, res) => res.json({
-  status: 'ok',
-  service: 'LeadCapture Pro',
-  version: '1.9.0',
-  timestamp: new Date().toISOString(),
-}))
-app.use('/api/sistema', statusLimiter, sistemaRouter)
 app.use('/api/ranking', statusLimiter, rankingRouter)
 app.use('/api/chat',      chatRouter)
 app.use('/api/whatsapp', whatsappRouter)
