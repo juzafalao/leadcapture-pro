@@ -252,9 +252,8 @@ export default function RankingPage() {
   // Carrega tenants para admin
   useEffect(() => {
     if (!isAdmin) return
-    const token_key = Object.keys(localStorage).find(k => k.includes('auth-token') || k.includes('sb-'))
-    const sessao = JSON.parse(localStorage.getItem(token_key) || '{}')
-    const token  = sessao?.access_token || sessao?.session?.access_token
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
     if (!token) return
     const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
     fetch(`${API}/api/ranking/tenants`, { headers: { Authorization: `Bearer ${token}` } })
@@ -282,10 +281,9 @@ export default function RankingPage() {
     setLoading(true)
     setErro('')
     try {
-      const token_key = Object.keys(localStorage).find(k => k.includes('auth-token') || k.includes('sb-'))
-      const sessao = JSON.parse(localStorage.getItem(token_key) || '{}')
-      const token  = sessao?.access_token || sessao?.session?.access_token || ''
-      const API    = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token || ''
+      const API   = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
 
       const res  = await fetch(
         `${API}/api/ranking/usuarios?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
