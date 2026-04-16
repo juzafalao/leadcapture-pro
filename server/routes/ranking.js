@@ -37,10 +37,17 @@ function verificarJWT(req) {
 }
 
 // Busca usuario no banco dado o auth_id (sub do JWT)
-async function buscarUsuario(sub) {
+async function buscarUsuario(sub, token) {
+  // Usa o JWT do proprio usuario para buscar seus dados
+  // RLS permite via policy: auth_id = auth.uid()
   try {
-    // Seleciona apenas colunas que existem em todas as versoes do schema
-    const { data, error } = await sb()
+    const url     = process.env.SUPABASE_URL
+    const anonKey = process.env.SUPABASE_ANON_KEY
+    const sbUser  = createClient(url, anonKey, {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    })
+    const { data, error } = await sbUser
       .from('usuarios')
       .select('id, nome, role, tenant_id')
       .eq('auth_id', sub)
@@ -64,9 +71,13 @@ router.get('/debug', async (req, res) => {
   let dbError = null
   if (jwt?.sub) {
     try {
-      const r = await sb().from('usuarios').select('id, nome, role, tenant_id').eq('auth_id', jwt.sub).limit(1)
-      r.data = r.data?.[0] || null
-      usuario = r.data
+      const anonKey = process.env.SUPABASE_ANON_KEY
+      const sbU = createClient(process.env.SUPABASE_URL, anonKey, {
+        auth: { persistSession: false },
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      })
+      const r = await sbU.from('usuarios').select('id, nome, role, tenant_id').eq('auth_id', jwt.sub).limit(1)
+      usuario = r.data?.[0] || null
       dbError = r.error?.message
     } catch (e) { dbError = e.message }
   }
@@ -88,7 +99,7 @@ router.get('/tenants', async (req, res) => {
   try {
     const jwtData = verificarJWT(req)
     if (!jwtData) return res.status(401).json({ error: 'Token invalido' })
-    const usuario = await buscarUsuario(jwtData.sub)
+    const usuario = await buscarUsuario(jwtData.sub, (req.headers.authorization || "").replace("Bearer ", "").trim())
     if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado' })
     const isAdmin = ['Administrador','admin'].includes(usuario.role)
     if (!isAdmin) return res.json({ tenants: [{ id: usuario.tenant_id, name: 'Minha empresa' }] })
@@ -105,7 +116,7 @@ router.get('/usuarios', async (req, res) => {
     const jwtData = verificarJWT(req)
     if (!jwtData) return res.status(401).json({ error: 'JWT invalido -- faca logout e login' })
 
-    const usuario = await buscarUsuario(jwtData.sub)
+    const usuario = await buscarUsuario(jwtData.sub, (req.headers.authorization || "").replace("Bearer ", "").trim())
     if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado no banco' })
 
     const isAdmin = ['Administrador','admin','Diretor','Gestor'].includes(usuario.role)
@@ -199,7 +210,7 @@ router.get('/meta', async (req, res) => {
   try {
     const jwtData = verificarJWT(req)
     if (!jwtData) return res.status(401).json({ error: 'Token invalido' })
-    const usuario = await buscarUsuario(jwtData.sub)
+    const usuario = await buscarUsuario(jwtData.sub, (req.headers.authorization || "").replace("Bearer ", "").trim())
     if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado' })
     const tenantId = req.query.tenant_id || usuario.tenant_id
     const ano = parseInt(req.query.ano) || new Date().getFullYear()
