@@ -253,17 +253,17 @@ export default function RankingPage() {
   useEffect(() => {
     async function loadTenants() {
       if (isAdmin) {
-        // Admin: busca todos os tenants
+        // Admin: busca todos os tenants e mostra dropdown para escolher
         const { data } = await supabase.from('tenants').select('id, name').order('name')
         if (data?.length) {
           setTenants(data)
-          // Pre-seleciona o primeiro tenant que nao e o proprio (tenant piloto)
-          const outro = data.find(t => t.id !== usuario?.tenant_id) || data[0]
-          if (outro && !tenantId) setTenantId(outro.id)
+          // Nao auto-seleciona -- deixa o admin escolher pelo dropdown
+          // Se ja tinha um tenant selecionado, mantem
+          if (!tenantId) setTenantId('')
         }
       } else {
-        // Nao admin: usa o proprio tenant
-        if (usuario?.tenant_id) setTenantId(usuario.tenant_id)
+        // Nao admin: usa sempre o proprio tenant
+        if (usuario?.tenant_id && !tenantId) setTenantId(usuario.tenant_id)
       }
     }
     loadTenants()
@@ -271,7 +271,7 @@ export default function RankingPage() {
 
   // Carrega faixas de comissao
   useEffect(() => {
-    if (!tenantId) return
+    if (!tenantId) { setLoading(false); return }
     supabase.from('ranking_config').select('*').eq('tenant_id', tenantId)
       .eq('ativo', true).order('de')
       .then(({ data }) => setFaixas(data || []))
@@ -388,6 +388,7 @@ export default function RankingPage() {
             {isAdmin && tenants.length > 0 && (
               <select value={tenantId} onChange={e => setTenantId(e.target.value)}
                 className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none">
+                <option value="">-- Selecione o tenant --</option>
                 {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0,8)}</option>)}
               </select>
             )}
@@ -542,10 +543,11 @@ export default function RankingPage() {
 
               {consultores.length === 0 && !erro ? (
                 <div className="py-16 text-center">
-                  <p className="text-gray-600 text-sm mb-2">Nenhum dado para este periodo</p>
-                  <p className="text-gray-700 text-xs">
-                    Verifique se ha consultores ou gestores cadastrados no tenant selecionado
-                  </p>
+                  {!tenantId && isAdmin ? (
+                    <p className="text-[#10B981] text-sm font-bold">Selecione o tenant no dropdown verde acima</p>
+                  ) : (
+                    <p className="text-gray-600 text-sm">Nenhum consultor/gestor encontrado neste tenant e periodo</p>
+                  )}
                 </div>
               ) : (
                 consultores.map((c, i) => (
