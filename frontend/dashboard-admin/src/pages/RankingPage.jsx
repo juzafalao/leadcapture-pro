@@ -253,17 +253,14 @@ export default function RankingPage() {
   useEffect(() => {
     async function loadTenants() {
       if (isAdmin) {
-        // Admin: busca todos os tenants e mostra dropdown para escolher
         const { data } = await supabase.from('tenants').select('id, name').order('name')
         if (data?.length) {
           setTenants(data)
-          // Nao auto-seleciona -- deixa o admin escolher pelo dropdown
-          // Se ja tinha um tenant selecionado, mantem
-          if (!tenantId) setTenantId('')
+          // Auto-seleciona primeiro tenant se nao tem nenhum selecionado
+          if (!tenantId && data[0]) setTenantId(data[0].id)
         }
       } else {
-        // Nao admin: usa sempre o proprio tenant
-        if (usuario?.tenant_id && !tenantId) setTenantId(usuario.tenant_id)
+        if (usuario?.tenant_id) setTenantId(usuario.tenant_id)
       }
     }
     loadTenants()
