@@ -130,7 +130,7 @@ router.get('/usuarios', async (req, res) => {
 
     const { data: users, error: usersErr } = await c
       .from('usuarios')
-      .select('id, nome, role, role_emoji, role_color')
+      .select('id, nome, role')
       .eq('tenant_id', tenantId)
       .in('role', ['Consultor', 'Gestor', 'Operador'])
       .order('nome')
@@ -185,7 +185,7 @@ router.get('/usuarios', async (req, res) => {
       const bateuMeta  = pctMeta >= 100
       const bateuEquipe = pctEquipe >= 80
       return {
-        id: u.id, nome: u.nome, role: u.role, role_emoji: u.role_emoji, role_color: u.role_color,
+        id: u.id, nome: u.nome, role: u.role, role_emoji: null, role_color: null,
         total_leads: d.total, leads_hot: d.hot, convertidos: d.convertido, capital_total: d.capital,
         pct_meta: pctMeta, meta_leads: metaLeads,
         comissao_pct: com.pct, comissao_valor: Math.round(com.valor), bonus_faixa: com.bonus,

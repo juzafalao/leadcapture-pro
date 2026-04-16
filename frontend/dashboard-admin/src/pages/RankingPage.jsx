@@ -310,7 +310,7 @@ export default function RankingPage() {
         console.warn('[Ranking] API indisponivel, usando Supabase direto')
         const { data: users } = await supabase
           .from('usuarios')
-          .select('id, nome, role, role_emoji, role_color')
+          .select('id, nome, role')
           .eq('tenant_id', tenantId)
           .in('role', ['Consultor', 'Gestor', 'Operador'])
           .order('nome')
