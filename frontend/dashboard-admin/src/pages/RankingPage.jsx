@@ -298,14 +298,28 @@ export default function RankingPage() {
       )
       const json = await res.json()
 
-      if (res.status === 401) {
-        setErro('Sessao expirada. Faca logout e login novamente.')
-        setConsultores([])
-        return
-      }
-      if (!res.ok) {
-        setErro(json.error || 'Erro ao carregar ranking')
-        setConsultores([])
+      if (res.status === 401 || !res.ok) {
+        // Fallback: busca direto no Supabase (mesmo tenant do usuario logado)
+        console.warn('[Ranking] API indisponivel, usando Supabase direto')
+        const { data: users } = await supabase
+          .from('usuarios')
+          .select('id, nome, role, role_emoji, role_color')
+          .eq('tenant_id', tenantId)
+          .in('role', ['Consultor', 'Gestor', 'Operador'])
+          .order('nome')
+        if (users?.length) {
+          setConsultores(users.map(u => ({
+            ...u,
+            total_leads: 0, leads_hot: 0, convertidos: 0, capital_total: 0,
+            pct_meta: 0, meta_leads: 20, comissao_pct: 0,
+            comissao_valor: 0, bonus_faixa: 0, bonus_individual: 0,
+            bonus_equipe: 0, total_ganhos: 0, bateu_meta: false,
+          })))
+          setErro('Modo basico ativo. Faca logout/login para ver dados completos.')
+        } else {
+          setErro(json?.error || 'Erro ao carregar. Verifique se ha consultores cadastrados.')
+          setConsultores([])
+        }
         return
       }
 
@@ -582,9 +596,14 @@ export default function RankingPage() {
               <button
                 onClick={async () => {
                   const get = k => parseFloat(document.getElementById(`meta-${k}`)?.value || 0)
+                  const metaLeadsVal = get('meta_leads') || 20
                   const { error } = await supabase.from('ranking_metas').upsert({
-                    tenant_id: tenantId, ano: periodo.ano, mes: periodo.mes, consultor_id: null,
-                    meta_leads:       get('meta_leads'),
+                    tenant_id:        tenantId,
+                    ano:              periodo.ano,
+                    mes:              periodo.mes,
+                    consultor_id:     null,
+                    meta_valor:       metaLeadsVal,
+                    meta_leads:       metaLeadsVal,
                     meta_capital:     get('meta_capital'),
                     bonus_individual: get('bonus_individual'),
                     bonus_equipe:     get('bonus_equipe'),
