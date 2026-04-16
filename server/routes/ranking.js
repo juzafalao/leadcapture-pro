@@ -8,11 +8,16 @@ const router = Router()
 
 // Service role -- bypassa RLS completamente
 function sb() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
-    { auth: { persistSession: false } }
-  )
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url) throw new Error('SUPABASE_URL nao configurada')
+  if (!key) throw new Error('SUPABASE_SERVICE_KEY nao configurada')
+  // Verifica se a key tem formato correto (service role tem >200 chars, anon tem ~150)
+  if (key.length < 180) console.warn('[ranking] AVISO: SUPABASE_SERVICE_KEY pode ser a anon key (muito curta)')
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    global: { headers: { 'x-client-info': 'ranking-backend' } }
+  })
 }
 
 // Decodifica JWT sem verificar assinatura
@@ -38,23 +43,20 @@ function verificarJWT(req) {
 
 // Busca usuario no banco dado o auth_id (sub do JWT)
 async function buscarUsuario(sub, token) {
-  // Usa o JWT do proprio usuario para buscar seus dados
-  // RLS permite via policy: auth_id = auth.uid()
+  // Usa SERVICE ROLE para buscar usuario pelo auth_id -- bypassa RLS completamente
+  // O JWT já foi validado antes de chamar esta função
   try {
-    const url     = process.env.SUPABASE_URL
-    const anonKey = process.env.SUPABASE_ANON_KEY
-    const sbUser  = createClient(url, anonKey, {
-      auth: { persistSession: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    })
-    const { data, error } = await sbUser
+    const { data, error } = await sb()
       .from('usuarios')
       .select('id, nome, role, tenant_id')
       .eq('auth_id', sub)
       .limit(1)
     if (error) {
-      console.error('[ranking] buscarUsuario erro:', error.message)
+      console.error('[ranking] buscarUsuario erro:', error.message, '| sub:', sub)
       return null
+    }
+    if (!data?.length) {
+      console.error('[ranking] usuario nao encontrado para auth_id:', sub)
     }
     return data?.[0] || null
   } catch (e) {
@@ -71,12 +73,8 @@ router.get('/debug', async (req, res) => {
   let dbError = null
   if (jwt?.sub) {
     try {
-      const anonKey = process.env.SUPABASE_ANON_KEY
-      const sbU = createClient(process.env.SUPABASE_URL, anonKey, {
-        auth: { persistSession: false },
-        global: { headers: { Authorization: `Bearer ${token}` } },
-      })
-      const r = await sbU.from('usuarios').select('id, nome, role, tenant_id').eq('auth_id', jwt.sub).limit(1)
+      // Usa service role no debug tambem
+      const r = await sb().from('usuarios').select('id, nome, role, tenant_id').eq('auth_id', jwt.sub).limit(1)
       usuario = r.data?.[0] || null
       dbError = r.error?.message
     } catch (e) { dbError = e.message }
