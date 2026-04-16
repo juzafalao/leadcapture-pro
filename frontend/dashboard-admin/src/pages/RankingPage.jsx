@@ -732,21 +732,27 @@ export default function RankingPage() {
               <button
                 onClick={async () => {
                   const get = k => parseFloat(document.getElementById(`meta-${k}`)?.value || 0)
-                  const metaLeads = get('meta_leads') || 20
-                  const { error } = await supabase.from('ranking_metas').upsert({
-                    tenant_id:        tenantId,
-                    ano:              periodo.ano,
-                    mes:              periodo.mes,
-                    consultor_id:     null,
-                    meta_valor:       metaLeads,
-                    meta_leads:       metaLeads,
-                    meta_capital:     get('meta_capital'),
-                    bonus_individual: get('bonus_individual'),
-                    bonus_equipe:     get('bonus_equipe'),
-                    pct_gestor:       get('pct_gestor'),
-                  }, { onConflict: 'tenant_id,ano,mes,consultor_id' })
-                  if (!error) { alert('Metas salvas!'); carregar() }
-                  else alert('Erro: ' + error.message)
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    const tok = session?.access_token
+                    if (!tok) { alert('Sessao expirada. Faca logout e login.'); return }
+                    const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
+                    const r = await fetch(`${API}/api/ranking/meta`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+                      body: JSON.stringify({
+                        tenant_id: tenantId, ano: periodo.ano, mes: periodo.mes,
+                        meta_leads: get('meta_leads') || 20,
+                        meta_capital: get('meta_capital'),
+                        bonus_individual: get('bonus_individual'),
+                        bonus_equipe: get('bonus_equipe'),
+                        pct_gestor: get('pct_gestor'),
+                      })
+                    })
+                    const json = await r.json()
+                    if (json.success) { alert('Metas salvas!'); carregar() }
+                    else alert('Erro ao salvar: ' + (json.error || 'verifique o console'))
+                  } catch(e) { alert('Erro: ' + e.message) }
                 }}
                 className="w-full py-2.5 rounded-xl text-[11px] font-bold bg-[#10B981] text-black hover:bg-[#059669] transition-all">
                 Salvar Metas
