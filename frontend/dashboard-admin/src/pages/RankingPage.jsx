@@ -253,19 +253,20 @@ export default function RankingPage() {
   useEffect(() => {
     if (!isAdmin) return
     async function loadTenants() {
-    const { data: { session } } = await supabase.auth.getSession()
-    const token = session?.access_token
-    if (!token) return
-    const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
-    fetch(`${API}/api/ranking/tenants`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      if (!token) return
+      const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
+      try {
+        const r = await fetch(`${API}/api/ranking/tenants`, { headers: { Authorization: `Bearer ${token}` } })
+        const d = await r.json()
         if (d.tenants?.length) {
           setTenants(d.tenants)
           if (!tenantId) setTenantId(d.tenants[0].id)
         }
-      })
-      .catch(() => {})
+      } catch (_) {}
+    }
+    loadTenants()
   }, [isAdmin])
 
   // Carrega faixas de comissao
