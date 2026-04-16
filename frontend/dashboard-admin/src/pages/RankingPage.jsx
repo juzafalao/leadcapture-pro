@@ -249,27 +249,25 @@ export default function RankingPage() {
   const [consultorDetalhe, setConsultorDetalhe] = useState(null)
   const [faixas,           setFaixas]           = useState([])
 
-  // Carrega tenants para admin
+  // Carrega tenants direto do Supabase -- admin ve todos, outros veem o proprio
   useEffect(() => {
-    if (!isAdmin) return
     async function loadTenants() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-      if (!token) return
-      const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
-      try {
-        const r = await fetch(`${API}/api/ranking/tenants`, { headers: { Authorization: `Bearer ${token}` } })
-        const d = await r.json()
-        if (d.tenants?.length) {
-          setTenants(d.tenants)
-          if (!tenantId) setTenantId(d.tenants[0].id)
+      if (isAdmin) {
+        // Admin: busca todos os tenants
+        const { data } = await supabase.from('tenants').select('id, name').order('name')
+        if (data?.length) {
+          setTenants(data)
+          // Pre-seleciona o primeiro tenant que nao e o proprio (tenant piloto)
+          const outro = data.find(t => t.id !== usuario?.tenant_id) || data[0]
+          if (outro && !tenantId) setTenantId(outro.id)
         }
-      } catch (_) {}
+      } else {
+        // Nao admin: usa o proprio tenant
+        if (usuario?.tenant_id) setTenantId(usuario.tenant_id)
+      }
     }
     loadTenants()
-  }, [isAdmin])
+  }, [isAdmin, usuario?.tenant_id])
 
   // Carrega faixas de comissao
   useEffect(() => {
