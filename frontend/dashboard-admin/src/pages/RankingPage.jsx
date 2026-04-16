@@ -253,6 +253,8 @@ export default function RankingPage() {
   useEffect(() => {
     if (!isAdmin) return
     async function loadTenants() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token
       if (!token) return
@@ -283,6 +285,9 @@ export default function RankingPage() {
     setLoading(true)
     setErro('')
     try {
+      // getUser() valida com servidor e forca refresh do token se necessario
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setErro('Sessao invalida. Faca logout e login novamente.'); setLoading(false); return }
       const { data: { session } } = await supabase.auth.getSession()
       const token = session?.access_token || ''
       const API   = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')

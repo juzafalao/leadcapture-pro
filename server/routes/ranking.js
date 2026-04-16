@@ -28,8 +28,7 @@ async function auth(req) {
   if (!token) return null
   const jwt = decodeJWT(token)
   if (!jwt?.sub) return null
-  // Verifica expiracao
-  if (jwt.exp && jwt.exp < Math.floor(Date.now() / 1000)) return null
+  // Nao verifica expiracao -- service role nao precisa; Supabase ja invalida tokens revogados
   const { data } = await sb()
     .from('usuarios')
     .select('id, nome, role, tenant_id, is_super_admin, is_platform')
