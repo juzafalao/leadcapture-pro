@@ -442,6 +442,7 @@ export default function RankingPage() {
           {[
             { id: 'ranking',   label: 'Ranking' },
             { id: 'relatorio', label: 'Relatorio' },
+            { id: 'metricas',  label: 'Metricas' },
             ...(isDiretor ? [{ id: 'config', label: 'Config' }] : []),
           ].map(t => (
             <button key={t.id} onClick={() => setAba(t.id)}
@@ -619,6 +620,93 @@ export default function RankingPage() {
           </div>
         )}
 
+        {!loading && aba === 'metricas' && (
+          <div className="space-y-4">
+            {/* Painel de metas e bonus configurados */}
+            <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5">
+              <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-4">
+                Configuracao de {MESES[periodo.mes-1]} {periodo.ano}
+              </p>
+              {Object.keys(metaConfig).length === 0 ? (
+                <p className="text-gray-600 text-sm">Nenhuma meta configurada para este periodo.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {[
+                    { label: 'Meta de Leads',       value: metaConfig.meta_leads || metaConfig.meta_valor || 0,  cor: 'text-white',      suf: ' leads' },
+                    { label: 'Meta de Capital',     value: fmtR$(metaConfig.meta_capital || 0),                  cor: 'text-[#10B981]',  suf: '' },
+                    { label: 'Bonus Individual',    value: fmtR$(metaConfig.bonus_individual || 0),              cor: 'text-[#F59E0B]',  suf: '' },
+                    { label: 'Bonus Equipe (80%)',  value: fmtR$(metaConfig.bonus_equipe || 0),                  cor: 'text-[#F59E0B]',  suf: '' },
+                    { label: '% Gestor s/ equipe',  value: (metaConfig.pct_gestor || 0) + '%',                   cor: 'text-[#EE7B4D]',  suf: '' },
+                    { label: 'Meta da equipe',      value: fmtPct(pctEquipe),                                    cor: pctEquipe >= 80 ? 'text-[#10B981]' : 'text-gray-400', suf: ' atingido' },
+                  ].map(k => (
+                    <div key={k.label} className="bg-[#0F172A] border border-white/[0.06] rounded-xl p-4">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-1">{k.label}</p>
+                      <p className={`text-xl font-black ${k.cor}`}>{k.value}{k.suf}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Faixas de comissao */}
+            {faixas.length > 0 && (
+              <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5">
+                <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-4">
+                  Faixas de Comissao -- {faixas.length} configuradas
+                </p>
+                <div className="space-y-2">
+                  {faixas.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between py-2.5 px-3 bg-[#0F172A] border border-white/[0.06] rounded-xl">
+                      <span className="text-[11px] text-gray-400">
+                        {fmtR$(f.de)} {f.ate ? `ate ${fmtR$(f.ate)}` : 'em diante'}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[#EE7B4D] font-black text-[12px]">{f.pct}% de comissao</span>
+                        {f.bonus > 0 && (
+                          <span className="text-[#F59E0B] text-[11px] font-bold">+{fmtR$(f.bonus)} bonus</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Resumo por consultor */}
+            {consultores.length > 0 && (
+              <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden">
+                <div className="px-4 py-3 border-b border-white/[0.06]">
+                  <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">Estimativa de comissoes do mes</p>
+                </div>
+                {consultores.map((c, i) => (
+                  <div key={c.id} className="flex items-center justify-between px-4 py-3 border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02]">
+                    <div className="flex items-center gap-3">
+                      <span className="text-gray-600 text-[11px] w-5">{i+1}</span>
+                      <div>
+                        <p className="text-white text-[11px] font-bold">{c.nome}</p>
+                        <p className="text-gray-600 text-[9px]">{c.role} - {c.comissao_pct}% sobre capital</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[#EE7B4D] font-black text-[12px]">{fmtR$(c.total_ganhos)}</p>
+                      <p className="text-gray-600 text-[9px]">
+                        {fmtR$(c.comissao_valor)} com.
+                        {c.bonus_faixa > 0 ? ` + ${fmtR$(c.bonus_faixa)} bonus` : ''}
+                        {c.bonus_individual > 0 ? ` + ${fmtR$(c.bonus_individual)} ind.` : ''}
+                        {c.bonus_equipe > 0 ? ` + ${fmtR$(c.bonus_equipe)} eq.` : ''}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                <div className="px-4 py-3 bg-[#10B981]/5 border-t border-[#10B981]/20 flex justify-between">
+                  <p className="text-[10px] font-black text-[#10B981] uppercase">Total estimado</p>
+                  <p className="text-[#10B981] font-black">{fmtR$(consultores.reduce((a,c) => a + c.total_ganhos, 0))}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {!loading && aba === 'config' && isDiretor && (
           <div className="max-w-xl space-y-5">
             {/* Meta */}
@@ -647,26 +735,21 @@ export default function RankingPage() {
               <button
                 onClick={async () => {
                   const get = k => parseFloat(document.getElementById(`meta-${k}`)?.value || 0)
-                  try {
-                    const { data: { session } } = await supabase.auth.getSession()
-                    const tok = session?.access_token || ''
-                    const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
-                    const r = await fetch(`${API}/api/ranking/meta`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
-                      body: JSON.stringify({
-                        tenant_id: tenantId, ano: periodo.ano, mes: periodo.mes,
-                        meta_leads: get('meta_leads') || 20,
-                        meta_capital: get('meta_capital'),
-                        bonus_individual: get('bonus_individual'),
-                        bonus_equipe: get('bonus_equipe'),
-                        pct_gestor: get('pct_gestor'),
-                      })
-                    })
-                    const json = await r.json()
-                    if (json.success) { alert('Metas salvas!'); carregar() }
-                    else alert('Erro: ' + (json.error || 'desconhecido'))
-                  } catch(e) { alert('Erro: ' + e.message) }
+                  const metaLeads = get('meta_leads') || 20
+                  const { error } = await supabase.from('ranking_metas').upsert({
+                    tenant_id:        tenantId,
+                    ano:              periodo.ano,
+                    mes:              periodo.mes,
+                    consultor_id:     null,
+                    meta_valor:       metaLeads,
+                    meta_leads:       metaLeads,
+                    meta_capital:     get('meta_capital'),
+                    bonus_individual: get('bonus_individual'),
+                    bonus_equipe:     get('bonus_equipe'),
+                    pct_gestor:       get('pct_gestor'),
+                  }, { onConflict: 'tenant_id,ano,mes,consultor_id' })
+                  if (!error) { alert('Metas salvas!'); carregar() }
+                  else alert('Erro: ' + error.message)
                 }}
                 className="w-full py-2.5 rounded-xl text-[11px] font-bold bg-[#10B981] text-black hover:bg-[#059669] transition-all">
                 Salvar Metas
