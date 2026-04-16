@@ -222,4 +222,37 @@ router.get('/meta', async (req, res) => {
   }
 })
 
+
+// POST /api/ranking/meta -- salva meta via service role (bypassa RLS para admin cross-tenant)
+router.post('/meta', async (req, res) => {
+  try {
+    const jwtData = verificarJWT(req)
+    if (!jwtData) return res.status(401).json({ error: 'Token invalido' })
+    const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+    const usuario = await buscarUsuario(jwtData.sub, token)
+    if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado' })
+    const isAdmin = ['Administrador','admin','Diretor'].includes(usuario.role)
+    if (!isAdmin) return res.status(403).json({ error: 'Sem permissao' })
+
+    const { tenant_id, ano, mes, meta_leads, meta_capital, bonus_individual, bonus_equipe, pct_gestor } = req.body
+    if (!tenant_id || !ano || !mes) return res.status(400).json({ error: 'tenant_id, ano e mes obrigatorios' })
+
+    const metaLeads = parseInt(meta_leads) || 20
+    const { error } = await sb().from('ranking_metas').upsert({
+      tenant_id, ano: parseInt(ano), mes: parseInt(mes), consultor_id: null,
+      meta_valor:       metaLeads,
+      meta_leads:       metaLeads,
+      meta_capital:     parseFloat(meta_capital) || 0,
+      bonus_individual: parseFloat(bonus_individual) || 0,
+      bonus_equipe:     parseFloat(bonus_equipe) || 0,
+      pct_gestor:       parseFloat(pct_gestor) || 0,
+    }, { onConflict: 'tenant_id,ano,mes,consultor_id' })
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 export default router

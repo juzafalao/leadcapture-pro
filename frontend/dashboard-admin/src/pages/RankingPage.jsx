@@ -469,6 +469,50 @@ export default function RankingPage() {
           </div>
         )}
 
+        {/* Painel de config do mes -- sempre visivel */}
+        {!loading && (metaConfig.meta_leads || metaConfig.bonus_individual || faixas.length > 0) && (
+          <div className="mb-5 bg-[#0B1220] border border-white/[0.06] rounded-2xl px-5 py-4">
+            <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-3">
+              Parametros de {MESES[periodo.mes-1]} {periodo.ano}
+            </p>
+            <div className="flex flex-wrap gap-4">
+              {metaConfig.meta_leads > 0 && (
+                <div><p className="text-[8px] text-gray-600 mb-0.5">Meta leads</p>
+                  <p className="text-sm font-black text-white">{metaConfig.meta_leads}</p></div>
+              )}
+              {metaConfig.meta_capital > 0 && (
+                <div><p className="text-[8px] text-gray-600 mb-0.5">Meta capital</p>
+                  <p className="text-sm font-black text-[#10B981]">{fmtR$(metaConfig.meta_capital)}</p></div>
+              )}
+              {metaConfig.bonus_individual > 0 && (
+                <div><p className="text-[8px] text-gray-600 mb-0.5">Bonus individual</p>
+                  <p className="text-sm font-black text-[#F59E0B]">{fmtR$(metaConfig.bonus_individual)}</p></div>
+              )}
+              {metaConfig.bonus_equipe > 0 && (
+                <div><p className="text-[8px] text-gray-600 mb-0.5">Bonus equipe (80%)</p>
+                  <p className="text-sm font-black text-[#F59E0B]">{fmtR$(metaConfig.bonus_equipe)}</p></div>
+              )}
+              {metaConfig.pct_gestor > 0 && (
+                <div><p className="text-[8px] text-gray-600 mb-0.5">% gestor s/equipe</p>
+                  <p className="text-sm font-black text-[#EE7B4D]">{metaConfig.pct_gestor}%</p></div>
+              )}
+              {faixas.length > 0 && (
+                <div><p className="text-[8px] text-gray-600 mb-0.5">Faixas comissao</p>
+                  <p className="text-sm font-black text-[#EE7B4D]">{faixas.length} faixas</p></div>
+              )}
+            </div>
+            {faixas.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                {faixas.map((f, i) => (
+                  <span key={i} className="text-[9px] bg-[#EE7B4D]/10 text-[#EE7B4D] px-2 py-1 rounded-lg font-bold">
+                    {fmtR$(f.de)}{f.ate ? ` - ${fmtR$(f.ate)}` : '+'} = {f.pct}%{f.bonus > 0 ? ` +${fmtR$(f.bonus)}` : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {!loading && aba === 'ranking' && (
           <div className="space-y-5">
             {/* Alertas */}
@@ -603,21 +647,26 @@ export default function RankingPage() {
               <button
                 onClick={async () => {
                   const get = k => parseFloat(document.getElementById(`meta-${k}`)?.value || 0)
-                  const metaLeadsVal = get('meta_leads') || 20
-                  const { error } = await supabase.from('ranking_metas').upsert({
-                    tenant_id:        tenantId,
-                    ano:              periodo.ano,
-                    mes:              periodo.mes,
-                    consultor_id:     null,
-                    meta_valor:       metaLeadsVal,
-                    meta_leads:       metaLeadsVal,
-                    meta_capital:     get('meta_capital'),
-                    bonus_individual: get('bonus_individual'),
-                    bonus_equipe:     get('bonus_equipe'),
-                    pct_gestor:       get('pct_gestor'),
-                  }, { onConflict: 'tenant_id,ano,mes,consultor_id' })
-                  if (!error) { alert('Metas salvas!'); carregar() }
-                  else alert('Erro: ' + error.message)
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    const tok = session?.access_token || ''
+                    const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
+                    const r = await fetch(`${API}/api/ranking/meta`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tok}` },
+                      body: JSON.stringify({
+                        tenant_id: tenantId, ano: periodo.ano, mes: periodo.mes,
+                        meta_leads: get('meta_leads') || 20,
+                        meta_capital: get('meta_capital'),
+                        bonus_individual: get('bonus_individual'),
+                        bonus_equipe: get('bonus_equipe'),
+                        pct_gestor: get('pct_gestor'),
+                      })
+                    })
+                    const json = await r.json()
+                    if (json.success) { alert('Metas salvas!'); carregar() }
+                    else alert('Erro: ' + (json.error || 'desconhecido'))
+                  } catch(e) { alert('Erro: ' + e.message) }
                 }}
                 className="w-full py-2.5 rounded-xl text-[11px] font-bold bg-[#10B981] text-black hover:bg-[#059669] transition-all">
                 Salvar Metas
