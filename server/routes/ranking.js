@@ -38,12 +38,22 @@ function verificarJWT(req) {
 
 // Busca usuario no banco dado o auth_id (sub do JWT)
 async function buscarUsuario(sub) {
-  const { data } = await sb()
-    .from('usuarios')
-    .select('id, nome, role, tenant_id, is_super_admin, is_platform')
-    .eq('auth_id', sub)
-    .maybeSingle()
-  return data
+  try {
+    // Seleciona apenas colunas que existem em todas as versoes do schema
+    const { data, error } = await sb()
+      .from('usuarios')
+      .select('id, nome, role, tenant_id')
+      .eq('auth_id', sub)
+      .limit(1)
+    if (error) {
+      console.error('[ranking] buscarUsuario erro:', error.message)
+      return null
+    }
+    return data?.[0] || null
+  } catch (e) {
+    console.error('[ranking] buscarUsuario excecao:', e.message)
+    return null
+  }
 }
 
 // DEBUG
@@ -54,7 +64,8 @@ router.get('/debug', async (req, res) => {
   let dbError = null
   if (jwt?.sub) {
     try {
-      const r = await sb().from('usuarios').select('id, nome, role, tenant_id').eq('auth_id', jwt.sub).maybeSingle()
+      const r = await sb().from('usuarios').select('id, nome, role, tenant_id').eq('auth_id', jwt.sub).limit(1)
+      r.data = r.data?.[0] || null
       usuario = r.data
       dbError = r.error?.message
     } catch (e) { dbError = e.message }
@@ -79,7 +90,7 @@ router.get('/tenants', async (req, res) => {
     if (!jwtData) return res.status(401).json({ error: 'Token invalido' })
     const usuario = await buscarUsuario(jwtData.sub)
     if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado' })
-    const isAdmin = ['Administrador','admin'].includes(usuario.role) || usuario.is_super_admin || usuario.is_platform
+    const isAdmin = ['Administrador','admin'].includes(usuario.role)
     if (!isAdmin) return res.json({ tenants: [{ id: usuario.tenant_id, name: 'Minha empresa' }] })
     const { data } = await sb().from('tenants').select('id, name').order('name')
     res.json({ tenants: data || [] })
@@ -98,7 +109,6 @@ router.get('/usuarios', async (req, res) => {
     if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado no banco' })
 
     const isAdmin = ['Administrador','admin','Diretor','Gestor'].includes(usuario.role)
-      || usuario.is_super_admin || usuario.is_platform
 
     const tenantId = (isAdmin && req.query.tenant_id) ? req.query.tenant_id : usuario.tenant_id
     if (!tenantId) return res.status(400).json({ error: 'tenant_id obrigatorio' })
