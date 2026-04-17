@@ -1,426 +1,298 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../components/AuthContext';
-import UserCard from '../components/dashboard/UserCard';
-import FAB from '../components/dashboard/FAB';
-import UserModal from '../components/usuarios/UserModal';
-import { exportUsuariosToExcel, exportUsuariosToPDF } from '../utils/exportUtilsLegacy.js';
-import LoadingSpinner from '../components/shared/LoadingSpinner';
+// UsuariosPage.jsx -- Design System v1.0
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useAuth } from '../components/AuthContext'
+import { supabase } from '../lib/supabase'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-const PAGE_SIZE = 20;
+const ROLES = ['Administrador', 'Diretor', 'Gestor', 'Consultor', 'Cliente']
 
-export default function UsuariosPage() {
-  const { usuario, isPlatformAdmin } = useAuth();
-  const [usuarios, setUsuarios] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [busca, setBusca] = useState('');
-  const [buscaInput, setBuscaInput] = useState('');
-  const [filtroRole, setFiltroRole] = useState('todos');
-  const [page, setPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showExportMenu, setShowExportMenu] = useState(false);
-  const debounceRef = useRef(null);
+const ROLE_STYLE = {
+  Administrador: { bg: 'bg-red-500/10',    text: 'text-red-400' },
+  Diretor:       { bg: 'bg-purple-500/10', text: 'text-purple-400' },
+  Gestor:        { bg: 'bg-blue-500/10',   text: 'text-blue-400' },
+  Consultor:     { bg: 'bg-[#10B981]/10',  text: 'text-[#10B981]' },
+  Cliente:       { bg: 'bg-gray-500/10',   text: 'text-gray-400' },
+}
 
-  const handleBuscaChange = useCallback((value) => {
-    setBuscaInput(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setBusca(value), 300);
-  }, []);
+function Avatar({ nome, role }) {
+  const s = ROLE_STYLE[role] || ROLE_STYLE.Cliente
+  return (
+    <div className={`w-9 h-9 rounded-full ${s.bg} flex items-center justify-center font-black text-sm ${s.text} shrink-0`}>
+      {nome?.charAt(0)?.toUpperCase() || '?'}
+    </div>
+  )
+}
 
-  const fetchUsuarios = useCallback(async () => {
-    if (!usuario?.tenant_id && !isPlatformAdmin()) {
-      console.log('Sem tenant_id');
-      return;
-    }
-    setLoading(true);
+function UsuarioModal({ usuario, onClose, tenantId, onSaved }) {
+  const qc = useQueryClient()
+  const isNew = !usuario?.id
+  const [form, setForm] = useState({
+    nome:     usuario?.nome     || '',
+    email:    usuario?.email    || '',
+    telefone: usuario?.telefone || '',
+    role:     usuario?.role     || 'Consultor',
+    active:   usuario?.active   ?? true,
+  })
+  const [saving, setSaving] = useState(false)
+  const [error,  setError]  = useState('')
 
+  async function handleSave() {
+    if (!form.nome || !form.email) { setError('Nome e email sao obrigatorios'); return }
+    setSaving(true); setError('')
     try {
-      let query = supabase
-        .from('usuarios')
-        .select('id, nome, email, role, active, tenant_id, created_at')
-        .order('created_at', { ascending: false })
-        .limit(500);
-
-      if (!isPlatformAdmin()) {
-        query = query.eq('tenant_id', usuario.tenant_id);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Erro ao carregar usuarios:', error);
-        setUsuarios([]);
+      if (isNew) {
+        const { error: e } = await supabase.from('usuarios').insert({ ...form, tenant_id: tenantId })
+        if (e) throw e
       } else {
-        console.log('Usuarios carregados:', data?.length);
-        setUsuarios(data || []);
+        const { error: e } = await supabase.from('usuarios').update(form).eq('id', usuario.id)
+        if (e) throw e
       }
-    } catch (err) {
-      console.error('Erro inesperado:', err);
-      setUsuarios([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [usuario?.tenant_id]);
-
-  useEffect(() => {
-    if (usuario?.tenant_id) {
-      fetchUsuarios();
-    }
-  }, [usuario?.tenant_id, fetchUsuarios]);
-
-  useEffect(() => {
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, []);
-
-  useEffect(() => {
-    setPage(1);
-  }, [busca, filtroRole]);
-
-  const usuariosFiltrados = usuarios.filter(u => {
-    const matchBusca = u.nome?.toLowerCase().includes(busca.toLowerCase()) ||
-                       u.email?.toLowerCase().includes(busca.toLowerCase());
-    const matchRole = filtroRole === 'todos' || u.role === filtroRole;
-    return matchBusca && matchRole;
-  });
-
-  const totalPages = Math.ceil(usuariosFiltrados.length / PAGE_SIZE);
-  const paginatedUsuarios = usuariosFiltrados.slice(
-    (page - 1) * PAGE_SIZE,
-    page * PAGE_SIZE
-  );
-  const startIndex = (page - 1) * PAGE_SIZE + 1;
-  const endIndex = Math.min(page * PAGE_SIZE, usuariosFiltrados.length);
-
-  const handleOpenModal = (user = null) => {
-    setSelectedUser(user);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedUser(null);
-    fetchUsuarios();
-  };
-
-  const handleExportExcel = () => {
-    exportUsuariosToExcel(usuariosFiltrados);
-    setShowExportMenu(false);
-  };
-
-  const handleExportPDF = () => {
-    exportUsuariosToPDF(usuariosFiltrados);
-    setShowExportMenu(false);
-  };
-
-  if (loading) {
-    return <LoadingSpinner fullScreen={false} />;
+      qc.invalidateQueries({ queryKey: ['usuarios', tenantId] })
+      onSaved?.()
+      onClose()
+    } catch (e) { setError(e.message) } finally { setSaving(false) }
   }
 
   return (
-    <div className="text-white pb-32">
-      
-      {/* HEADER */}
-      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Gestão de <span className="text-[#10B981] font-bold">Usuários</span>
-          </h1>
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>
-            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
-              {usuarios.length} {usuarios.length === 1 ? 'usuário cadastrado' : 'usuários cadastrados'}
-            </p>
-          </div>
-        </motion.div>
-      </div>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        className="relative w-full max-w-md bg-[#0B1220] border border-white/[0.08] rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl shadow-black/60"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-600">
+            {isNew ? 'Novo usuario' : 'Editar usuario'}
+          </p>
+          <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors text-lg leading-none">x</button>
+        </div>
 
-      {/* SEARCH BAR & FILTERS & EXPORT */}
-      <div className="px-4 lg:px-10 mb-8 space-y-4">
-        {/* Search */}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="🔍 Buscar usuário..."
-            value={buscaInput}
-            onChange={(e) => handleBuscaChange(e.target.value)}
-            className="
-              w-full
-              bg-[#0F172A]
-              border border-white/5
-              rounded-2xl
-              px-5 py-4
-              lg:px-6 lg:py-4
-              text-sm lg:text-base
-              text-white
-              placeholder:text-gray-600
-              focus:outline-none
-              focus:border-[#10B981]/50
-              focus:ring-2
-              focus:ring-[#10B981]/20
-              transition-all
-            "
-          />
-          {buscaInput && (
+        <div className="space-y-3">
+          {[
+            { label: 'Nome completo', key: 'nome',     type: 'text',  placeholder: 'Ex: Ana Paula Silva' },
+            { label: 'E-mail',        key: 'email',    type: 'email', placeholder: 'ana@empresa.com' },
+            { label: 'Telefone',      key: 'telefone', type: 'tel',   placeholder: '(11) 9 9999-9999' },
+          ].map(f => (
+            <div key={f.key}>
+              <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-1.5">{f.label}</label>
+              <input
+                type={f.type}
+                value={form[f.key]}
+                placeholder={f.placeholder}
+                onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                className="w-full bg-[#080E18] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-[#10B981]/50 transition-colors"
+              />
+            </div>
+          ))}
+
+          <div>
+            <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-1.5">Perfil de acesso</label>
+            <select
+              value={form.role}
+              onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
+              className="w-full bg-[#080E18] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#10B981]/50 transition-colors"
+            >
+              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-[11px] font-bold text-white">Status ativo</p>
+              <p className="text-[10px] text-gray-600">Usuario pode acessar o sistema</p>
+            </div>
             <button
-              onClick={() => { setBuscaInput(''); setBusca(''); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              onClick={() => setForm(p => ({ ...p, active: !p.active }))}
+              className={`w-10 h-5.5 rounded-full transition-all relative ${form.active ? 'bg-[#10B981]' : 'bg-white/[0.08]'}`}
+              style={{ height: '22px' }}
             >
-              ✕
+              <span
+                className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${form.active ? 'left-5.5' : 'left-0.5'}`}
+                style={{ left: form.active ? '22px' : '2px' }}
+              />
             </button>
-          )}
-        </div>
-
-        {/* Role filter + Export button */}
-        <div className="flex items-center gap-3">
-          {/* Filtros */}
-          <div className="flex-1 flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            {['todos', 'Administrador', 'Diretor', 'Gestor', 'Consultor', 'Operador'].map((role) => (
-              <motion.button
-                key={role}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setFiltroRole(role)}
-                className={`
-                  px-4 py-2.5 lg:px-5 lg:py-3
-                  rounded-full
-                  text-xs lg:text-sm
-                  font-bold
-                  uppercase
-                  tracking-wide
-                  whitespace-nowrap
-                  transition-all
-                  ${filtroRole === role
-                    ? 'bg-[#10B981]/30 text-white shadow-lg shadow-[#10B981]/20 border border-[#10B981]/50'
-                    : 'bg-[#0F172A] text-gray-400 border border-white/5 hover:bg-white/5'
-                  }
-                `}
-              >
-                {role === 'todos' && '⚪ Todos'}
-                {role === 'Administrador' && '👑 Admin'}
-                {role === 'Diretor' && '🎯 Diretor'}
-                {role === 'Gestor' && '📊 Gestor'}
-                {role === 'Consultor' && '💼 Consultor'}
-                {role === 'Operador' && '⚙️ Operador'}
-              </motion.button>
-            ))}
-          </div>
-
-          {/* BOTÃO EXPORT - AO LADO DOS FILTROS */}
-          <div className="relative flex-shrink-0">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className="
-                flex items-center gap-2
-                px-4 py-2.5 lg:px-5 lg:py-3
-                bg-[#0F172A]
-                border border-white/10
-                rounded-xl
-                text-sm font-bold
-                text-white
-                hover:bg-white/5
-                transition-all
-                whitespace-nowrap
-              "
-            >
-              <span className="text-lg">📥</span>
-              <span className="hidden lg:inline">Exportar</span>
-            </motion.button>
-
-            {/* MENU EXPORT */}
-            {showExportMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="
-                  absolute right-0 top-full mt-2
-                  bg-[#0F172A]
-                  border border-white/10
-                  rounded-xl
-                  shadow-2xl
-                  overflow-hidden
-                  z-50
-                  min-w-[200px]
-                "
-              >
-                <button
-                  onClick={handleExportExcel}
-                  className="
-                    w-full
-                    flex items-center gap-3
-                    px-4 py-3
-                    text-left text-sm font-semibold
-                    text-white
-                    hover:bg-green-500/10
-                    transition-colors
-                  "
-                >
-                  <span className="text-xl">📗</span>
-                  <span>Excel (.xlsx)</span>
-                </button>
-                <button
-                  onClick={handleExportPDF}
-                  className="
-                    w-full
-                    flex items-center gap-3
-                    px-4 py-3
-                    text-left text-sm font-semibold
-                    text-white
-                    hover:bg-red-500/10
-                    transition-colors
-                    border-t border-white/5
-                  "
-                >
-                  <span className="text-xl">📕</span>
-                  <span>PDF (.pdf)</span>
-                </button>
-              </motion.div>
-            )}
           </div>
         </div>
-      </div>
 
-      {/* USERS GRID */}
-      <div className="px-4 lg:px-10">
-        {usuariosFiltrados.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <div className="text-6xl mb-4 opacity-30">👥</div>
-            <p className="text-xl text-gray-400 mb-2">
-              {busca || filtroRole !== 'todos' ? 'Nenhum usuário encontrado' : 'Nenhum usuário cadastrado'}
-            </p>
-            <p className="text-sm text-gray-600 mb-6">
-              {busca || filtroRole !== 'todos' ? 'Tente ajustar os filtros' : 'Comece criando seu primeiro usuário!'}
-            </p>
-            {!busca && filtroRole === 'todos' && (
-              <p className="text-xs text-white/30 mt-2">tenant_id: {usuario?.tenant_id}</p>
-            )}
-            {(busca || filtroRole !== 'todos') && (
-              <button
-                onClick={() => {
-                  setBuscaInput('');
-                  setBusca('');
-                  setFiltroRole('todos');
-                }}
-                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
-              >
-                Limpar Filtros
-              </button>
-            )}
-          </motion.div>
-        ) : (
-          <div className="bg-[#0F172A] border border-white/5 rounded-3xl overflow-hidden">
-            <div className="p-4 lg:p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-                {paginatedUsuarios.map((user, index) => (
-                  <UserCard
-                    key={user.id}
-                    user={user}
-                    index={index}
-                    onClick={() => handleOpenModal(user)}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* FOOTER COM PAGINAÇÃO */}
-            <div className="px-4 py-4 border-t border-white/5 bg-[#0F172A] rounded-b-3xl">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                {/* Info */}
-                <p className="text-xs text-gray-600">
-                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
-                  <span className="text-white font-bold">{endIndex}</span> de{' '}
-                  <span className="text-white font-bold">{usuariosFiltrados.length}</span> itens
-                </p>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      ← Anterior
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      {[...Array(totalPages)].map((_, i) => {
-                        const pageNum = i + 1;
-                        if (
-                          pageNum === 1 ||
-                          pageNum === totalPages ||
-                          (pageNum >= page - 1 && pageNum <= page + 1)
-                        ) {
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setPage(pageNum)}
-                              className={`
-                                w-8 h-8 rounded-lg text-xs font-bold transition-all
-                                ${page === pageNum
-                                  ? 'bg-[#10B981] text-black'
-                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                                }
-                              `}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        } else if (pageNum === page - 2 || pageNum === page + 2) {
-                          return <span key={pageNum} className="text-gray-600">...</span>;
-                        }
-                        return null;
-                      })}
-                    </div>
-
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      Próxima →
-                    </button>
-                  </div>
-                )}
-
-                {/* Branding */}
-                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
-                  LeadCapture Pro · Zafalão Tech
-                </p>
-              </div>
-            </div>
-          </div>
+        {error && (
+          <p className="text-red-400 text-[11px] mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>
         )}
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-[11px] font-bold bg-white/[0.05] text-gray-400 border border-white/[0.08] hover:bg-white/[0.08] transition-all">
+            Cancelar
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            className="flex-1 py-2.5 rounded-xl text-[11px] font-black bg-[#10B981] text-black hover:bg-[#059669] disabled:opacity-50 transition-all">
+            {saving ? 'Salvando...' : isNew ? 'Criar usuario' : 'Salvar'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
+
+export default function UsuariosPage() {
+  const { usuario } = useAuth()
+  const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
+  const qc       = useQueryClient()
+
+  const [modal,   setModal]   = useState(null)
+  const [search,  setSearch]  = useState('')
+  const [filtRole, setFiltRole] = useState('')
+
+  const { data: usuarios = [], isLoading } = useQuery({
+    queryKey: ['usuarios', tenantId],
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      let q = supabase.from('usuarios')
+        .select('id, nome, email, telefone, role, active, created_at, last_login')
+        .is('deleted_at', null)
+        .order('nome')
+      if (tenantId) q = q.eq('tenant_id', tenantId)
+      const { data, error } = await q
+      if (error) throw error
+      return data || []
+    },
+  })
+
+  const filtrados = usuarios.filter(u => {
+    const matchSearch = !search || u.nome?.toLowerCase().includes(search.toLowerCase()) || u.email?.toLowerCase().includes(search.toLowerCase())
+    const matchRole   = !filtRole || u.role === filtRole
+    return matchSearch && matchRole
+  })
+
+  const ativos   = usuarios.filter(u => u.active).length
+  const inativos = usuarios.length - ativos
+
+  return (
+    <div className="flex flex-col min-h-full bg-[#0F172A]">
+
+      <div className="px-6 lg:px-10 pt-7 pb-5 border-b border-white/[0.06]">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-light text-white">
+              Gestao de <span className="text-[#10B981] font-bold">Time</span>
+            </h1>
+            <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mt-1">
+              usuarios, perfis e permissoes
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-center">
+              <p className="text-[9px] text-gray-600 font-black uppercase tracking-wider">Ativos</p>
+              <p className="text-xl font-black text-[#10B981]">{ativos}</p>
+            </div>
+            <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-center">
+              <p className="text-[9px] text-gray-600 font-black uppercase tracking-wider">Total</p>
+              <p className="text-xl font-black text-white">{usuarios.length}</p>
+            </div>
+            <button
+              onClick={() => setModal({})}
+              className="px-4 py-2.5 rounded-xl text-[11px] font-black bg-[#10B981] text-black hover:bg-[#059669] transition-all flex items-center gap-1.5"
+            >
+              <span className="text-lg leading-none">+</span> Novo usuario
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* FAB */}
-      <FAB onClick={() => handleOpenModal(null)} />
+      <div className="flex-1 px-6 lg:px-10 py-5">
+        <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
 
-      {/* MODAL */}
-      {isModalOpen && (
-        <UserModal
-          usuario={selectedUser}
-          onClose={handleCloseModal}
-        />
-      )}
+          {/* Filtros */}
+          <div className="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-white/[0.04]">
+            <input
+              placeholder="Buscar por nome ou email..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="flex-1 min-w-[200px] bg-transparent border border-white/[0.06] rounded-lg px-3 py-1.5 text-[11px] text-white placeholder-gray-700 focus:outline-none focus:border-[#10B981]/40 transition-colors"
+            />
+            <select
+              value={filtRole}
+              onChange={e => setFiltRole(e.target.value)}
+              className="bg-[#080E18] border border-white/[0.06] rounded-lg px-3 py-1.5 text-[11px] text-white focus:outline-none"
+            >
+              <option value="">Todos perfis</option>
+              {ROLES.map(r => <option key={r}>{r}</option>)}
+            </select>
+          </div>
 
-      {/* Overlay para fechar menu export */}
-      {showExportMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowExportMenu(false)}
-        />
-      )}
+          {/* Tabela */}
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-white/[0.06]">
+                  {['Usuario', 'Perfil', 'Status', 'Ultimo acesso', ''].map(h => (
+                    <th key={h} className="px-5 py-3 text-left text-[9px] font-black uppercase tracking-[0.2em] text-gray-700">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={5} className="py-20 text-center">
+                    <div className="w-7 h-7 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mx-auto" />
+                  </td></tr>
+                ) : filtrados.length === 0 ? (
+                  <tr><td colSpan={5} className="py-12 text-center text-gray-600 text-sm">
+                    Nenhum usuario encontrado
+                  </td></tr>
+                ) : filtrados.map((u) => {
+                  const rs = ROLE_STYLE[u.role] || ROLE_STYLE.Cliente
+                  const lastLogin = u.last_login
+                    ? new Date(u.last_login).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                    : 'Nunca'
+                  return (
+                    <motion.tr key={u.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="border-b border-white/[0.04] hover:bg-white/[0.02] group cursor-pointer"
+                      onClick={() => setModal(u)}
+                    >
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-3">
+                          <Avatar nome={u.nome} role={u.role} />
+                          <div>
+                            <p className="text-[12px] font-bold text-white group-hover:text-[#10B981] transition-colors">{u.nome}</p>
+                            <p className="text-[10px] text-gray-600">{u.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${rs.bg} ${rs.text}`}>{u.role}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`flex items-center gap-1.5 text-[11px] font-bold ${u.active ? 'text-[#10B981]' : 'text-gray-600'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${u.active ? 'bg-[#10B981]' : 'bg-gray-600'}`} />
+                          {u.active ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-[11px] text-gray-600">{lastLogin}</td>
+                      <td className="px-5 py-3.5 text-right">
+                        <span className="text-gray-700 group-hover:text-gray-400 transition-colors"></span>
+                      </td>
+                    </motion.tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {modal !== null && (
+          <UsuarioModal
+            usuario={modal?.id ? modal : null}
+            tenantId={tenantId}
+            onClose={() => setModal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
-  );
+  )
 }
