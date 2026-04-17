@@ -276,60 +276,81 @@ export default function RankingPage() {
 
   // Carrega dados do ranking
   const carregar = useCallback(async () => {
-    if (!tenantId) return
+    if (!tenantId) { setLoading(false); return }
     setLoading(true)
     setErro('')
     try {
-      // Forca refresh do token -- garante token valido mesmo apos longa inatividade
-      let token = ''
-      try {
-        const { data: refreshed } = await supabase.auth.refreshSession()
-        token = refreshed?.session?.access_token || ''
-      } catch (_) {}
-      // Fallback: session atual
-      if (!token) {
-        const { data: { session } } = await supabase.auth.getSession()
-        token = session?.access_token || ''
-      }
-      if (!token) { setErro('Sessao expirada. Faca logout e login novamente.'); setLoading(false); return }
-      const API   = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
+      // Usa RPC SECURITY DEFINER -- bypassa RLS sem precisar de service key
+      const { data: rpcData, error: rpcErr } = await supabase
+        .rpc('get_ranking_data', {
+          p_tenant_id: tenantId,
+          p_ano:       periodo.ano,
+          p_mes:       periodo.mes,
+        })
 
-      const res  = await fetch(
-        `${API}/api/ranking/usuarios?tenant_id=${tenantId}&ano=${periodo.ano}&mes=${periodo.mes}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      const json = await res.json()
-
-      if (res.status === 401 || !res.ok) {
-        // Fallback: busca direto no Supabase (mesmo tenant do usuario logado)
-        console.warn('[Ranking] API indisponivel, usando Supabase direto')
-        const { data: users } = await supabase
-          .from('usuarios')
-          .select('id, nome, role')
-          .eq('tenant_id', tenantId)
-          .in('role', ['Consultor', 'Gestor', 'Operador'])
-          .order('nome')
-        if (users?.length) {
-          setConsultores(users.map(u => ({
-            ...u,
-            total_leads: 0, leads_hot: 0, convertidos: 0, capital_total: 0,
-            pct_meta: 0, meta_leads: 20, comissao_pct: 0,
-            comissao_valor: 0, bonus_faixa: 0, bonus_individual: 0,
-            bonus_equipe: 0, total_ganhos: 0, bateu_meta: false,
-          })))
-          setErro('Modo basico ativo. Faca logout/login para ver dados completos.')
-        } else {
-          setErro(json?.error || 'Erro ao carregar. Verifique se ha consultores cadastrados.')
-          setConsultores([])
-        }
+      if (rpcErr) {
+        setErro('Erro: ' + rpcErr.message)
+        setConsultores([])
+        setLoading(false)
         return
       }
 
-      setConsultores(json.consultores || [])
-      setMetaConfig(json.meta_global  || {})
-      setPctEquipe(json.pct_equipe    || 0)
+      const users  = rpcData?.usuarios || []
+      const leads  = rpcData?.leads    || []
+      const meta   = rpcData?.meta     || {}
+      const faixas = rpcData?.faixas   || []
+
+      if (!users.length) { setConsultores([]); setLoading(false); return }
+
+      function calcCom(capital, fxs) {
+        if (!fxs.length || !capital) return { pct: 0, valor: 0, bonus: 0 }
+        const f = [...fxs].reverse().find(f => capital >= f.de)
+        return f ? { pct: f.pct, valor: (capital * f.pct) / 100, bonus: f.bonus || 0 }
+                 : { pct: 0, valor: 0, bonus: 0 }
+      }
+
+      const mapa = {}
+      for (const l of leads) {
+        const uid = l.id_operador_responsavel || l.operador_id
+        if (!uid) continue
+        if (!mapa[uid]) mapa[uid] = { total: 0, hot: 0, conv: 0, capital: 0 }
+        mapa[uid].total++
+        if (l.categoria === 'hot') mapa[uid].hot++
+        if (l.status === 'convertido' || (l.status||'').includes('fecha')) mapa[uid].conv++
+        mapa[uid].capital += parseFloat(l.capital_disponivel || 0)
+      }
+
+      const metaLeadsGlobal = meta.meta_leads || meta.meta_valor || 20
+      const totalEq = Object.values(mapa).reduce((a, b) => a + b.total, 0)
+      const pctEq   = metaLeadsGlobal > 0
+        ? Math.round((totalEq / (metaLeadsGlobal * users.length)) * 100) : 0
+
+      const calc = users.map(u => {
+        const d = mapa[u.id] || { total: 0, hot: 0, conv: 0, capital: 0 }
+        const pctMeta = metaLeadsGlobal > 0 ? Math.min(Math.round((d.total / metaLeadsGlobal) * 100), 100) : 0
+        const com = calcCom(d.capital, faixas)
+        const bateuMeta   = pctMeta >= 100
+        const bateuEquipe = pctEq   >= 80
+        return {
+          id: u.id, nome: u.nome, role: u.role, role_emoji: null, role_color: null,
+          total_leads: d.total, leads_hot: d.hot, convertidos: d.conv, capital_total: d.capital,
+          pct_meta: pctMeta, meta_leads: metaLeadsGlobal,
+          comissao_pct: com.pct, comissao_valor: Math.round(com.valor), bonus_faixa: com.bonus,
+          bonus_individual: bateuMeta   ? (meta.bonus_individual || 0) : 0,
+          bonus_equipe:     bateuEquipe ? (meta.bonus_equipe     || 0) : 0,
+          total_ganhos: Math.round(com.valor) + com.bonus
+            + (bateuMeta   ? (meta.bonus_individual || 0) : 0)
+            + (bateuEquipe ? (meta.bonus_equipe     || 0) : 0),
+          bateu_meta: bateuMeta,
+        }
+      }).sort((a, b) => b.total_leads - a.total_leads || b.capital_total - a.capital_total)
+
+      setConsultores(calc)
+      setMetaConfig(meta)
+      setPctEquipe(pctEq)
+      setErro('')
     } catch (e) {
-      setErro('Erro de conexao: ' + e.message)
+      setErro('Erro: ' + e.message)
     } finally {
       setLoading(false)
     }
