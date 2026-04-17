@@ -3,8 +3,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
-import { useLeads, useMetrics } from '../hooks/useLeads'
-import { useStatusColunas, COLUNAS_PADRAO } from '../hooks/useKanban'
+import { useLeads } from '../hooks/useLeads'
+import { useStatusColunas } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
 
 const fmtCapital = (v) => {
@@ -208,15 +208,14 @@ export default function DashboardPage() {
   const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
 
   const [page,     setPage]     = useState(1)
-  const [filters,  setFilters]  = useState({ search: '', status: '', meusLeads: false, userId: usuario?.id })
+  const [filters,  setFilters]  = useState(() => ({ search: '', status: '', meusLeads: false, userId: usuario?.id || '' }))
   const [leadSel,  setLeadSel]  = useState(null)
 
   const PER_PAGE = 25
-  const metricsQuery  = useMetrics(tenantId)
   const statusQuery   = useStatusColunas(tenantId)
   const leadsQuery    = useLeads(tenantId, page, PER_PAGE, filters)
 
-  const metrics    = metricsQuery?.data   || null
+  const metrics    = null
   const statusOpts = statusQuery?.data    || []
   const leadsData  = leadsQuery?.data     || null
   const isLoading  = leadsQuery?.isLoading ?? true
@@ -245,10 +244,10 @@ export default function DashboardPage() {
           </div>
           {/* KPIs */}
           <div className="flex flex-wrap gap-2">
-            <KPI label="Total"      value={metrics?.total        ?? total ?? 0} />
-            <KPI label="Hot"        value={metrics?.hot          ?? 0} color="text-red-400" />
-            <KPI label="Capital"    value={fmtCapital(metrics?.capital_total)} color="text-[#10B981]" />
-            <KPI label="Esta semana" value={metrics?.this_week   ?? 0} color="text-gray-300" />
+            <KPI label="Total"      value={total ?? 0} />
+            <KPI label="Hot"        value={leads.filter(l => l.categoria === 'hot').length} color="text-red-400" />
+            <KPI label="Capital"    value={fmtCapital(leads.reduce((a,l) => a + parseFloat(l.capital_disponivel||0), 0))} color="text-[#10B981]" />
+            <KPI label="Pagina"     value={`${page}/${Math.ceil(total/PER_PAGE)||1}`} color="text-gray-300" />
           </div>
         </div>
       </div>
