@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { useLeads, useMetrics } from '../hooks/useLeads'
-import { useStatusColunas } from '../hooks/useKanban'
+import { useStatusColunas, COLUNAS_PADRAO } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
 
 const fmtCapital = (v) => {
@@ -212,9 +212,14 @@ export default function DashboardPage() {
   const [leadSel,  setLeadSel]  = useState(null)
 
   const PER_PAGE = 25
-  const { data: metrics }        = useMetrics(tenantId)
-  const { data: statusOpts = [] }= useStatusColunas(tenantId)
-  const { data: leadsData, isLoading } = useLeads(tenantId, page, PER_PAGE, filters)
+  const metricsQuery  = useMetrics(tenantId)
+  const statusQuery   = useStatusColunas(tenantId)
+  const leadsQuery    = useLeads(tenantId, page, PER_PAGE, filters)
+
+  const metrics    = metricsQuery?.data   || null
+  const statusOpts = statusQuery?.data    || []
+  const leadsData  = leadsQuery?.data     || null
+  const isLoading  = leadsQuery?.isLoading ?? true
 
   const leads = leadsData?.data || []
   const total = leadsData?.count || 0
