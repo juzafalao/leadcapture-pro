@@ -1,49 +1,109 @@
-// components/layout/Header.jsx
-// Header enxuto: sem titulo de pagina -- cada pagina tem seu proprio header
-import { useAuth } from '../AuthContext'
+﻿import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
+import ConfirmModal from '../shared/ConfirmModal';
 
+/**
+ * Render the application header with logo, tenant and user information, a mobile menu button, and a logout confirmation flow.
+ * @param {Object} props
+ * @param {Function} props.onMenuClick - Callback invoked when the mobile menu button is clicked.
+ * @returns {JSX.Element} The header element containing the logo and tenant label, user info, logout button, and a confirm modal for logout.
+ */
 export default function Header({ onMenuClick }) {
-  const { usuario } = useAuth()
+  const { usuario, tenant, logout } = useAuth();
+  const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleLogoutClick = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setConfirmOpen(false);
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between px-5 lg:px-8 h-14 bg-[#0F172A]/90 backdrop-blur-xl border-b border-white/[0.05]">
-      {/* Mobile menu */}
-      <button
-        onClick={onMenuClick}
-        className="lg:hidden p-2 rounded-xl text-gray-600 hover:text-white hover:bg-white/[0.06] transition-all"
-        aria-label="Menu"
-      >
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round"/>
-        </svg>
-      </button>
-      <div className="hidden lg:block" />
+    <>
+      <header className="sticky top-0 z-40 bg-[#0F172A]/95 backdrop-blur-xl border-b border-[#1F2937] w-full">
+        <div className="px-4 lg:px-8 py-3 lg:py-4 flex items-center justify-between">
 
-      {/* Direita: avatar */}
-      <div className="flex items-center gap-3">
-        <button className="p-2 rounded-xl text-gray-600 hover:text-gray-300 hover:bg-white/[0.04] transition-all relative">
-          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round"/>
-            <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round"/>
-          </svg>
-        </button>
-        <div className="flex items-center gap-2.5 pl-3 border-l border-white/[0.06]">
-          <div className="text-right hidden sm:block">
-            <p className="text-[11px] font-bold text-white leading-none">
-              {usuario?.nome?.split(' ')[0] || 'Usuario'}
-            </p>
-            <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 leading-none mt-0.5">
-              {usuario?.role || 'Role'}
-            </p>
+          {/* Left: Menu Mobile + Title */}
+          <div className="flex items-center gap-3 lg:gap-4">
+            {/* Menu Hamburguer - Mobile */}
+            <button
+              onClick={onMenuClick}
+              className="lg:hidden w-10 h-10 rounded-xl bg-[#0F172A] border border-[#1F2937] flex items-center justify-center text-[#F8FAFC] hover:border-[#10B981]/40 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="21" y2="12"/>
+                <line x1="3" y1="18" x2="21" y2="18"/>
+              </svg>
+            </button>
+
+            {/* Logo Header (texto) + Tenant */}
+            <div className="flex flex-col">
+              <div className="group cursor-default">
+                <span style={{ fontWeight: 300, fontSize: 'clamp(18px, 2.5vw, 24px)', lineHeight: 1 }}>
+                  <span style={{ color: '#F8FAFC' }}>Lead</span>
+                  <span style={{ color: '#10B981' }}>Capture</span>
+                  <span style={{ color: '#F8FAFC' }}> Pro</span>
+                </span>
+              </div>
+              {(tenant?.nome || tenant?.name) ? (
+                <p className="text-[8px] lg:text-[9px] text-[#10B981] font-bold uppercase tracking-wider mt-0.5">
+                  {tenant.nome || tenant.name}
+                </p>
+              ) : null}
+            </div>
           </div>
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-black shrink-0"
-            style={{ background: 'linear-gradient(135deg, #10B981, #059669)', color: '#000' }}
-          >
-            {usuario?.nome?.charAt(0)?.toUpperCase() || 'U'}
+
+          {/* Right: User info + logout */}
+          <div className="flex items-center gap-2 lg:gap-4">
+
+            {/* Info do usu├írio */}
+            <div className="text-right hidden sm:block">
+              <p className="text-xs lg:text-sm font-medium text-[#F8FAFC]">
+                {usuario?.nome || 'Usu├írio'}
+              </p>
+              <p className="text-[8px] lg:text-[9px] text-[#10B981] font-bold uppercase tracking-wider">
+                {usuario?.role || 'Sem Permiss├úo'}
+              </p>
+            </div>
+
+            <button
+              onClick={handleLogoutClick}
+              className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-[#0F172A] border border-[#1F2937] flex items-center justify-center text-[#CBD5E1]/60 hover:text-red-400 hover:border-red-500/30 transition-all"
+              title="Sair"
+            >
+              <svg
+                width="16" height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </button>
           </div>
+
         </div>
-      </div>
-    </header>
-  )
+      </header>
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        title="Sair do sistema"
+        message="Tem certeza que deseja encerrar sua sess├úo?"
+        onConfirm={handleLogoutConfirm}
+        onClose={() => setConfirmOpen(false)}
+      />
+    </>
+  );
 }
