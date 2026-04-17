@@ -3,7 +3,8 @@
 import { useState, useCallback, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
-import { useLeads, useMetrics, useStatusColunas } from '../hooks/useLeads'
+import { useLeads, useMetrics } from '../hooks/useLeads'
+import { useStatusColunas } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
 
 const fmtCapital = (v) => {
