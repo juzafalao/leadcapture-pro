@@ -389,13 +389,14 @@ export default function RankingPage() {
     <div className="min-h-screen bg-[#0F172A] pb-16">
 
       {/* Header */}
-      <div className="px-6 lg:px-10 pt-7 pb-5 border-b border-white/[0.06]">
+      <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-5 border-b border-white/[0.06]">
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-light text-white">
+            <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
               Ranking de <span className="text-[#10B981] font-bold">Vendas</span>
             </h1>
-            <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mt-1">
+            <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
+            <p className="text-[11px] text-gray-500">
               {MESES[periodo.mes-1]} {periodo.ano}  comissoes e metas
             </p>
           </div>

@@ -228,9 +228,9 @@ export default function KanbanPage() {
     <div className="flex flex-col h-full bg-[#0F172A]">
 
       {/* Header compacto */}
-      <div className="px-6 lg:px-8 pt-6 pb-4 border-b border-white/[0.05] flex items-center justify-between flex-wrap gap-3 shrink-0">
+      <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-4 border-b border-white/[0.05] flex items-center justify-between flex-wrap gap-3 shrink-0">
         <div>
-          <h1 className="text-xl font-light text-white">
+          <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
             Funil de <span className="text-[#10B981] font-bold">Vendas</span>
           </h1>
           <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mt-0.5">
