@@ -72,37 +72,30 @@ function LeadRow({ lead, operadores, podeAtribuir, usuario, onOpenModal, onReloa
         </div>
       </td>
 
+      {/* Contato: email + telefone */}
+      <td className="px-4 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
+        <div className="flex flex-col gap-0.5">
+          {lead.email    && <span className="text-[11px] text-gray-400 truncate max-w-[160px]">{lead.email}</span>}
+          {lead.telefone && <span className="text-[10px] text-gray-600">{lead.telefone}</span>}
+          {!lead.email && !lead.telefone && <span className="text-gray-700 text-[10px]">-</span>}
+        </div>
+      </td>
+
       {/* Marca */}
-      <td className="px-4 py-3.5 hidden md:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
+      <td className="px-4 py-3.5 hidden lg:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
         {lead.marca ? (
-          <span className="text-[11px] text-gray-400 font-medium">
-            {lead.marca.emoji} {lead.marca.nome}
-          </span>
+          <span className="text-[11px] text-gray-400 font-medium">{lead.marca.emoji} {lead.marca.nome}</span>
         ) : <span className="text-gray-700 text-[11px]">-</span>}
       </td>
 
       {/* Capital */}
-      <td className="px-4 py-3.5 hidden lg:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
-        <span className="text-[12px] font-bold text-[#10B981] tabular-nums">
-          {fmtCapital(lead.capital_disponivel)}
-        </span>
-      </td>
-
-      {/* Consultor */}
-      <td className="px-4 py-3.5 hidden xl:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
-        {lead.operador ? (
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#10B981]/15 flex items-center justify-center text-[10px] font-black text-[#10B981]">
-              {lead.operador.nome?.charAt(0)}
-            </div>
-            <span className="text-[11px] text-gray-400 truncate">{lead.operador.nome?.split(' ')[0]}</span>
-          </div>
-        ) : <span className="text-gray-700 text-[11px] italic">sem dono</span>}
+      <td className="px-4 py-3.5 hidden md:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
+        <span className="text-[12px] font-bold text-[#10B981] tabular-nums">{fmtCapital(lead.capital_disponivel)}</span>
       </td>
 
       {/* Status */}
       <td className="px-4 py-3.5 cursor-pointer" onClick={() => onOpenModal(lead)}>
-        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider"
+        <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap"
           style={{
             background: `${lead.status_comercial?.cor || '#6B7280'}20`,
             color:      lead.status_comercial?.cor || '#6B7280',
@@ -111,11 +104,15 @@ function LeadRow({ lead, operadores, podeAtribuir, usuario, onOpenModal, onReloa
         </span>
       </td>
 
-      {/* Categoria badge */}
-      <td className="px-4 py-3.5 hidden sm:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
-        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ring-1 ${style.bg} ${style.ring} ${style.text}`}>
-          {cat}
-        </span>
+      {/* Score */}
+      <td className="px-4 py-3.5 hidden lg:table-cell cursor-pointer" onClick={() => onOpenModal(lead)}>
+        <div className="flex items-center gap-1.5">
+          <div className="w-10 h-1 bg-white/[0.06] rounded-full overflow-hidden">
+            <div className="h-full rounded-full"
+              style={{ width: `${lead.score ?? 0}%`, background: (lead.score||0) >= 80 ? '#EF4444' : (lead.score||0) >= 60 ? '#F59E0B' : '#6B7280' }} />
+          </div>
+          <span className={`text-[10px] font-black tabular-nums ${style.text}`}>{lead.score ?? 0}</span>
+        </div>
       </td>
 
       {/* Atribuir */}
@@ -349,13 +346,13 @@ export default function DashboardPage() {
               <thead>
                 <tr className="border-b border-white/[0.06] bg-black/20">
                   {[
-                    { label: 'Lead',      cls: 'px-5 py-3 min-w-[220px]' },
-                    { label: 'Marca',     cls: 'px-4 py-3 hidden md:table-cell' },
-                    { label: 'Capital',   cls: 'px-4 py-3 hidden lg:table-cell' },
-                    { label: 'Consultor', cls: 'px-4 py-3 hidden xl:table-cell' },
+                    { label: 'Lead',      cls: 'px-4 py-3 min-w-[200px]' },
+                    { label: 'Contato',   cls: 'px-4 py-3 hidden sm:table-cell' },
+                    { label: 'Marca',     cls: 'px-4 py-3 hidden lg:table-cell' },
+                    { label: 'Capital',   cls: 'px-4 py-3 hidden md:table-cell' },
                     { label: 'Status',    cls: 'px-4 py-3' },
-                    { label: 'Cat',       cls: 'px-4 py-3 hidden sm:table-cell' },
-                    { label: podeVerAtribuir ? 'Atribuir' : '', cls: 'px-4 py-3 w-[150px] text-right' },
+                    { label: 'Score',     cls: 'px-4 py-3 hidden lg:table-cell' },
+                    { label: podeVerAtribuir ? 'Atribuir' : '', cls: 'px-4 py-3 w-[140px] text-right' },
                   ].map((h, i) => (
                     <th key={i} className={`${h.cls} text-left text-[9px] font-black uppercase tracking-[0.2em] text-gray-500`}>
                       {h.label}
