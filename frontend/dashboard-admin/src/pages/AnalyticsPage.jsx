@@ -211,7 +211,7 @@ export default function AnalyticsPage() {
 
           {/* Tabs período gráfico */}
           <div className="h-[280px] mt-4" style={{ minHeight: 280, minWidth: 0 }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minheight={280} minHeight={280}>
               <AreaChart data={d.evolucao || []} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
                 <defs>
                   <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
@@ -379,7 +379,7 @@ export default function AnalyticsPage() {
           <h3 className="text-sm font-bold text-white mb-6">🏢 Leads por Marca</h3>
           {(d.porMarca || []).length > 0 ? (
             <div className="h-[260px]" style={{ minHeight: 260, minWidth: 0 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={260}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minheight={260} minHeight={260}>
                 <PieChart>
                   <Pie data={d.porMarca} innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
                     {(d.porMarca || []).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
@@ -400,7 +400,7 @@ export default function AnalyticsPage() {
           <h3 className="text-sm font-bold text-white mb-6">📉 Motivos de Perda</h3>
           {(d.motivosPerda || []).length > 0 ? (
             <div className="h-[260px]" style={{ minHeight: 260, minWidth: 0 }}>
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={260}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minheight={260} minHeight={260}>
                 <BarChart data={d.motivosPerda} margin={{ top: 5, right: 5, bottom: 20, left: -20 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
                   <XAxis dataKey="motivo" stroke="#374151" fontSize={8} axisLine={false} tickLine={false} angle={-20} textAnchor="end" />
