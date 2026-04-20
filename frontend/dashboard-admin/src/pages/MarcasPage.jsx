@@ -1,1 +1,333 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';import { motion } from 'framer-motion';import { supabase } from '../lib/supabase';import { useAuth } from '../components/AuthContext';import MarcaCard from '../components/dashboard/MarcaCard';import FAB from '../components/dashboard/FAB';import MarcaModal from '../components/marcas/MarcaModal';import { useAlertModal } from '../hooks/useAlertModal';import LoadingSpinner from '../components/shared/LoadingSpinner';const PAGE_SIZE = 20;export default function MarcasPage() {  const { usuario, isPlatformAdmin } = useAuth();  const { alertModal, showAlert } = useAlertModal();  const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);  const [marcas, setMarcas] = useState([]);  const [segmentos, setSegmentos] = useState([]);  const [loading, setLoading] = useState(true);  const [busca, setBusca] = useState('');  const [buscaInput, setBuscaInput] = useState('');  const [page, setPage] = useState(1);  const [selectedMarca, setSelectedMarca] = useState(null);  const [isModalOpen, setIsModalOpen] = useState(false);  const [isSaving, setIsSaving] = useState(false);  const debounceRef = useRef(null);  const handleBuscaChange = useCallback((value) => {    setBuscaInput(value);    if (debounceRef.current) clearTimeout(debounceRef.current);    debounceRef.current = setTimeout(() => setBusca(value), 300);  }, []);  const fetchMarcas = async () => {    if (!usuario?.tenant_id && !isPlatformAdmin()) return;    setLoading(true);    let query = supabase.from('marcas').select('*').order('created_at', { ascending: false });    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);    const { data, error } = await query;    if (!error && data) {      setMarcas(data);      }    } else if (error) {      showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });    }    setLoading(false);  };  const fetchSegmentos = async () => {    if (!usuario?.tenant_id && !isPlatformAdmin()) return;    let query = supabase.from('segmentos').select('id, nome, emoji').order('nome');    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);    const { data, error } = await query;    if (!error && data) setSegmentos(data);  };  useEffect(() => {    fetchMarcas();    fetchSegmentos();  }, [usuario]);  useEffect(() => {    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };  }, []);  useEffect(() => {    setPage(1);  }, [busca]);  const marcasFiltradas = marcas.filter(m =>    m.nome?.toLowerCase().includes(busca.toLowerCase())  );  const totalPages = Math.ceil(marcasFiltradas.length / PAGE_SIZE);  const paginatedMarcas = marcasFiltradas.slice(    (page - 1) * PAGE_SIZE,    page * PAGE_SIZE  );  const startIndex = (page - 1) * PAGE_SIZE + 1;  const endIndex = Math.min(page * PAGE_SIZE, marcasFiltradas.length);  const handleOpenModal = (marca = null) => {    setSelectedMarca(marca);    setIsModalOpen(true);  };  const handleCloseModal = () => {    setIsModalOpen(false);    setSelectedMarca(null);    setIsSaving(false);  };  const handleSaveMarca = async (marcaData) => {    setIsSaving(true);        try {      const dataToSave = {        tenant_id: usuario.tenant_id,        nome: marcaData.nome,        emoji: marcaData.emoji,        id_segmento: marcaData.segmento_id || null,        invest_min: marcaData.investimento_minimo || 0,        invest_max: marcaData.investimento_maximo || 0,        ativo: true      };      if (marcaData.id) {        // Editar        const { error } = await supabase          .from('marcas')          .update(dataToSave)          .eq('id', marcaData.id);        if (error) throw error;      } else {        // Criar        const { error } = await supabase          .from('marcas')          .insert(dataToSave);        if (error) throw error;      }      await fetchMarcas();      handleCloseModal();    } catch (error) {      console.error('Erro ao salvar marca:', error);      showAlert({ type: 'error', title: 'Erro ao salvar', message: error.message });    } finally {      setIsSaving(false);    }  };  if (loading) {    return <LoadingSpinner fullScreen={false} />;  }  return (    <div className="text-white pb-32">            {/* HEADER */}      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">        <motion.div          initial={{ opacity: 0, y: -20 }}          animate={{ opacity: 1, y: 0 }}          transition={{ duration: 0.5 }}        >          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">            Gestão de <span className="text-[#10B981] font-bold">Marcas</span>          </h1>          <div className="flex items-center gap-3">            <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">              {marcas.length} {marcas.length === 1 ? 'marca cadastrada' : 'marcas cadastradas'}            </p>          </div>        </motion.div>      </div>      {/* SEARCH BAR */}      <div className="px-4 lg:px-10 mb-8">        <div className="relative">          <input            type="text"            placeholder="🔍 Buscar marca..."            value={buscaInput}            onChange={(e) => handleBuscaChange(e.target.value)}            className="              w-full              bg-[#0F172A]              border border-white/5              rounded-2xl              px-5 py-4              lg:px-6 lg:py-4              text-sm lg:text-base              text-white              placeholder:text-gray-600              focus:outline-none              focus:border-[#10B981]/50              focus:ring-2              focus:ring-[#10B981]/20              transition-all            "          />          {buscaInput && (            <button              onClick={() => { setBuscaInput(''); setBusca(''); }}              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"            >              ✕            </button>          )}        </div>      </div>      {/* MARCAS GRID */}      <div className="px-4 lg:px-10">        {marcasFiltradas.length === 0 ? (          <motion.div            initial={{ opacity: 0, scale: 0.9 }}            animate={{ opacity: 1, scale: 1 }}            className="text-center py-20"          >            <div className="text-6xl mb-4 opacity-30">🏢</div>            <p className="text-xl text-gray-400 mb-2">              {busca ? 'Nenhuma marca encontrada' : 'Nenhuma marca cadastrada'}            </p>            <p className="text-sm text-gray-600 mb-6">              {busca ? 'Tente ajustar sua busca' : 'Comece criando sua primeira marca!'}            </p>            {buscaInput && (              <button                onClick={() => { setBuscaInput(''); setBusca(''); }}                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"              >                Limpar Busca              </button>            )}          </motion.div>        ) : (          <div className="bg-[#0F172A] border border-white/5 rounded-3xl overflow-hidden">            <div className="p-4 lg:p-6">              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">                {paginatedMarcas.map((marca, index) => (                  <MarcaCard                    key={marca.id}                    marca={marca}                    index={index}                    onClick={canEdit ? () => handleOpenModal(marca) : undefined}                  />                ))}              </div>            </div>            {/* FOOTER COM PAGINAÇÃO */}            <div className="px-4 py-4 border-t border-white/5 bg-[#0F172A] rounded-b-3xl">              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">                {/* Info */}                <p className="text-xs text-gray-600">                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}                  <span className="text-white font-bold">{endIndex}</span> de{' '}                  <span className="text-white font-bold">{marcasFiltradas.length}</span> itens                </p>                {/* Pagination Controls */}                {totalPages > 1 && (                  <div className="flex items-center gap-2">                    <button                      onClick={() => setPage(p => Math.max(1, p - 1))}                      disabled={page === 1}                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"                    >                      ← Anterior                    </button>                    <div className="flex items-center gap-1">                      {[...Array(totalPages)].map((_, i) => {                        const pageNum = i + 1;                        if (                          pageNum === 1 ||                          pageNum === totalPages ||                          (pageNum >= page - 1 && pageNum <= page + 1)                        ) {                          return (                            <button                              key={pageNum}                              onClick={() => setPage(pageNum)}                              className={`                                w-8 h-8 rounded-lg text-xs font-bold transition-all                                ${page === pageNum                                  ? 'bg-[#10B981] text-black'                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'                                }                              `}                            >                              {pageNum}                            </button>                          );                        } else if (pageNum === page - 2 || pageNum === page + 2) {                          return <span key={pageNum} className="text-gray-600">...</span>;                        }                        return null;                      })}                    </div>                    <button                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}                      disabled={page === totalPages}                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"                    >                      Próxima →                    </button>                  </div>                )}                {/* Branding */}                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">                  LeadCapture Pro · Zafalão Tech                </p>              </div>            </div>          </div>        )}      </div>      {/* FAB */}      {canEdit && <FAB onClick={() => handleOpenModal(null)} />}      {/* MODAL */}      {isModalOpen && canEdit && (        <MarcaModal          marca={selectedMarca}          segmentos={segmentos}          onClose={handleCloseModal}          onSave={handleSaveMarca}          isSaving={isSaving}        />      )}      {alertModal}    </div>  );}
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../components/AuthContext';
+import MarcaCard from '../components/dashboard/MarcaCard';
+import FAB from '../components/dashboard/FAB';
+import MarcaModal from '../components/marcas/MarcaModal';
+import { useAlertModal } from '../hooks/useAlertModal';
+import LoadingSpinner from '../components/shared/LoadingSpinner';
+
+const PAGE_SIZE = 20;
+
+export default function MarcasPage() {
+  const { usuario, isPlatformAdmin } = useAuth();
+  const { alertModal, showAlert } = useAlertModal();
+  const canEdit = ['Administrador', 'admin', 'Diretor'].includes(usuario?.role);
+  const [marcas, setMarcas] = useState([]);
+  const [segmentos, setSegmentos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
+  const [buscaInput, setBuscaInput] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedMarca, setSelectedMarca] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const debounceRef = useRef(null);
+
+  const handleBuscaChange = useCallback((value) => {
+    setBuscaInput(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setBusca(value), 300);
+  }, []);
+
+  const fetchMarcas = async () => {
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
+    setLoading(true);
+    let query = supabase.from('marcas').select('*').order('created_at', { ascending: false });
+    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
+    const { data, error } = await query;
+    if (!error && data) {
+      if (isPlatformAdmin()) {
+        const tenantIds = [...new Set(data.map(m => m.tenant_id).filter(Boolean))];
+        if (tenantIds.length > 0) {
+          const { data: tenants } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
+          const tMap = {};
+          (tenants || []).forEach(t => { tMap[t.id] = t.name; });
+          setMarcas(data.map(m => ({ ...m, tenant_name: tMap[m.tenant_id] || '' })));
+        } else {
+          setMarcas(data);
+        }
+      } else {
+        setMarcas(data);
+      }
+    } else if (error) {
+      showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
+    }
+    setLoading(false);
+  };
+
+  const fetchSegmentos = async () => {
+    if (!usuario?.tenant_id && !isPlatformAdmin()) return;
+    let query = supabase.from('segmentos').select('id, nome, emoji').order('nome');
+    if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
+    const { data, error } = await query;
+    if (!error && data) setSegmentos(data);
+  };
+
+  useEffect(() => {
+    fetchMarcas();
+    fetchSegmentos();
+  }, [usuario]);
+
+  useEffect(() => {
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, []);
+
+  useEffect(() => {
+    setPage(1);
+  }, [busca]);
+
+  const marcasFiltradas = marcas.filter(m =>
+    m.nome?.toLowerCase().includes(busca.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(marcasFiltradas.length / PAGE_SIZE);
+  const paginatedMarcas = marcasFiltradas.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE
+  );
+  const startIndex = (page - 1) * PAGE_SIZE + 1;
+  const endIndex = Math.min(page * PAGE_SIZE, marcasFiltradas.length);
+
+  const handleOpenModal = (marca = null) => {
+    setSelectedMarca(marca);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedMarca(null);
+    setIsSaving(false);
+  };
+
+  const handleSaveMarca = async (marcaData) => {
+    setIsSaving(true);
+    
+    try {
+      const dataToSave = {
+        tenant_id: usuario.tenant_id,
+        nome: marcaData.nome,
+        emoji: marcaData.emoji,
+        id_segmento: marcaData.segmento_id || null,
+        invest_min: marcaData.investimento_minimo || 0,
+        invest_max: marcaData.investimento_maximo || 0,
+        ativo: true
+      };
+
+      if (marcaData.id) {
+        // Editar
+        const { error } = await supabase
+          .from('marcas')
+          .update(dataToSave)
+          .eq('id', marcaData.id);
+
+        if (error) throw error;
+      } else {
+        // Criar
+        const { error } = await supabase
+          .from('marcas')
+          .insert(dataToSave);
+
+        if (error) throw error;
+      }
+
+      await fetchMarcas();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Erro ao salvar marca:', error);
+      showAlert({ type: 'error', title: 'Erro ao salvar', message: error.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <LoadingSpinner fullScreen={false} />;
+  }
+
+  return (
+    <div className="text-white pb-32">
+      
+      {/* HEADER */}
+      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
+            Gestão de <span className="text-[#10B981] font-bold">Marcas</span>
+          </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>
+            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
+              {marcas.length} {marcas.length === 1 ? 'marca cadastrada' : 'marcas cadastradas'}
+            </p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* SEARCH BAR */}
+      <div className="px-4 lg:px-10 mb-8">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="🔍 Buscar marca..."
+            value={buscaInput}
+            onChange={(e) => handleBuscaChange(e.target.value)}
+            className="
+              w-full
+              bg-[#0F172A]
+              border border-white/5
+              rounded-2xl
+              px-5 py-4
+              lg:px-6 lg:py-4
+              text-sm lg:text-base
+              text-white
+              placeholder:text-gray-600
+              focus:outline-none
+              focus:border-[#10B981]/50
+              focus:ring-2
+              focus:ring-[#10B981]/20
+              transition-all
+            "
+          />
+          {buscaInput && (
+            <button
+              onClick={() => { setBuscaInput(''); setBusca(''); }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* MARCAS GRID */}
+      <div className="px-4 lg:px-10">
+        {marcasFiltradas.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div className="text-6xl mb-4 opacity-30">🏢</div>
+            <p className="text-xl text-gray-400 mb-2">
+              {busca ? 'Nenhuma marca encontrada' : 'Nenhuma marca cadastrada'}
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              {busca ? 'Tente ajustar sua busca' : 'Comece criando sua primeira marca!'}
+            </p>
+            {buscaInput && (
+              <button
+                onClick={() => { setBuscaInput(''); setBusca(''); }}
+                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
+              >
+                Limpar Busca
+              </button>
+            )}
+          </motion.div>
+        ) : (
+          <div className="bg-[#0F172A] border border-white/5 rounded-3xl overflow-hidden">
+            <div className="p-4 lg:p-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
+                {paginatedMarcas.map((marca, index) => (
+                  <MarcaCard
+                    key={marca.id}
+                    marca={marca}
+                    index={index}
+                    onClick={canEdit ? () => handleOpenModal(marca) : undefined}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* FOOTER COM PAGINAÇÃO */}
+            <div className="px-4 py-4 border-t border-white/5 bg-[#0F172A] rounded-b-3xl">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
+                {/* Info */}
+                <p className="text-xs text-gray-600">
+                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
+                  <span className="text-white font-bold">{endIndex}</span> de{' '}
+                  <span className="text-white font-bold">{marcasFiltradas.length}</span> itens
+                </p>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      ← Anterior
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {[...Array(totalPages)].map((_, i) => {
+                        const pageNum = i + 1;
+                        if (
+                          pageNum === 1 ||
+                          pageNum === totalPages ||
+                          (pageNum >= page - 1 && pageNum <= page + 1)
+                        ) {
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setPage(pageNum)}
+                              className={`
+                                w-8 h-8 rounded-lg text-xs font-bold transition-all
+                                ${page === pageNum
+                                  ? 'bg-[#10B981] text-black'
+                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
+                                }
+                              `}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        } else if (pageNum === page - 2 || pageNum === page + 2) {
+                          return <span key={pageNum} className="text-gray-600">...</span>;
+                        }
+                        return null;
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      disabled={page === totalPages}
+                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      Próxima →
+                    </button>
+                  </div>
+                )}
+
+                {/* Branding */}
+                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
+                  LeadCapture Pro · Zafalão Tech
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* FAB */}
+      {canEdit && <FAB onClick={() => handleOpenModal(null)} />}
+
+      {/* MODAL */}
+      {isModalOpen && canEdit && (
+        <MarcaModal
+          marca={selectedMarca}
+          segmentos={segmentos}
+          onClose={handleCloseModal}
+          onSave={handleSaveMarca}
+          isSaving={isSaving}
+        />
+      )}
+      {alertModal}
+    </div>
+  );
+}
