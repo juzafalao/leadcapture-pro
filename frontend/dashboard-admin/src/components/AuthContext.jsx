@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!usuario;
 
   const isPlatformAdmin = () => {
-    return usuario?.is_super_admin === true && tenant?.is_platform === true;
+    return ['Administrador', 'admin'].includes(usuario?.role);
   };
 
   const hasMinLevel = (minLevel) => {
