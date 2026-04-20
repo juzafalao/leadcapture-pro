@@ -38,19 +38,7 @@ export default function MarcasPage() {
     if (!isPlatformAdmin()) query = query.eq('tenant_id', usuario.tenant_id);
     const { data, error } = await query;
     if (!error && data) {
-      if (isPlatformAdmin()) {
-        const tenantIds = [...new Set(data.map(m => m.tenant_id).filter(Boolean))];
-        if (tenantIds.length > 0) {
-          const { data: tenants } = await supabase.from('tenants').select('id, name').in('id', tenantIds);
-          const tMap = {};
-          (tenants || []).forEach(t => { tMap[t.id] = t.name; });
-          setMarcas(data.map(m => ({ ...m, tenant_name: tMap[m.tenant_id] || '' })));
-        } else {
-          setMarcas(data);
-        }
-      } else {
-        setMarcas(data);
-      }
+      setMarcas(data);
     } else if (error) {
       showAlert({ type: 'error', title: 'Erro', message: 'Erro ao buscar marcas: ' + error.message });
     }
@@ -81,7 +69,6 @@ export default function MarcasPage() {
   const marcasFiltradas = marcas.filter(m =>
     m.nome?.toLowerCase().includes(busca.toLowerCase())
   );
-
   const totalPages = Math.ceil(marcasFiltradas.length / PAGE_SIZE);
   const paginatedMarcas = marcasFiltradas.slice(
     (page - 1) * PAGE_SIZE,
@@ -103,7 +90,6 @@ export default function MarcasPage() {
 
   const handleSaveMarca = async (marcaData) => {
     setIsSaving(true);
-    
     try {
       const dataToSave = {
         tenant_id: usuario.tenant_id,
@@ -114,24 +100,13 @@ export default function MarcasPage() {
         invest_max: marcaData.investimento_maximo || 0,
         ativo: true
       };
-
       if (marcaData.id) {
-        // Editar
-        const { error } = await supabase
-          .from('marcas')
-          .update(dataToSave)
-          .eq('id', marcaData.id);
-
+        const { error } = await supabase.from('marcas').update(dataToSave).eq('id', marcaData.id);
         if (error) throw error;
       } else {
-        // Criar
-        const { error } = await supabase
-          .from('marcas')
-          .insert(dataToSave);
-
+        const { error } = await supabase.from('marcas').insert(dataToSave);
         if (error) throw error;
       }
-
       await fetchMarcas();
       handleCloseModal();
     } catch (error) {
@@ -142,192 +117,122 @@ export default function MarcasPage() {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner fullScreen={false} />;
-  }
+  const handleDeleteMarca = async (marca) => {
+    try {
+      const { error } = await supabase.from('marcas').delete().eq('id', marca.id);
+      if (error) throw error;
+      await fetchMarcas();
+    } catch (error) {
+      showAlert({ type: 'error', title: 'Erro ao excluir', message: error.message });
+    }
+  };
 
   return (
-    <div className="text-white pb-32">
-      
-      {/* HEADER */}
-      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Gestão de <span className="text-[#10B981] font-bold">Marcas</span>
-          </h1>
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>
-            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
-              {marcas.length} {marcas.length === 1 ? 'marca cadastrada' : 'marcas cadastradas'}
-            </p>
-          </div>
-        </motion.div>
-      </div>
+    <div className="flex flex-col min-h-full">
+      {alertModal}
 
-      {/* SEARCH BAR */}
-      <div className="px-4 lg:px-10 mb-8">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="🔍 Buscar marca..."
-            value={buscaInput}
-            onChange={(e) => handleBuscaChange(e.target.value)}
-            className="
-              w-full
-              bg-[#0F172A]
-              border border-white/5
-              rounded-2xl
-              px-5 py-4
-              lg:px-6 lg:py-4
-              text-sm lg:text-base
-              text-white
-              placeholder:text-gray-600
-              focus:outline-none
-              focus:border-[#10B981]/50
-              focus:ring-2
-              focus:ring-[#10B981]/20
-              transition-all
-            "
-          />
-          {buscaInput && (
+      {/* Header */}
+      <div className="px-4 lg:px-10 pt-6 lg:pt-8 mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
+            Gestao de <span className="text-[#10B981] font-bold">Marcas</span>
+          </h1>
+          <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
+          <p className="text-[11px] text-gray-500">Franquias e marcas cadastradas no sistema</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-center">
+            <p className="text-[9px] font-black uppercase tracking-wider text-gray-600">Total</p>
+            <p className="text-xl font-black text-white">{marcas.length}</p>
+          </div>
+          {canEdit && (
             <button
-              onClick={() => { setBuscaInput(''); setBusca(''); }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              onClick={() => handleOpenModal()}
+              className="px-4 py-2.5 rounded-xl text-[11px] font-black bg-[#10B981] text-black hover:bg-[#059669] transition-all flex items-center gap-1.5"
             >
-              ✕
+              <span className="text-lg leading-none">+</span> Nova marca
             </button>
           )}
         </div>
       </div>
 
-      {/* MARCAS GRID */}
-      <div className="px-4 lg:px-10">
-        {marcasFiltradas.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <div className="text-6xl mb-4 opacity-30">🏢</div>
-            <p className="text-xl text-gray-400 mb-2">
+      {/* Busca */}
+      <div className="px-4 lg:px-10 mb-5">
+        <input
+          type="text"
+          placeholder="Buscar marca..."
+          value={buscaInput}
+          onChange={e => handleBuscaChange(e.target.value)}
+          className="w-full max-w-sm bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-700 focus:outline-none focus:border-[#10B981]/40 transition-colors"
+        />
+      </div>
+
+      {/* Conteudo */}
+      <div className="flex-1 px-4 lg:px-10 pb-8">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <LoadingSpinner />
+          </div>
+        ) : marcasFiltradas.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-[9px] font-black uppercase tracking-wider text-gray-700 mb-2">
               {busca ? 'Nenhuma marca encontrada' : 'Nenhuma marca cadastrada'}
             </p>
-            <p className="text-sm text-gray-600 mb-6">
-              {busca ? 'Tente ajustar sua busca' : 'Comece criando sua primeira marca!'}
-            </p>
-            {buscaInput && (
+            {canEdit && !busca && (
               <button
-                onClick={() => { setBuscaInput(''); setBusca(''); }}
-                className="px-6 py-3 bg-[#10B981] text-black font-bold rounded-xl hover:bg-[#059669] transition-all"
+                onClick={() => handleOpenModal()}
+                className="mt-4 px-4 py-2 rounded-xl text-[11px] font-black bg-[#10B981] text-black hover:bg-[#059669] transition-all"
               >
-                Limpar Busca
+                Cadastrar primeira marca
               </button>
             )}
-          </motion.div>
-        ) : (
-          <div className="bg-[#0F172A] border border-white/5 rounded-3xl overflow-hidden">
-            <div className="p-4 lg:p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
-                {paginatedMarcas.map((marca, index) => (
-                  <MarcaCard
-                    key={marca.id}
-                    marca={marca}
-                    index={index}
-                    onClick={canEdit ? () => handleOpenModal(marca) : undefined}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* FOOTER COM PAGINAÇÃO */}
-            <div className="px-4 py-4 border-t border-white/5 bg-[#0F172A] rounded-b-3xl">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
-                {/* Info */}
-                <p className="text-xs text-gray-600">
-                  Exibindo <span className="text-white font-bold">{startIndex}</span> a{' '}
-                  <span className="text-white font-bold">{endIndex}</span> de{' '}
-                  <span className="text-white font-bold">{marcasFiltradas.length}</span> itens
-                </p>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setPage(p => Math.max(1, p - 1))}
-                      disabled={page === 1}
-                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      ← Anterior
-                    </button>
-
-                    <div className="flex items-center gap-1">
-                      {[...Array(totalPages)].map((_, i) => {
-                        const pageNum = i + 1;
-                        if (
-                          pageNum === 1 ||
-                          pageNum === totalPages ||
-                          (pageNum >= page - 1 && pageNum <= page + 1)
-                        ) {
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => setPage(pageNum)}
-                              className={`
-                                w-8 h-8 rounded-lg text-xs font-bold transition-all
-                                ${page === pageNum
-                                  ? 'bg-[#10B981] text-black'
-                                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
-                                }
-                              `}
-                            >
-                              {pageNum}
-                            </button>
-                          );
-                        } else if (pageNum === page - 2 || pageNum === page + 2) {
-                          return <span key={pageNum} className="text-gray-600">...</span>;
-                        }
-                        return null;
-                      })}
-                    </div>
-
-                    <button
-                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages}
-                      className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-bold hover:bg-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      Próxima →
-                    </button>
-                  </div>
-                )}
-
-                {/* Branding */}
-                <p className="text-[9px] text-gray-700 font-black uppercase tracking-widest">
-                  LeadCapture Pro · Zafalão Tech
-                </p>
-              </div>
-            </div>
           </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {paginatedMarcas.map(marca => (
+                <MarcaCard
+                  key={marca.id}
+                  marca={marca}
+                  segmentos={segmentos}
+                  canEdit={canEdit}
+                  onEdit={() => handleOpenModal(marca)}
+                  onDelete={() => handleDeleteMarca(marca)}
+                />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/[0.04]">
+                <p className="text-[10px] text-gray-600">
+                  {startIndex}-{endIndex} de {marcasFiltradas.length}
+                </p>
+                <div className="flex gap-1">
+                  <button onClick={() => setPage(p => Math.max(1, p-1))} disabled={page <= 1}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-white disabled:opacity-30 transition-all">
+                    Anterior
+                  </button>
+                  <span className="px-3 py-1.5 text-[11px] text-gray-500">{page} / {totalPages}</span>
+                  <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page >= totalPages}
+                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-white disabled:opacity-30 transition-all">
+                    Proxima
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
-      {/* FAB */}
-      {canEdit && <FAB onClick={() => handleOpenModal(null)} />}
-
-      {/* MODAL */}
-      {isModalOpen && canEdit && (
+      {/* Modal */}
+      {isModalOpen && (
         <MarcaModal
           marca={selectedMarca}
           segmentos={segmentos}
-          onClose={handleCloseModal}
           onSave={handleSaveMarca}
+          onClose={handleCloseModal}
           isSaving={isSaving}
         />
       )}
-      {alertModal}
     </div>
   );
 }
