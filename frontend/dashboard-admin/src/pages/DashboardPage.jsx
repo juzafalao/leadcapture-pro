@@ -215,9 +215,9 @@ export default function DashboardPage() {
     setLoading(true); setError('')
     try {
       let q = supabase.from('leads').select(`
-        id, nome, email, telefone, cidade, estado,
+        id, tenant_id, nome, email, telefone, cidade, estado,
         capital_disponivel, categoria, score, status, fonte,
-        id_operador_responsavel, operador_id, created_at,
+        id_operador_responsavel, operador_id, created_at, id_status, id_marca,
         status_comercial:id_status ( id, label, slug, cor ),
         marca:id_marca ( id, nome, emoji ),
         operador:id_operador_responsavel ( id, nome )
