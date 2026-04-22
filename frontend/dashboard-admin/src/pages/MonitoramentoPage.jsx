@@ -125,7 +125,7 @@ export default function MonitoramentoPage() {
         <motion.div initial={{ opacity:0, y:-12 }} animate={{ opacity:1, y:0 }}
           className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-light text-white mb-1">
+            <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
               Monitoramento <span className="text-[#10B981] font-bold">do Sistema</span>
             </h1>
             <div className="flex items-center gap-3">
