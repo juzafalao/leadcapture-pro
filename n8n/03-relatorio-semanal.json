@@ -1,0 +1,91 @@
+{
+  "name": "LeadCapture Pro - Relatório Semanal",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "weeksInterval": 1,
+              "daysOfWeek": [1],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "weekly-trigger",
+      "name": "Toda Segunda 9h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Gera relatório semanal\nconst now = new Date();\nconst weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);\n\n// Simula busca de métricas\nconst metricas = {\n  total_leads: 47,\n  leads_hot: 12,\n  leads_warm: 18,\n  leads_cold: 17,\n  capital_total: 12500000,\n  convertidos: 5,\n  taxa_conversao: 10.6\n};\n\nconst ranking = [\n  { nome: 'João Silva', leads: 15, convertidos: 3 },\n  { nome: 'Maria Santos', leads: 12, convertidos: 2 },\n  { nome: 'Pedro Costa', leads: 10, convertidos: 0 }\n];\n\nreturn {\n  json: {\n    periodo: {\n      inicio: weekAgo.toISOString(),\n      fim: now.toISOString()\n    },\n    metricas,\n    ranking\n  }\n};"
+      },
+      "id": "generate-report",
+      "name": "Gerar Relatório",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "content": "## 📊 Relatório Semanal - LeadCapture Pro\n\n### Resumo\n- **Total de Leads:** {{ $json.metricas.total_leads }}\n- **Hot:** {{ $json.metricas.leads_hot }} 🔥\n- **Warm:** {{ $json.metricas.leads_warm }} 🌤️\n- **Cold:** {{ $json.metricas.leads_cold }} ❄️\n- **Capital Total:** R$ {{ $json.metricas.capital_total }}\n- **Convertidos:** {{ $json.metricas.convertidos }}\n- **Taxa de Conversão:** {{ $json.metricas.taxa_conversao }}%\n\n### 🏆 Top Consultores\n{{#each $json.ranking}}\n{{ @index + 1 }}. **{{ nome }}** - {{ leads }} leads, {{ convertidos }} conversões\n{{/each}}\n\n_Acesse o dashboard para mais detalhes._",
+        "additionalFields": {}
+      },
+      "id": "send-slack",
+      "name": "Enviar Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@leadcapture.pro",
+        "toEmail": "diretores@empresa.com",
+        "subject": "📊 Relatório Semanal - LeadCapture Pro",
+        "text": "=Ver anexo HTML",
+        "html": "=Gerado dinamicamente"
+      },
+      "id": "send-email",
+      "name": "Enviar Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Toda Segunda 9h": {
+      "main": [
+        [
+          {
+            "node": "Gerar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gerar Relatório": {
+      "main": [
+        [
+          {
+            "node": "Enviar Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enviar Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

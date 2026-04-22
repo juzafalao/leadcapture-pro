@@ -1,0 +1,188 @@
+{
+  "name": "LeadCapture - Notificação Lead Quente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-hot",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Lead Hot",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "lead-hot-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "score-check",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-hot",
+      "name": "É Lead Quente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/{{ $env.EVOLUTION_INSTANCE }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $env.DIRECTOR_PHONE }}"
+            },
+            {
+              "name": "textMessage",
+              "value": "={ \"text\": \"🔥 *LEAD QUENTE!*\\n\\n*\" + $json.nome + \"*\\nScore: \" + $json.score + \"\\nCapital: R$ \" + $json.capital + \"\\nRegião: \" + ($json.regiao || 'Não informado') + \"\\n\\nAcesse o dashboard agora!\" }"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-whatsapp",
+      "name": "Enviar WhatsApp Diretor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [750, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "🔥 Lead Quente: {{ $json.nome }} (Score: {{ $json.score }})"
+            },
+            {
+              "name": "blocks",
+              "value": "=[{\"type\": \"section\", \"text\": {\"type\": \"mrkdwn\", \"text\": \"🔥 *LEAD QUENTE DETECTADO!*\\n\\n*Nome:* {{ $json.nome }}\\n*Score:* {{ $json.score }}\\n*Capital:* R$ {{ $json.capital }}\\n*Região:* {{ $json.regiao || 'Não informado' }}\\n*Fonte:* {{ $json.fonte }}\"}}]"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-slack",
+      "name": "Notificar Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": true, \"message\": \"Lead processado\" }",
+        "options": {}
+      },
+      "id": "respond-webhook",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Lead Hot": {
+      "main": [
+        [
+          {
+            "node": "É Lead Quente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Lead Quente?": {
+      "main": [
+        [
+          {
+            "node": "Enviar WhatsApp Diretor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar WhatsApp Diretor": {
+      "main": [
+        [
+          {
+            "node": "Notificar Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notificar Slack": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "leadcapture",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "notifications",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2024-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

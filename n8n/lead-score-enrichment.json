@@ -1,0 +1,224 @@
+{
+  "name": "LeadCapture - Enriquecimento de Score",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-enrich",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Enriquecimento",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.invertexto.com/v1/cnpj",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "={{ $env.INVERTEXTO_TOKEN }}"
+            },
+            {
+              "name": "cnpj",
+              "value": "={{ $json.documento }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "check-cnpj",
+      "name": "Consultar CNPJ",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.linkedin.com/v2/people",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-linkedin",
+      "name": "Consultar LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combinationMode": "mergeByPosition",
+        "options": {}
+      },
+      "id": "merge-data",
+      "name": "Mesclar Dados",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 2.1,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calcula score enriquecido\nconst lead = $input.all()[0].json;\nconst cnpjData = $input.all()[1]?.json || {};\nconst linkedinData = $input.all()[2]?.json || {};\n\nlet enrichedScore = lead.score || 50;\n\n// Bônus por empresa ativa\nif (cnpjData.situacao === 'ATIVA') {\n  enrichedScore += 5;\n}\n\n// Bônus por capital social\nif (cnpjData.capital_social) {\n  const capital = parseFloat(cnpjData.capital_social);\n  if (capital >= 100000) enrichedScore += 5;\n  if (capital >= 500000) enrichedScore += 10;\n}\n\n// Bônus por LinkedIn\nif (linkedinData.id) {\n  enrichedScore += 5;\n}\n\n// Limita a 100\nenrichedScore = Math.min(enrichedScore, 100);\n\nreturn {\n  leadId: lead.leadId,\n  originalScore: lead.score,\n  enrichedScore: enrichedScore,\n  categoria: enrichedScore >= 80 ? 'hot' : enrichedScore >= 60 ? 'warm' : 'cold',\n  empresa: cnpjData.razao_social || null,\n  capitalSocial: cnpjData.capital_social || null,\n  hasLinkedIn: !!linkedinData.id\n};"
+      },
+      "id": "calculate-score",
+      "name": "Calcular Score Enriquecido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1000, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.API_URL }}/api/leads/{{ $json.leadId }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "score",
+              "value": "={{ $json.enrichedScore }}"
+            },
+            {
+              "name": "categoria",
+              "value": "={{ $json.categoria }}"
+            },
+            {
+              "name": "empresa",
+              "value": "={{ $json.empresa }}"
+            },
+            {
+              "name": "enriched_at",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "id": "update-lead",
+      "name": "Atualizar Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "respond",
+      "name": "Responder",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1500, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Enriquecimento": {
+      "main": [
+        [
+          {
+            "node": "Consultar CNPJ",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Consultar LinkedIn",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar CNPJ": {
+      "main": [
+        [
+          {
+            "node": "Mesclar Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar LinkedIn": {
+      "main": [
+        [
+          {
+            "node": "Mesclar Dados",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Mesclar Dados": {
+      "main": [
+        [
+          {
+            "node": "Calcular Score Enriquecido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Score Enriquecido": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Atualizar Lead": {
+      "main": [
+        [
+          {
+            "node": "Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "leadcapture",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "enrichment",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "name": "LeadCapture Pro - Novo Lead",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook/leads",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "lead-webhook"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Processa dados do lead\nconst lead = $input.all()[0].json.body;\n\n// Calcula score baseado no capital\nconst capital = parseFloat(lead.capital_disponivel) || 0;\nlet score = 50;\nif (capital >= 500000) score = 95;\nelse if (capital >= 300000) score = 90;\nelse if (capital >= 200000) score = 80;\nelse if (capital >= 150000) score = 70;\nelse if (capital >= 100000) score = 60;\n\n// Determina categoria\nconst categoria = score >= 80 ? 'hot' : score >= 60 ? 'warm' : 'cold';\n\n// Enriquece com dados calculados\nreturn {
+  json: {
+    ...lead,
+    score,
+    categoria,
+    processado_em: new Date().toISOString(),
+    prioridade: categoria === 'hot' ? 'urgente' : categoria === 'warm' ? 'alta' : 'normal'
+  }
+};"
+      },
+      "id": "process-lead",
+      "name": "Processar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.categoria }}",
+              "value2": "hot"
+            }
+          ]
+        }
+      },
+      "id": "if-hot",
+      "name": "É Lead Quente?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "content": "### 🔥 NOVO LEAD QUENTE!\n\n**Nome:** {{ $json.nome }}\n**Email:** {{ $json.email }}\n**Telefone:** {{ $json.telefone }}\n**Capital:** R$ {{ $json.capital_disponivel }}\n**Score:** {{ $json.score }}/100\n**Categoria:** {{ $json.categoria }}\n\n_Acesse o dashboard para mais detalhes._",
+        "additionalFields": {}
+      },
+      "id": "slack-hot",
+      "name": "Notificar Slack (Hot)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.evolution-api.com/message/sendText/lead-pro",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "{{ $credentials.evolutionApiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "{{ $json.telefone }}"
+            },
+            {
+              "name": "textMessage",
+              "value": "{ \"text\": \"Olá {{ $json.nome }}! 👋 Recebemos seu interesse. Em breve entraremos em contato!\" }"
+            }
+          ]
+        }
+      },
+      "id": "whatsapp-welcome",
+      "name": "WhatsApp Boas-vindas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "resource": "lead",
+        "additionalFields": {}
+      },
+      "id": "crm-integration",
+      "name": "Sincronizar CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Lead": {
+      "main": [
+        [
+          {
+            "node": "Processar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar Lead": {
+      "main": [
+        [
+          {
+            "node": "É Lead Quente?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "É Lead Quente?": {
+      "main": [
+        [
+          {
+            "node": "Notificar Slack (Hot)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "WhatsApp Boas-vindas",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WhatsApp Boas-vindas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-01T00:00:00.000Z",
+  "versionId": "1"
+}

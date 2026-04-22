@@ -1,0 +1,140 @@
+{
+  "name": "LeadCapture Pro - Follow-up Automático",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Diariamente 9h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 100,
+        "additionalFields": {
+          "filters": "status=eq.novo,created_at=lt.now()-interval '48 hours'"
+        }
+      },
+      "id": "get-stale-leads",
+      "name": "Buscar Leads Parados",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.length }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "if-has-leads",
+      "name": "Tem Leads?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "content": "### ⚠️ Leads sem atendimento\n\nExistem **{{ $json.length }}** leads aguardando contato há mais de 48h.\n\nAcesse o dashboard para visualizar e atribuir.",
+        "additionalFields": {}
+      },
+      "id": "notify-team",
+      "name": "Notificar Equipe",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.evolution-api.com/message/sendText/lead-pro",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "{{ $env.EVOLUTION_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "{{ $json.telefone }}"
+            },
+            {
+              "name": "textMessage",
+              "value": "{ \"text\": \"Oi {{ $json.nome }}! 👋 Ainda tem interesse? Estamos aguardando seu retorno!\" }"
+            }
+          ]
+        }
+      },
+      "id": "followup-whatsapp",
+      "name": "Follow-up WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Diariamente 9h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Leads Parados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Leads Parados": {
+      "main": [
+        [
+          {
+            "node": "Tem Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem Leads?": {
+      "main": [
+        [
+          {
+            "node": "Notificar Equipe",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Follow-up WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

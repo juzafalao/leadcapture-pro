@@ -1,0 +1,173 @@
+{
+  "name": "LeadCapture Pro - Lead Frio Reativação",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "daysInterval": 3
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "A cada 3 dias",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://sua-api.supabase.co/rest/v1/leads?select=*&categoria=eq.cold&last_contact=lt.now()-interval '7 days'",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_SERVICE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        }
+      },
+      "id": "get-cold-leads",
+      "name": "Buscar Leads Frios",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "splitInBatches",
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "batch-leads",
+      "name": "Processar em Lotes",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.evolution-api.com/message/sendText/lead-pro",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "{{ $env.EVOLUTION_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "{{ $json.telefone }}"
+            },
+            {
+              "name": "textMessage",
+              "value": "{ \"text\": \"Oi {{ $json.nome }}! 👋 Faz um tempo que não conversamos. Ainda tem interesse em abrir sua franquia? Temos novidades! 🚀\" }"
+            }
+          ]
+        }
+      },
+      "id": "reactivate-whatsapp",
+      "name": "Reativar via WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://sua-api.supabase.co/rest/v1/leads?id=eq.{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "{{ $env.SUPABASE_SERVICE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "last_contact",
+              "value": "{{ $now }}"
+            },
+            {
+              "name": "reativation_count",
+              "value": "{{ $json.reativation_count + 1 }}"
+            }
+          ]
+        }
+      },
+      "id": "update-lead",
+      "name": "Atualizar Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "A cada 3 dias": {
+      "main": [
+        [
+          {
+            "node": "Buscar Leads Frios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Leads Frios": {
+      "main": [
+        [
+          {
+            "node": "Processar em Lotes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Processar em Lotes": {
+      "main": [
+        [
+          {
+            "node": "Reativar via WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reativar via WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Atualizar Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

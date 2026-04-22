@@ -1,0 +1,162 @@
+{
+  "name": "LeadCapture - Relatório Diário",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Todo dia 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.API_URL }}/api/leads/stats/daily",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "tenant_id",
+              "value": "all"
+            }
+          ]
+        }
+      },
+      "id": "get-stats",
+      "name": "Buscar Estatísticas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const stats = $input.all()[0].json;\n\nconst report = {\n  date: new Date().toLocaleDateString('pt-BR'),\n  totalLeads: stats.total || 0,\n  hotLeads: stats.hot || 0,\n  warmLeads: stats.warm || 0,\n  coldLeads: stats.cold || 0,\n  totalCapital: stats.capital || 0,\n  conversions: stats.conversions || 0,\n  topConsultants: stats.topConsultants || []\n};\n\nconst message = `📊 *RELATÓRIO DIÁRIO - LeadCapture Pro*\n📅 ${report.date}\n\n📈 *Métricas do Dia:*\n• Total de Leads: ${report.totalLeads}\n• 🔥 Hot: ${report.hotLeads}\n• 🌤️ Warm: ${report.warmLeads}\n• ❄️ Cold: ${report.coldLeads}\n\n💰 *Capital Total:* R$ ${report.totalCapital.toLocaleString('pt-BR')}\n✅ *Conversões:* ${report.conversions}\n\n🏆 *Top Consultores:*\n${report.topConsultants.map((c, i) => `${i + 1}. ${c.nome} - ${c.leads} leads`).join('\\n')}\n\n_Acesse o dashboard para mais detalhes._`;\n\nreturn { message, stats: report };"
+      },
+      "id": "format-report",
+      "name": "Formatar Relatório",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [750, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SLACK_WEBHOOK_URL }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        }
+      },
+      "id": "send-slack",
+      "name": "Enviar Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.EVOLUTION_API_URL }}/message/sendText/{{ $env.EVOLUTION_INSTANCE }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.EVOLUTION_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $env.ADMIN_PHONE }}"
+            },
+            {
+              "name": "textMessage",
+              "value": "={ \"text\": \"{{ $json.message }}\" }"
+            }
+          ]
+        }
+      },
+      "id": "send-whatsapp",
+      "name": "Enviar WhatsApp Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1000, 400]
+    }
+  ],
+  "connections": {
+    "Todo dia 8h": {
+      "main": [
+        [
+          {
+            "node": "Buscar Estatísticas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Estatísticas": {
+      "main": [
+        [
+          {
+            "node": "Formatar Relatório",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatar Relatório": {
+      "main": [
+        [
+          {
+            "node": "Enviar Slack",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Enviar WhatsApp Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "leadcapture",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "name": "scheduled",
+      "createdAt": "2024-01-01T00:00:00.000Z"
+    }
+  ]
+}
