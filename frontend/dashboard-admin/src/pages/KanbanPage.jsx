@@ -1,5 +1,5 @@
 // KanbanPage -- Funil de Vendas
-// Paleta: #0F172A fundo, #10B981 ativo, cards elegantes
+// Cards: Nome, Score, Contato, Consultor -- padrao LeadCapture Pro
 import { useState, useRef, memo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
@@ -17,133 +17,141 @@ const fmtCapital = (v) => {
 }
 
 const CAT = {
-  hot:  { cor: '#EF4444', bg: 'bg-red-500/10',    ring: 'ring-red-500/30',    label: 'HOT' },
-  warm: { cor: '#F59E0B', bg: 'bg-amber-500/10',  ring: 'ring-amber-500/30',  label: 'WARM' },
-  cold: { cor: '#6B7280', bg: 'bg-gray-500/10',   ring: 'ring-gray-500/20',   label: 'COLD' },
+  hot:  { cor: '#EF4444', bg: 'bg-red-500/10',   ring: 'ring-red-500/30',   label: 'HOT'  },
+  warm: { cor: '#F59E0B', bg: 'bg-amber-500/10', ring: 'ring-amber-500/30', label: 'WARM' },
+  cold: { cor: '#6B7280', bg: 'bg-gray-500/10',  ring: 'ring-gray-500/20',  label: 'COLD' },
 }
 
-//  Card do lead 
+// Card do lead -- nome, score, contato, consultor
 const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragEnd, onClick }) {
-  const cat = CAT[lead.categoria] || CAT.cold
-  const cap = fmtCapital(lead.capital_disponivel)
+  const cat   = CAT[(lead.categoria || 'cold').toLowerCase()] || CAT.cold
+  const cap   = fmtCapital(lead.capital_disponivel)
+  const score = lead.score ?? 0
+  const corScore = score >= 80 ? '#EF4444' : score >= 60 ? '#F59E0B' : '#6B7280'
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: isDragging ? 0.5 : 1, y: 0, scale: isDragging ? 1.02 : 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.15 }}
+    <div
       draggable
       onDragStart={(e) => onDragStart(e, lead)}
       onDragEnd={onDragEnd}
       onClick={() => onClick(lead)}
       className={`
-        relative bg-[#0F172A] border border-white/[0.07] rounded-2xl p-3.5
-        cursor-grab active:cursor-grabbing select-none
-        hover:border-white/20 hover:shadow-xl hover:shadow-black/40
-        transition-all duration-150
-        ${isDragging ? 'opacity-50' : ''}
+        relative rounded-2xl p-3.5 cursor-grab active:cursor-grabbing select-none
+        border transition-all duration-150 group
+        ${isDragging
+          ? 'opacity-40 scale-95 border-[#10B981]/40 bg-[#10B981]/5'
+          : 'bg-white/[0.03] border-white/[0.07] hover:border-white/[0.18] hover:bg-white/[0.06] hover:shadow-lg hover:shadow-black/30'
+        }
       `}
     >
-      {/* Badge categoria -- canto superior direito */}
-      <span className={`
-        absolute top-3 right-3 text-[8px] font-black uppercase tracking-wider
-        px-1.5 py-0.5 rounded-full ${cat.bg} ring-1 ${cat.ring}
-      `} style={{ color: cat.cor }}>
-        {cat.label}
-      </span>
+      {/* Linha de cor da categoria no topo */}
+      <div className="absolute top-0 left-4 right-4 h-[2px] rounded-full opacity-60"
+        style={{ background: cat.cor }} />
 
-      {/* Nome */}
-      <p className="text-white text-[12px] font-bold leading-tight pr-12 mb-2.5 truncate">
-        {lead.nome}
-      </p>
+      {/* Header: nome + badge */}
+      <div className="flex items-start justify-between gap-2 mt-1 mb-2.5">
+        <p className="text-white text-[12px] font-bold leading-tight truncate flex-1">
+          {lead.nome}
+        </p>
+        <span className={`shrink-0 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${cat.bg} ring-1 ${cat.ring}`}
+          style={{ color: cat.cor }}>
+          {cat.label}
+        </span>
+      </div>
 
       {/* Score bar */}
       <div className="mb-3">
         <div className="flex items-center justify-between mb-1">
           <span className="text-[9px] font-black uppercase tracking-wider text-gray-600">Score</span>
-          <span className="text-[10px] font-black tabular-nums" style={{ color: cat.cor }}>
-            {lead.score ?? 0}
-          </span>
+          <span className="text-[10px] font-black tabular-nums" style={{ color: corScore }}>{score}</span>
         </div>
-        <div className="h-[3px] bg-white/5 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full"
-            style={{ width: `${Math.min(lead.score ?? 0, 100)}%`, background: cat.cor }}
-          />
+        <div className="h-[2px] bg-white/[0.06] rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all"
+            style={{ width: `${Math.min(score, 100)}%`, background: corScore }} />
         </div>
       </div>
 
-      {/* Footer: marca + capital */}
-      <div className="flex items-center justify-between gap-2">
-        {lead.marca ? (
-          <span className="text-[10px] text-gray-600 truncate flex items-center gap-1">
-            <span>{lead.marca.emoji}</span>
-            <span className="truncate">{lead.marca.nome}</span>
-          </span>
-        ) : (
-          <span className="text-[10px] text-gray-700 truncate">
-            {lead.regiao_interesse || lead.fonte || ''}
-          </span>
-        )}
-        {cap && (
-          <span className="text-[10px] font-black text-[#10B981] shrink-0 tabular-nums">
-            {cap}
-          </span>
-        )}
-      </div>
-
-      {/* Operador atribuido */}
-      {lead.operador && (
-        <div className="mt-2 pt-2 border-t border-white/[0.05] flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded-full bg-[#10B981]/20 flex items-center justify-center text-[9px]">
-            {lead.operador.nome?.charAt(0)}
-          </div>
-          <span className="text-[9px] text-gray-600 truncate">{lead.operador.nome}</span>
+      {/* Contato */}
+      {(lead.email || lead.telefone) && (
+        <div className="mb-2.5 space-y-0.5">
+          {lead.email && (
+            <p className="text-[10px] text-gray-500 truncate">{lead.email}</p>
+          )}
+          {lead.telefone && (
+            <p className="text-[10px] text-gray-600">{lead.telefone}</p>
+          )}
         </div>
       )}
-    </motion.div>
+
+      {/* Footer: capital + consultor */}
+      <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.05]">
+        {/* Consultor */}
+        {lead.operador ? (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="w-5 h-5 rounded-full bg-[#10B981]/20 flex items-center justify-center text-[9px] font-black text-[#10B981] shrink-0">
+              {lead.operador.nome?.charAt(0)}
+            </div>
+            <span className="text-[10px] text-gray-500 truncate">{lead.operador.nome?.split(' ')[0]}</span>
+          </div>
+        ) : (
+          <span className="text-[9px] text-gray-700 italic">sem consultor</span>
+        )}
+
+        {/* Capital */}
+        {cap && (
+          <span className="text-[10px] font-black text-[#10B981] shrink-0 tabular-nums">{cap}</span>
+        )}
+      </div>
+    </div>
   )
 })
 
-//  Coluna 
+// Coluna
 const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDragStart, onDragEnd, onDrop, onLeadClick }) {
   const isOver = dragOver === coluna.slug
   const hot    = leads.filter(l => l.categoria === 'hot').length
+  const capital = leads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
+  const fmtK   = (v) => v >= 1_000_000 ? `R$${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `R$${(v/1_000).toFixed(0)}K` : `R$${Math.round(v)}`
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
+      {/* Header da coluna */}
       <div className={`
         flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl
-        bg-[#0B1220] border transition-colors duration-150
-        ${isOver ? 'border-[#10B981]/40 bg-[#10B981]/5' : 'border-white/[0.06]'}
+        border transition-colors duration-150
+        ${isOver ? 'border-[#10B981]/40 bg-[#10B981]/5' : 'bg-[#0B1220] border-white/[0.06]'}
       `}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="w-2 h-2 rounded-full shrink-0" style={{ background: coluna.cor }} />
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-300">
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-300 truncate">
             {coluna.label}
           </span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           {hot > 0 && (
             <span className="text-[9px] font-black text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded-full">
-              {hot} HOT
+              {hot}H
             </span>
           )}
-          <span className="text-[10px] font-black text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
+          <span className="text-[9px] font-black text-gray-600 bg-white/[0.05] px-2 py-0.5 rounded-full tabular-nums">
             {leads.length}
           </span>
         </div>
       </div>
+
+      {/* Capital total da coluna */}
+      {capital > 0 && (
+        <p className="text-[9px] font-black text-[#10B981]/60 text-center mb-2 tabular-nums">
+          {fmtK(capital)}
+        </p>
+      )}
 
       {/* Drop zone */}
       <div
         className={`
           flex-1 rounded-xl p-1.5 space-y-2 min-h-[80px]
           transition-all duration-150
-          ${isOver ? 'bg-[#10B981]/5 ring-1 ring-dashed ring-[#10B981]/30' : ''}
+          ${isOver ? 'bg-[#10B981]/[0.03] ring-1 ring-dashed ring-[#10B981]/30' : ''}
         `}
         onDragOver={(e) => { e.preventDefault(); onDrop('over', coluna.slug) }}
         onDragLeave={() => onDrop('leave', coluna.slug)}
@@ -162,7 +170,7 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
           ))}
         </AnimatePresence>
         {leads.length === 0 && !isOver && (
-          <div className="h-12 flex items-center justify-center">
+          <div className="h-16 flex items-center justify-center rounded-xl border border-dashed border-white/[0.05]">
             <p className="text-[9px] text-gray-700 uppercase tracking-wider">Vazio</p>
           </div>
         )}
@@ -171,7 +179,7 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
   )
 })
 
-//  KanbanPage 
+// KanbanPage principal
 export default function KanbanPage() {
   const { usuario } = useAuth()
   const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
@@ -181,13 +189,16 @@ export default function KanbanPage() {
   const [lead,       setLead]       = useState(null)
   const dragRef = useRef(null)
 
-  const { data: colunas = COLUNAS_PADRAO }   = useStatusColunas(tenantId)
-  const { data: kanban = {}, isLoading }      = useKanbanLeads({ tenantId, colunas })
-  const { mutateAsync: mover }                = useMoverLead()
+  const { data: colunas = COLUNAS_PADRAO }  = useStatusColunas(tenantId)
+  const { data: kanban = {}, isLoading }    = useKanbanLeads({ tenantId, colunas })
+  const { mutateAsync: mover }              = useMoverLead()
 
   const totalLeads = Object.values(kanban).reduce((a, b) => a + b.length, 0)
   const totalConv  = kanban['convertido']?.length ?? 0
+  const totalHot   = Object.values(kanban).flat().filter(l => l.categoria === 'hot').length
   const txConv     = totalLeads > 0 ? Math.round((totalConv / totalLeads) * 100) : 0
+  const totalCap   = Object.values(kanban).flat().reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
+  const fmtK       = (v) => v >= 1_000_000 ? `R$${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `R$${(v/1_000).toFixed(0)}K` : `R$${Math.round(v)}`
 
   const onDragStart = useCallback((e, l) => {
     dragRef.current = l
@@ -227,36 +238,41 @@ export default function KanbanPage() {
   return (
     <div className="flex flex-col h-full bg-[#0F172A]">
 
-      {/* Header compacto */}
-      <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-4 border-b border-white/[0.05] flex items-center justify-between flex-wrap gap-3 shrink-0">
-        <div>
-          <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
-            Funil de <span className="text-[#10B981] font-bold">Vendas</span>
-          </h1>
-          <p className="text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] mt-0.5">
-            {colunas.length} etapas  pipeline em tempo real
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {[
-            { label: 'Total',      value: totalLeads, cor: 'text-white',      border: 'border-white/[0.06]' },
-            { label: 'Convertidos',value: totalConv,  cor: 'text-[#10B981]', border: 'border-[#10B981]/20' },
-            { label: 'Conversao',  value: `${txConv}%`,cor: 'text-gray-300', border: 'border-white/[0.06]' },
-          ].map(kpi => (
-            <div key={kpi.label} className={`bg-[#0B1220] border ${kpi.border} rounded-xl px-3.5 py-2 text-center min-w-[64px]`}>
-              <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-0.5">{kpi.label}</p>
-              <p className={`text-lg font-black tabular-nums ${kpi.cor}`}>{kpi.value}</p>
-            </div>
-          ))}
+      {/* Header -- padrao Analytics */}
+      <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-4 border-b border-white/[0.05] shrink-0">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
+              Funil de <span className="text-[#10B981] font-bold">Vendas</span>
+            </h1>
+            <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
+            <p className="text-[11px] text-gray-500">Arraste os cards para mover entre etapas</p>
+          </div>
+
+          {/* KPIs */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { label: 'Total',       value: totalLeads,      cor: 'text-white',      border: 'border-white/[0.06]' },
+              { label: 'Hot',         value: totalHot,        cor: 'text-red-400',    border: 'border-red-500/20'   },
+              { label: 'Convertidos', value: totalConv,       cor: 'text-[#10B981]',  border: 'border-[#10B981]/20' },
+              { label: 'Conversao',   value: `${txConv}%`,    cor: 'text-gray-300',   border: 'border-white/[0.06]' },
+              { label: 'Capital',     value: fmtK(totalCap),  cor: 'text-[#10B981]',  border: 'border-[#10B981]/20' },
+            ].map(kpi => (
+              <div key={kpi.label} className={`bg-[#0B1220] border ${kpi.border} rounded-xl px-3.5 py-2 text-center min-w-[64px]`}>
+                <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-0.5">{kpi.label}</p>
+                <p className={`text-base font-black tabular-nums ${kpi.cor}`}>{kpi.value}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Board com scroll horizontal */}
+      {/* Board */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
-        <div className="flex gap-3 h-full px-6 lg:px-8 py-4"
-          style={{ minWidth: `${Math.max(colunas.length * 220, 800)}px` }}>
+        <div className="flex gap-3 h-full px-4 lg:px-8 py-4"
+          style={{ minWidth: `${Math.max(colunas.length * 224, 800)}px` }}>
           {colunas.map(col => (
-            <div key={col.slug} className="flex flex-col shrink-0" style={{ width: '210px' }}>
+            <div key={col.slug} className="flex flex-col shrink-0" style={{ width: '212px' }}>
               <Coluna
                 coluna={col}
                 leads={kanban[col.slug] ?? []}
