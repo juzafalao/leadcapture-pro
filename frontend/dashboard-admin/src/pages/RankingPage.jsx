@@ -395,8 +395,8 @@ export default function RankingPage() {
             <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
               Ranking de <span className="text-[#10B981] font-bold">Vendas</span>
             </h1>
-            <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
-            <p className="text-[11px] text-gray-500">
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full mb-2" />
+            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
               {MESES[periodo.mes-1]} {periodo.ano}  comissoes e metas
             </p>
           </div>

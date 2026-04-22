@@ -178,15 +178,15 @@ export default function UsuariosPage() {
             <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
               Gestao de <span className="text-[#10B981] font-bold">Time</span>
             </h1>
-            <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
-            <p className="text-[11px] text-gray-500">Usuarios, perfis e permissoes</p>
+            <div className="w-16 h-0.5 bg-[#10B981] rounded-full mb-2" />
+            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">Usuarios, perfis e permissoes</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-center">
+            <div className="bg-[#0F172A] border border-white/5 rounded-2xl px-4 py-3 text-center">
               <p className="text-[9px] text-gray-600 font-black uppercase tracking-wider">Ativos</p>
               <p className="text-xl font-black text-[#10B981]">{ativos}</p>
             </div>
-            <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-center">
+            <div className="bg-[#0F172A] border border-white/5 rounded-2xl px-4 py-3 text-center">
               <p className="text-[9px] text-gray-600 font-black uppercase tracking-wider">Total</p>
               <p className="text-xl font-black text-white">{usuarios.length}</p>
             </div>

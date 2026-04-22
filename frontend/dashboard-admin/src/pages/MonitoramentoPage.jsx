@@ -247,7 +247,7 @@ export default function MonitoramentoPage() {
                               )}
                             </div>
                             {log.lead && (
-                              <p className="text-[11px] text-gray-500 truncate">
+                              <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] truncate">
                                 {log.lead.nome} · score {log.lead.score} · {log.lead.categoria?.toUpperCase()}
                               </p>
                             )}

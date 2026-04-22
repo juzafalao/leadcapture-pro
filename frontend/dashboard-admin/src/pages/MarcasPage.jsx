@@ -137,11 +137,11 @@ export default function MarcasPage() {
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
             Gestao de <span className="text-[#10B981] font-bold">Marcas</span>
           </h1>
-          <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
-          <p className="text-[11px] text-gray-500">Franquias e marcas cadastradas no sistema</p>
+          <div className="w-16 h-0.5 bg-[#10B981] rounded-full mb-2" />
+          <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">Franquias e marcas cadastradas no sistema</p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#0B1220] border border-white/[0.06] rounded-xl px-4 py-2.5 text-center">
+          <div className="bg-[#0F172A] border border-white/5 rounded-2xl px-4 py-3 text-center">
             <p className="text-[9px] font-black uppercase tracking-wider text-gray-600">Total</p>
             <p className="text-xl font-black text-white">{marcas.length}</p>
           </div>
@@ -211,7 +211,7 @@ export default function MarcasPage() {
                     className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-white disabled:opacity-30 transition-all">
                     Anterior
                   </button>
-                  <span className="px-3 py-1.5 text-[11px] text-gray-500">{page} / {totalPages}</span>
+                  <span className="px-3 py-1.5 text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">{page} / {totalPages}</span>
                   <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page >= totalPages}
                     className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-white disabled:opacity-30 transition-all">
                     Proxima

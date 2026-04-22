@@ -288,8 +288,8 @@ export default function DashboardPage() {
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
             Pipeline de <span className="text-[#10B981] font-bold">Leads</span>
           </h1>
-          <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
-          <p className="text-[11px] text-gray-500">Captacao e qualificacao em tempo real</p>
+          <div className="w-16 h-0.5 bg-[#10B981] rounded-full mb-2" />
+          <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">Captacao e qualificacao em tempo real</p>
         </div>
       </div>
 
@@ -405,7 +405,7 @@ export default function DashboardPage() {
                   className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-white disabled:opacity-30 transition-all">
                   Anterior
                 </button>
-                <span className="px-3 py-1.5 text-[11px] text-gray-500 tabular-nums">{page} / {totalPages}</span>
+                <span className="px-3 py-1.5 text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em] tabular-nums">{page} / {totalPages}</span>
                 <button onClick={() => setPage(p => Math.min(totalPages, p+1))} disabled={page >= totalPages}
                   className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-white disabled:opacity-30 transition-all">
                   Proxima
