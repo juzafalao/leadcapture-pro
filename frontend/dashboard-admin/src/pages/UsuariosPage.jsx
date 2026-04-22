@@ -170,7 +170,7 @@ export default function UsuariosPage() {
   const inativos = usuarios.length - ativos
 
   return (
-    <div className="flex flex-col min-h-full bg-[#0F172A]">
+    <div className="flex flex-col min-h-full bg-[#0B1220]">
 
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-5 border-b border-white/[0.06]">
         <div className="flex items-start justify-between flex-wrap gap-4">

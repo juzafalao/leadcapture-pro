@@ -114,7 +114,7 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
   const fmtK   = (v) => v >= 1_000_000 ? `R$${(v/1_000_000).toFixed(1)}M` : v >= 1_000 ? `R$${(v/1_000).toFixed(0)}K` : `R$${Math.round(v)}`
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#0B1220]">
       {/* Header da coluna */}
       <div className={`
         flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl
@@ -236,7 +236,7 @@ export default function KanbanPage() {
   )
 
   return (
-    <div className="flex flex-col h-full bg-[#0F172A]">
+    <div className="flex flex-col h-full bg-[#0B1220]">
 
       {/* Header -- padrao Analytics */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-4 border-b border-white/[0.05] shrink-0">

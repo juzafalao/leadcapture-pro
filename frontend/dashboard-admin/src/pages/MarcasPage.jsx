@@ -128,7 +128,7 @@ export default function MarcasPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-[#0B1220]">
       {alertModal}
 
       {/* Header */}
