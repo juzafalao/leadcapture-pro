@@ -1,7 +1,11 @@
 export function isEmailValido(email) {
   if (!email || typeof email !== 'string') return false
   const trimmed = email.trim()
-  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmed) && trimmed.length <= 255
+  if (trimmed.length > 255) return false
+  const [localPart, domainPart] = trimmed.split('@')
+  if (!localPart || !domainPart) return false
+  if (localPart.includes('..') || domainPart.includes('..')) return false
+  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$/.test(trimmed)
 }
 
 export function isTelefoneValido(telefone) {
@@ -84,8 +88,8 @@ export function validarSlug(slug) {
   if (!slug || typeof slug !== 'string') return { valido: false, erro: 'Slug obrigatório' }
   const t = slug.trim()
   if (t.length < 2 || t.length > 100) return { valido: false, erro: '2-100 caracteres' }
-  if (!/^[a-zA-Z0-9_-]+$/.test(t)) return { valido: false, erro: 'Caracteres inválidos' }
-  if (t.startsWith('-') || t.endsWith('-')) return { valido: false, erro: 'Não pode - no início/fim' }
+  if (!/^[a-zA-Z0-9_-]+$/.test(t)) return { valido: false, erro: 'Apenas letras, números, hífens e underscores são permitidos' }
+  if (t.startsWith('-') || t.endsWith('-')) return { valido: false, erro: 'Não pode iniciar ou terminar com hífen' }
   return { valido: true }
 }
 
@@ -94,9 +98,9 @@ export function isUUIDValido(uuid) {
 }
 
 export function sanitizarObjeto(obj, campos) {
-  const r = {}
-  for (const c of campos) {
-    if (Object.prototype.hasOwnProperty.call(obj, c)) r[c] = obj[c]
+  const result = {}
+  for (const campo of campos) {
+    if (Object.prototype.hasOwnProperty.call(obj, campo)) result[campo] = obj[campo]
   }
-  return r
+  return result
 }

@@ -8,6 +8,10 @@ import { retryWithBackoff } from '../core/retry.js'
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080'
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || ''
 const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'lead-pro'
+const WHATSAPP_MESSAGE_TIMEOUT_MS = 15000
+const WHATSAPP_CONNECTION_TIMEOUT_MS = 5000
+const CONNECTION_CACHE_TTL_MS = 30000
+const CONNECTED_STATES = new Set(['open', 'connected'])
 
 let cache = { conectado: false, lastCheck: 0, data: null }
 
@@ -41,8 +45,8 @@ export async function enviarMensagem(telefone, mensagem) {
 
   try {
     const data = await retryWithBackoff(async () => {
-      const c = new AbortController()
-      const t = setTimeout(() => c.abort(), 15000)
+      const abortController = new AbortController()
+      const timeoutId = setTimeout(() => abortController.abort(), WHATSAPP_MESSAGE_TIMEOUT_MS)
       const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: EVOLUTION_API_KEY },
@@ -51,9 +55,9 @@ export async function enviarMensagem(telefone, mensagem) {
           textMessage: { text: mensagem },
           options: { delay: 1200 },
         }),
-        signal: c.signal,
+        signal: abortController.signal,
       })
-      clearTimeout(t)
+      clearTimeout(timeoutId)
       const result = await response.json()
       if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`)
       return result
@@ -85,7 +89,7 @@ export async function enviarBoasVindas(lead, marca) {
  */
 export async function verificarConexao() {
   const agora = Date.now()
-  if (cache.lastCheck && (agora - cache.lastCheck) < 30000) return cache.data
+  if (cache.data && (agora - cache.lastCheck) < CONNECTION_CACHE_TTL_MS) return cache.data
 
   if (!EVOLUTION_API_KEY) {
     cache = { conectado: false, lastCheck: agora, data: { conectado: false, motivo: 'API não configurada' } }
@@ -93,13 +97,13 @@ export async function verificarConexao() {
   }
 
   try {
-    const c = new AbortController()
-    const t = setTimeout(() => c.abort(), 5000)
+    const abortController = new AbortController()
+    const timeoutId = setTimeout(() => abortController.abort(), WHATSAPP_CONNECTION_TIMEOUT_MS)
     const response = await fetch(`${EVOLUTION_API_URL}/instance/fetchInstances`, {
       headers: { apikey: EVOLUTION_API_KEY },
-      signal: c.signal,
+      signal: abortController.signal,
     })
-    clearTimeout(t)
+    clearTimeout(timeoutId)
     if (!response.ok) {
       cache = { conectado: false, lastCheck: agora, data: { conectado: false, motivo: `HTTP ${response.status}` } }
       return cache.data
@@ -116,7 +120,7 @@ export async function verificarConexao() {
     }
 
     const state = instancia.instance?.state || instancia.status || 'unknown'
-    const conectado = state === 'open' || state === 'connected'
+    const conectado = CONNECTED_STATES.has(state)
     cache = { conectado, lastCheck: agora, data: { conectado, instancia: EVOLUTION_INSTANCE, status: state } }
     return cache.data
   } catch (e) {
