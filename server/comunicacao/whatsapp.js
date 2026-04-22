@@ -8,15 +8,24 @@ import { retryWithBackoff } from '../core/retry.js'
 const EVOLUTION_API_URL    = process.env.EVOLUTION_API_URL    || 'http://localhost:8080'
 const EVOLUTION_API_KEY    = process.env.EVOLUTION_API_KEY    || ''
 const EVOLUTION_INSTANCE   = process.env.EVOLUTION_INSTANCE   || 'lead-pro'
+const CONNECTION_CACHE_TTL_MS = Number(process.env.WHATSAPP_STATUS_CACHE_MS || 15000)
+
+const connectionCache = {
+  value: null,
+  expiresAt: 0,
+  inFlight: null,
+}
 
 /**
  * Normaliza telefone para formato internacional (Brasil)
  * @param {string} telefone
  * @returns {string} ex: "5511999998888"
  */
-function normalizarTelefone(telefone) {
-  const digitos = String(telefone).replace(/\D/g, '')
-  return digitos.startsWith('55') ? digitos : `55${digitos}`
+export function normalizarTelefone(telefone) {
+  const digitos = String(telefone ?? '').replace(/\D/g, '')
+  if (!digitos) return ''
+  if (digitos.startsWith('55')) return digitos
+  return `55${digitos}`
 }
 
 /**
@@ -50,7 +59,7 @@ export async function enviarMensagem(telefone, mensagem) {
         }
       )
 
-      const result = await response.json()
+      const result = await parseApiResponse(response)
 
       if (!response.ok) {
         throw new Error(result?.message || `HTTP ${response.status}`)
@@ -92,28 +101,60 @@ export async function verificarConexao() {
     return { conectado: false, motivo: 'EVOLUTION_API_KEY não configurada' }
   }
 
-  try {
-    const response = await fetch(
-      `${EVOLUTION_API_URL}/instance/fetchInstances`,
-      {
-        headers: { 'apikey': EVOLUTION_API_KEY },
-        signal: AbortSignal.timeout(5000),
-      }
-    )
-
-    if (!response.ok) return { conectado: false, motivo: `HTTP ${response.status}` }
-
-    const instancias = await response.json()
-    const instancia  = Array.isArray(instancias)
-      ? instancias.find(i => i.instance?.instanceName === EVOLUTION_INSTANCE)
-      : null
-
-    return {
-      conectado: true,
-      instancia: EVOLUTION_INSTANCE,
-      status: instancia?.instance?.state ?? 'desconhecido',
-    }
-  } catch (err) {
-    return { conectado: false, motivo: err.message }
+  if (Date.now() < connectionCache.expiresAt && connectionCache.value) {
+    return connectionCache.value
   }
+
+  if (connectionCache.inFlight) {
+    return connectionCache.inFlight
+  }
+
+  connectionCache.inFlight = (async () => {
+    try {
+      const response = await fetch(
+        `${EVOLUTION_API_URL}/instance/fetchInstances`,
+        {
+          headers: { 'apikey': EVOLUTION_API_KEY },
+          signal: AbortSignal.timeout(5000),
+        }
+      )
+
+      if (!response.ok) {
+        return cacheConnectionResult({ conectado: false, motivo: `HTTP ${response.status}` })
+      }
+
+      const instancias = await parseApiResponse(response)
+      const instancia  = Array.isArray(instancias)
+        ? instancias.find(i => i.instance?.instanceName === EVOLUTION_INSTANCE)
+        : null
+
+      return cacheConnectionResult({
+        conectado: true,
+        instancia: EVOLUTION_INSTANCE,
+        status: instancia?.instance?.state ?? 'desconhecido',
+      })
+    } catch (err) {
+      return cacheConnectionResult({ conectado: false, motivo: err.message })
+    } finally {
+      connectionCache.inFlight = null
+    }
+  })()
+
+  return connectionCache.inFlight
+}
+
+async function parseApiResponse(response) {
+  const contentType = response.headers.get('content-type') || ''
+  if (contentType.includes('application/json')) {
+    return response.json()
+  }
+
+  const text = await response.text()
+  return text ? { message: text } : {}
+}
+
+function cacheConnectionResult(value) {
+  connectionCache.value = value
+  connectionCache.expiresAt = Date.now() + CONNECTION_CACHE_TTL_MS
+  return value
 }
