@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../components/AuthContext';
@@ -174,10 +174,10 @@ export default function SegmentosPage() {
   }
 
   return (
-    <div className="text-white pb-32">
+    <div className="flex flex-col min-h-full bg-[#0B1220] text-white pb-16">
       
       {/* HEADER */}
-      <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
+      <div className="px-4 lg:px-10 pt-6 lg:pt-8 mb-6">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -189,7 +189,7 @@ export default function SegmentosPage() {
           <div className="flex items-center gap-3">
             <div className="w-16 h-0.5 bg-[#10B981] rounded-full"></div>
             <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
-              {segmentos.length} {segmentos.length === 1 ? 'segmento cadastrado' : 'segmentos cadastrados'}
+              {segmentos.length} {segmentos.length === 1 ? 'segmento no sistema' : 'segmentos no sistema'}
             </p>
           </div>
         </motion.div>
@@ -241,7 +241,7 @@ export default function SegmentosPage() {
           >
             <div className="text-6xl mb-4 opacity-30">🎯</div>
             <p className="text-xl text-gray-400 mb-2">
-              {busca ? 'Nenhum segmento encontrado' : 'Nenhum segmento cadastrado'}
+              {busca ? 'Nenhum segmento encontrado' : 'Nenhum segmento no sistema'}
             </p>
             <p className="text-sm text-gray-600 mb-6">
               {busca ? 'Tente ajustar sua busca' : 'Comece criando seu primeiro segmento!'}

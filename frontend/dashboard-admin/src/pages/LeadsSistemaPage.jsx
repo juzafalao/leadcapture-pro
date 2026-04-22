@@ -407,7 +407,7 @@ export default function LeadsSistemaPage() {
 
   if (erro) {
     return (
-      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center p-4">
+      <div className="min-h-full bg-[#0B1220] bg-[#0F172A] flex items-center justify-center p-4">
         <div className="bg-[#1E293B] border border-red-500/30 rounded-3xl p-8 max-w-md text-center">
           <div className="text-5xl mb-4">&#x26A0;</div>
           <h2 className="text-xl font-bold text-white mb-2">Erro ao carregar</h2>
@@ -424,7 +424,7 @@ export default function LeadsSistemaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0F172A] text-[#F8FAFC] pb-32">
+    <div className="min-h-full bg-[#0B1220] bg-[#0F172A] text-[#F8FAFC] pb-32">
 
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">

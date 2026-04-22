@@ -245,8 +245,10 @@ export default function KanbanPage() {
             <h1 className="text-2xl lg:text-4xl font-light text-white mb-1">
               Funil de <span className="text-[#10B981] font-bold">Vendas</span>
             </h1>
-            <div className="h-0.5 w-12 bg-[#10B981] rounded-full mb-2" />
-            <p className="text-[11px] text-gray-500">Arraste os cards para mover entre etapas</p>
+            <div className="flex items-center gap-3">
+              <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
+              <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">Arraste os cards para mover entre etapas</p>
+            </div>
           </div>
 
           {/* KPIs */}

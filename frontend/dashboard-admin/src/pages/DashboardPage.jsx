@@ -280,7 +280,7 @@ export default function DashboardPage() {
   const podeVerAtribuir = podeAtribuir || role === 'Consultor'
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-[#0B1220]">
 
       {/* Header padrao RelatoriosPage */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 mb-6 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
