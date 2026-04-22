@@ -380,13 +380,13 @@ export default function RankingPage() {
   }
 
   if (!podeVer) return (
-    <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+    <div className="min-h-full bg-[#0B1220] flex items-center justify-center">
       <p className="text-gray-600">Sem permissao de acesso.</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-[#0F172A] pb-16">
+    <div className="min-h-full bg-[#0B1220] pb-16">
 
       {/* Header */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-8 pb-5 border-b border-white/[0.06]">

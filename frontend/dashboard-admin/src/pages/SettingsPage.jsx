@@ -129,7 +129,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="text-white pb-32">
+    <div className="min-h-full bg-[#0B1220] text-white pb-16">
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">

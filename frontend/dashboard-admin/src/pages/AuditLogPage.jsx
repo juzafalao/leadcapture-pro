@@ -61,7 +61,7 @@ export default function AuditLogPage() {
   if (isLoading) return <LoadingSpinner fullScreen={false} />;
 
   return (
-    <div className="text-white pb-32">
+    <div className="min-h-full bg-[#0B1220] text-white pb-16">
       {/* HEADER */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-6 lg:mb-8">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
