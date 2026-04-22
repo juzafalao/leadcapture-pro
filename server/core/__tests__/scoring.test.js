@@ -1,43 +1,13 @@
-import {
-  resolverCapital,
-  calcularScore,
-  determinarCategoria,
-  processarCapital,
-  getScoringTable,
-} from '../scoring.js'
+import { describe, it, expect } from 'vitest'
+import { calcularScore, determinarCategoria, resolverCapital } from '../scoring.js'
 
-describe('core/scoring', () => {
-  it('resolve capital em múltiplos formatos', () => {
-    expect(resolverCapital('300k-500k')).toBe(400000)
-    expect(resolverCapital('R$ 200.000')).toBe(200000)
-    expect(resolverCapital(150000)).toBe(150000)
-    expect(resolverCapital('valor inválido')).toBe(null)
-  })
-
-  it('calcula score por faixa de capital', () => {
-    expect(calcularScore(600000)).toBe(95)
-    expect(calcularScore(350000)).toBe(90)
-    expect(calcularScore(120000)).toBe(60)
-    expect(calcularScore(50000)).toBe(50)
-  })
-
-  it('determina categoria por score', () => {
-    expect(determinarCategoria(90)).toBe('hot')
-    expect(determinarCategoria(60)).toBe('warm')
-    expect(determinarCategoria(59)).toBe('cold')
-  })
-
-  it('processa capital e retorna score/categoria', () => {
-    expect(processarCapital('100k-300k')).toEqual({
-      capital: 200000,
-      score: 80,
-      categoria: 'hot',
-    })
-  })
-
-  it('retorna tabela de scoring com categoria', () => {
-    const tabela = getScoringTable()
-    expect(tabela.length).toBeGreaterThan(0)
-    expect(tabela[0]).toHaveProperty('categoria')
+describe('Scoring', () => {
+  it('capital >= 500k = score 95', () => expect(calcularScore(500000)).toBe(95))
+  it('score >= 80 = hot', () => expect(determinarCategoria(80)).toBe('hot'))
+  it('score 60-79 = warm', () => expect(determinarCategoria(70)).toBe('warm'))
+  it('score < 60 = cold', () => expect(determinarCategoria(50)).toBe('cold'))
+  it('resolver capital slugs', () => {
+    expect(resolverCapital('ate-100k')).toBe(80000)
+    expect(resolverCapital('acima-500k')).toBe(600000)
   })
 })

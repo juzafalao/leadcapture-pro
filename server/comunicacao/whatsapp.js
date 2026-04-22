@@ -5,27 +5,30 @@
 
 import { retryWithBackoff } from '../core/retry.js'
 
-const EVOLUTION_API_URL    = process.env.EVOLUTION_API_URL    || 'http://localhost:8080'
-const EVOLUTION_API_KEY    = process.env.EVOLUTION_API_KEY    || ''
-const EVOLUTION_INSTANCE   = process.env.EVOLUTION_INSTANCE   || 'lead-pro'
-const WHATSAPP_STATUS_CACHE_TTL_MS = Number(process.env.WHATSAPP_STATUS_CACHE_MS || 15000)
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080'
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || ''
+const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'lead-pro'
+const WHATSAPP_MESSAGE_TIMEOUT_MS = 15000
+const WHATSAPP_CONNECTION_TIMEOUT_MS = 5000
+const CONNECTION_CACHE_TTL_MS = 30000
+const CONNECTED_STATES = new Set(['open', 'connected'])
 
-const connectionCache = {
-  value: null,
-  expiresAt: 0,
-  inFlight: null,
-}
+let cache = { conectado: false, lastCheck: 0, data: null }
 
 /**
  * Normaliza telefone para formato internacional (Brasil)
  * @param {string} telefone
- * @returns {string} ex: "5511999998888"
+ * @returns {string}
  */
 export function normalizarTelefone(telefone) {
-  const digitos = String(telefone ?? '').replace(/\D/g, '')
-  if (!digitos) return ''
-  if (digitos.startsWith('55')) return digitos
-  return `55${digitos}`
+  if (!telefone) return ''
+  const digitos = String(telefone).replace(/\D/g, '')
+  return digitos.startsWith('55') ? digitos : `55${digitos}`
+}
+
+export function extrairTelefoneDoJid(jid) {
+  if (!jid) return ''
+  return normalizarTelefone(jid.split('@')[0])
 }
 
 /**
@@ -35,44 +38,35 @@ export function normalizarTelefone(telefone) {
  * @returns {Promise<{ success: boolean, error?: string }>}
  */
 export async function enviarMensagem(telefone, mensagem) {
-  if (!EVOLUTION_API_KEY) {
-    throw new Error('EVOLUTION_API_KEY não configurada. Não é possível enviar mensagens via WhatsApp.')
-  }
-
+  if (!telefone || !mensagem) return { success: false, error: 'Telefone e mensagem obrigatórios' }
+  if (!EVOLUTION_API_KEY) return { success: false, simulated: true, error: 'API não configurada' }
   const numero = normalizarTelefone(telefone)
+  if (numero.length < 12 || numero.length > 13) return { success: false, error: 'Telefone inválido' }
 
   try {
     const data = await retryWithBackoff(async () => {
-      const response = await fetch(
-        `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`,
-        {
-          method:  'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey':        EVOLUTION_API_KEY,
-          },
-          body: JSON.stringify({
-            number:  numero,
-            textMessage: { text: mensagem },
-            options: { delay: 1200 },
-          }),
-        }
-      )
-
-      const result = await parseApiResponse(response)
-
-      if (!response.ok) {
-        throw new Error(result?.message || `HTTP ${response.status}`)
-      }
-
+      const abortController = new AbortController()
+      const timeoutId = setTimeout(() => abortController.abort(), WHATSAPP_MESSAGE_TIMEOUT_MS)
+      const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: EVOLUTION_API_KEY },
+        body: JSON.stringify({
+          number: numero,
+          textMessage: { text: mensagem },
+          options: { delay: 1200 },
+        }),
+        signal: abortController.signal,
+      })
+      clearTimeout(timeoutId)
+      const result = await response.json()
+      if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`)
       return result
     }, { maxRetries: 3, baseDelay: 1000, label: 'WhatsApp' })
 
-    console.log('[Comunicacao/WhatsApp] Mensagem enviada para:', numero)
+    console.log('[WhatsApp] Enviado para:', numero)
     return { success: true, data }
-  } catch (err) {
-    console.error('[Comunicacao/WhatsApp] Falha no envio:', err.message)
-    return { success: false, error: err.message }
+  } catch (e) {
+    return { success: false, error: e.message }
   }
 }
 
@@ -82,79 +76,55 @@ export async function enviarMensagem(telefone, mensagem) {
  * @param {object} marca  - { nome, emoji }
  */
 export async function enviarBoasVindas(lead, marca) {
-  const mensagem = `Olá, ${lead.nome.split(' ')[0]}! 👋
-
-Recebemos seu interesse em *${marca.nome}* ${marca.emoji || ''}
-
-Em breve um de nossos consultores entrará em contato com mais informações.
-
-_LeadCapture Pro · Zafalão Tech_`
-
-  return enviarMensagem(lead.telefone, mensagem)
+  if (!lead?.telefone) return { success: false, error: 'Sem telefone' }
+  const nome = lead.nome?.split(' ')[0] || 'você'
+  return enviarMensagem(
+    lead.telefone,
+    `Olá, ${nome}! 👋\n\nRecebemos seu interesse em *${marca.nome}* ${marca.emoji || ''}\n\nEm breve entraremos em contato.\n\n_LeadCapture Pro_`
+  )
 }
 
 /**
  * Verifica a conectividade com a Evolution API
  */
 export async function verificarConexao() {
+  const agora = Date.now()
+  if (cache.data && (agora - cache.lastCheck) < CONNECTION_CACHE_TTL_MS) return cache.data
+
   if (!EVOLUTION_API_KEY) {
-    return { conectado: false, motivo: 'EVOLUTION_API_KEY não configurada' }
+    cache = { conectado: false, lastCheck: agora, data: { conectado: false, motivo: 'API não configurada' } }
+    return cache.data
   }
 
-  if (Date.now() < connectionCache.expiresAt && connectionCache.value) {
-    return connectionCache.value
-  }
-
-  if (connectionCache.inFlight) {
-    return connectionCache.inFlight
-  }
-
-  connectionCache.inFlight = (async () => {
-    try {
-      const response = await fetch(
-        `${EVOLUTION_API_URL}/instance/fetchInstances`,
-        {
-          headers: { 'apikey': EVOLUTION_API_KEY },
-          signal: AbortSignal.timeout(5000),
-        }
-      )
-
-      if (!response.ok) {
-        return cacheConnectionResult({ conectado: false, motivo: `HTTP ${response.status}` })
-      }
-
-      const instancias = await parseApiResponse(response)
-      const instancia  = Array.isArray(instancias)
-        ? instancias.find(i => i.instance?.instanceName === EVOLUTION_INSTANCE)
-        : null
-
-      return cacheConnectionResult({
-        conectado: true,
-        instancia: EVOLUTION_INSTANCE,
-        status: instancia?.instance?.state ?? 'desconhecido',
-      })
-    } catch (err) {
-      return cacheConnectionResult({ conectado: false, motivo: err.message })
-    } finally {
-      connectionCache.inFlight = null
+  try {
+    const abortController = new AbortController()
+    const timeoutId = setTimeout(() => abortController.abort(), WHATSAPP_CONNECTION_TIMEOUT_MS)
+    const response = await fetch(`${EVOLUTION_API_URL}/instance/fetchInstances`, {
+      headers: { apikey: EVOLUTION_API_KEY },
+      signal: abortController.signal,
+    })
+    clearTimeout(timeoutId)
+    if (!response.ok) {
+      cache = { conectado: false, lastCheck: agora, data: { conectado: false, motivo: `HTTP ${response.status}` } }
+      return cache.data
     }
-  })()
 
-  return connectionCache.inFlight
-}
+    const instancias = await response.json()
+    const instancia = Array.isArray(instancias)
+      ? instancias.find(i => i.instance?.instanceName === EVOLUTION_INSTANCE || i.name === EVOLUTION_INSTANCE)
+      : null
 
-async function parseApiResponse(response) {
-  const contentType = response.headers.get('content-type') || ''
-  if (contentType.includes('application/json')) {
-    return response.json()
+    if (!instancia) {
+      cache = { conectado: false, lastCheck: agora, data: { conectado: false, motivo: 'Instância não encontrada' } }
+      return cache.data
+    }
+
+    const state = instancia.instance?.state || instancia.status || 'unknown'
+    const conectado = CONNECTED_STATES.has(state)
+    cache = { conectado, lastCheck: agora, data: { conectado, instancia: EVOLUTION_INSTANCE, status: state } }
+    return cache.data
+  } catch (e) {
+    cache = { conectado: false, lastCheck: agora, data: { conectado: false, motivo: e.message } }
+    return cache.data
   }
-
-  const text = await response.text()
-  return text ? { message: text } : {}
-}
-
-function cacheConnectionResult(value) {
-  connectionCache.value = value
-  connectionCache.expiresAt = Date.now() + WHATSAPP_STATUS_CACHE_TTL_MS
-  return value
 }

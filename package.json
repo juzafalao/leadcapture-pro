@@ -2,13 +2,24 @@
   "name": "your-package-name",
   "version": "1.0.0",
   "scripts": {
+    "build": "./scripts/build.sh",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "test:ui": "vitest --ui"
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "vitest": "^2.0.0",
-    "@vitest/coverage-v8": "^2.0.0",
-    "@vitest/ui": "^2.0.0"
+    "vitest": "^4.1.5"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@sentry/node": "^10.47.0",
+    "@supabase/supabase-js": "^2.39.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.5.0",
+    "nodemailer": "^7.0.13",
+    "resend": "^6.10.0",
+    "twilio": "^4.20.0",
+    "zod": "^3.24.0"
   }
 }

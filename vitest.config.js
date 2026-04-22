@@ -1,9 +1,16 @@
 import { defineConfig } from 'vitest/config'
+import path from 'path'
 
 export default defineConfig({
   test: {
-    include: ['server/core/__tests__/**/*.test.js'],
-    environment: 'node',
     globals: true,
+    environment: 'node',
+    include: ['**/*.{test,spec}.{js,ts}'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './server'),
+    },
   },
 })
