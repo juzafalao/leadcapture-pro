@@ -1,20 +1,9 @@
 // ============================================================
 // CORE — Retry com Backoff Exponencial
-// Função utilitária reutilizável para tentativas com espera
-// exponencialmente progressiva entre falhas.
+// Função utilitária para tentativas com espera progressiva
+// LeadCapture Pro — Zafalão Tech
 // ============================================================
 
-/**
- * Executa uma função assíncrona com retry e backoff exponencial.
- * Delays: baseDelay, baseDelay*2, baseDelay*4, ...
- *
- * @param {() => Promise<*>} fn        - Função a executar
- * @param {object}           [opts]    - Opções
- * @param {number}           [opts.maxRetries=3]   - Tentativas totais
- * @param {number}           [opts.baseDelay=1000] - Delay base em ms
- * @param {string}           [opts.label='Retry']  - Rótulo para logs
- * @returns {Promise<*>} Resultado da função em caso de sucesso
- */
 export async function retryWithBackoff(fn, opts = {}) {
   const { maxRetries = 3, baseDelay = 1000, label = 'Retry' } = opts
 

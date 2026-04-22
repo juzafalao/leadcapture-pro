@@ -1,19 +1,18 @@
 // ============================================================
-// ROUTES — /api/whatsapp
+// ROUTES — /api/whatsapp (CORRIGIDO)
 // WhatsApp IA de qualificação de leads via Evolution API
-// LeadCapture Pro — Zafalao Tech
+// LeadCapture Pro — Zafalão Tech
 //
-// FLUXO:
-// 1. Lead preenche formulário → envia boas-vindas pelo WA
-// 2. Lead responde → webhook recebe → IA processa → responde
-// 3. IA coleta: capital, região, urgência → salva no lead
-// 4. Score >= 65 → notifica consultor
+// CORREÇÕES:
+// - Extração correta de telefone do JID
+// - Busca flexível de lead por telefone
+// - Logs estruturados
 // ============================================================
 
-import { Router }            from 'express'
-import supabase              from '../core/database.js'
-import { enviarMensagem }    from '../comunicacao/whatsapp.js'
-import rateLimit             from 'express-rate-limit'
+import { Router } from 'express'
+import supabase from '../core/database.js'
+import { enviarMensagem, normalizarTelefone, extrairTelefoneDoJid } from '../comunicacao/whatsapp.js'
+import rateLimit from 'express-rate-limit'
 
 const router = Router()
 
@@ -23,7 +22,7 @@ const webhookLimiter = rateLimit({
   message: { success: false, error: 'Rate limit excedido' }
 })
 
-// Perguntas da IA em sequência
+// Fluxo de qualificação
 const FLUXO_QUALIFICACAO = [
   {
     etapa: 'capital',
@@ -48,22 +47,19 @@ const FLUXO_QUALIFICACAO = [
 ]
 
 const capitalMap = {
-  '1': 80000,
-  '2': 200000,
-  '3': 400000,
-  '4': 600000,
+  '1': 80000, '2': 200000, '3': 400000, '4': 600000,
+  '1️⃣': 80000, '2️⃣': 200000, '3️⃣': 400000, '4️⃣': 600000,
 }
 
 const urgenciaMap = {
-  '1': 'imediato',
-  '2': 'curto_prazo',
-  '3': 'explorando',
+  '1': 'imediato', '2': 'curto_prazo', '3': 'explorando',
+  '1️⃣': 'imediato', '2️⃣': 'curto_prazo', '3️⃣': 'explorando',
 }
 
-// ─── POST /api/whatsapp/webhook ───────────────────────────────
-// Recebe mensagens da Evolution API
+// ============================================================
+// POST /api/whatsapp/webhook
+// ============================================================
 router.post('/webhook', webhookLimiter, async (req, res) => {
-  // Valida token de segurança se configurado
   const webhookToken = process.env.EVOLUTION_WEBHOOK_TOKEN
   if (webhookToken) {
     const tokenRecebido = req.headers['x-webhook-token'] || req.query.token
@@ -75,93 +71,94 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
 
   try {
     const payload = req.body
+    console.log('[WhatsApp/Webhook] Payload recebido:', JSON.stringify(payload).slice(0, 500))
 
-    // Evolution API envia diferentes formatos — normaliza
-    const event   = payload?.event || payload?.type
-    const data    = payload?.data  || payload
+    const event = payload?.event || payload?.type || payload?.data?.event
+    const data = payload?.data || payload
 
-    // Só processa mensagens recebidas (não enviadas pelo bot)
-    if (event !== 'messages.upsert' && event !== 'message') {
-      return res.json({ success: true, ignorado: true })
+    const eventosValidos = ['messages.upsert', 'message', 'messages.upsert@broadcast']
+    if (!eventosValidos.includes(event)) {
+      return res.json({ success: true, ignorado: true, motivo: 'evento não processado' })
     }
 
-    const mensagem  = data?.message?.conversation
+    const fromMe = data?.key?.fromMe || data?.fromMe || data?.message?.fromMe
+    if (fromMe) {
+      return res.json({ success: true, ignorado: true, motivo: 'mensagem enviada pelo bot' })
+    }
+
+    const mensagem = data?.message?.conversation
       || data?.message?.extendedTextMessage?.text
       || data?.body
+      || data?.message?.text
       || ''
 
-    const telefoneRaw = data?.key?.remoteJid
-      || data?.from
-      || ''
+    const telefoneRaw = data?.key?.remoteJid || data?.from || data?.sender || ''
 
     if (!mensagem || !telefoneRaw) {
-      return res.json({ success: true, ignorado: true })
+      return res.json({ success: true, ignorado: true, motivo: 'sem mensagem ou telefone' })
     }
 
-    // Remove @s.whatsapp.net do número
-    const telefone = telefoneRaw.replace('@s.whatsapp.net', '').replace(/\D/g, '')
+    const telefone = extrairTelefoneDoJid(telefoneRaw)
+    console.log(`[WhatsApp/Webhook] Mensagem de ${telefone}: ${mensagem.slice(0, 50)}...`)
 
-    // Busca lead pelo telefone
+    // Busca lead pelo telefone (busca flexível)
+    const telefoneBusca = telefone.slice(-11)
     const { data: leads } = await supabase
       .from('leads')
-      .select('id, nome, tenant_id, score, categoria, capital_disponivel, regiao_interesse, urgencia, whatsapp_etapa')
-      .ilike('telefone', `%${telefone.slice(-9)}%`)
+      .select('id, nome, tenant_id, score, categoria, capital_disponivel, regiao_interesse, urgencia, whatsapp_etapa, telefone')
+      .or(`telefone.ilike.%${telefoneBusca},telefone.ilike.%${telefone}`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
 
     if (!leads?.length) {
-      return res.json({ success: true, ignorado: true, motivo: 'lead nao encontrado' })
+      console.log(`[WhatsApp/Webhook] Lead não encontrado para telefone: ${telefone}`)
+      return res.json({ success: true, ignorado: true, motivo: 'lead não encontrado' })
     }
 
     const lead = leads[0]
     const etapaAtual = lead.whatsapp_etapa || 'capital'
-    const etapaIdx   = FLUXO_QUALIFICACAO.findIndex(e => e.etapa === etapaAtual)
 
     if (etapaAtual === 'finalizado') {
-      return res.json({ success: true, ignorado: true, motivo: 'fluxo ja finalizado' })
+      return res.json({ success: true, ignorado: true, motivo: 'fluxo já finalizado' })
     }
 
-    // Processa resposta da etapa atual
     const atualizacoes = {}
+    const mensagemNormalizada = mensagem.trim()
 
     if (etapaAtual === 'capital') {
-      const capital = capitalMap[mensagem.trim()] || null
+      const capital = capitalMap[mensagemNormalizada] || capitalMap[mensagemNormalizada.slice(0, 1)]
       if (capital) {
         atualizacoes.capital_disponivel = capital
-        atualizacoes.whatsapp_etapa     = 'regiao'
+        atualizacoes.whatsapp_etapa = 'regiao'
       }
     } else if (etapaAtual === 'regiao') {
-      atualizacoes.regiao_interesse = mensagem.trim().substring(0, 100)
-      atualizacoes.whatsapp_etapa   = 'urgencia'
+      atualizacoes.regiao_interesse = mensagemNormalizada.substring(0, 100)
+      atualizacoes.whatsapp_etapa = 'urgencia'
     } else if (etapaAtual === 'urgencia') {
-      const urgencia = urgenciaMap[mensagem.trim()] || 'explorando'
-      atualizacoes.urgencia       = urgencia
+      const urgencia = urgenciaMap[mensagemNormalizada] || urgenciaMap[mensagemNormalizada.slice(0, 1)] || 'explorando'
+      atualizacoes.urgencia = urgencia
       atualizacoes.whatsapp_etapa = 'finalizado'
     }
 
-    // Recalcula score com os dados novos
     if (Object.keys(atualizacoes).length > 0) {
       const capitalAtual = atualizacoes.capital_disponivel || lead.capital_disponivel || 0
-      const score = calcularScore(capitalAtual, atualizacoes.urgencia || lead.urgencia)
-      atualizacoes.score    = score
+      const urgenciaAtual = atualizacoes.urgencia || lead.urgencia
+      const score = calcularScore(capitalAtual, urgenciaAtual)
+      atualizacoes.score = score
       atualizacoes.categoria = score >= 65 ? 'hot' : score >= 40 ? 'warm' : 'cold'
       atualizacoes.updated_at = new Date().toISOString()
 
-      await supabase
-        .from('leads')
-        .update(atualizacoes)
-        .eq('id', lead.id)
+      await supabase.from('leads').update(atualizacoes).eq('id', lead.id)
+      console.log(`[WhatsApp/Webhook] Lead ${lead.id} atualizado: etapa=${atualizacoes.whatsapp_etapa}, score=${score}`)
 
-      // Se ficou quente após qualificação — notifica
       if (score >= 65 && lead.score < 65) {
         notificarConsultor(lead.id, lead.tenant_id, score).catch(console.error)
       }
     }
 
-    // Envia próxima mensagem do fluxo
     const proximaEtapa = atualizacoes.whatsapp_etapa || etapaAtual
-    const proxIdx      = FLUXO_QUALIFICACAO.findIndex(e => e.etapa === proximaEtapa)
+    const proxIdx = FLUXO_QUALIFICACAO.findIndex(e => e.etapa === proximaEtapa)
 
     if (proxIdx !== -1) {
       const etapa = FLUXO_QUALIFICACAO[proxIdx]
@@ -169,7 +166,8 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
         ? etapa.mensagem(lead.nome?.split(' ')[0] || 'você')
         : etapa.pergunta(lead.nome?.split(' ')[0] || 'você')
 
-      await enviarMensagem(telefone, texto)
+      const telefoneEnvio = normalizarTelefone(lead.telefone)
+      await enviarMensagem(telefoneEnvio, texto)
     }
 
     res.json({ success: true })
@@ -179,12 +177,15 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
   }
 })
 
-// ─── POST /api/whatsapp/enviar-boas-vindas ────────────────────
-// Chamado quando lead entra — envia primeira mensagem
+// ============================================================
+// POST /api/whatsapp/enviar-boas-vindas
+// ============================================================
 router.post('/enviar-boas-vindas', async (req, res) => {
   try {
     const { leadId } = req.body
-    if (!leadId) return res.status(400).json({ success: false, error: 'leadId obrigatorio' })
+    if (!leadId) {
+      return res.status(400).json({ success: false, error: 'leadId obrigatório' })
+    }
 
     const { data: lead } = await supabase
       .from('leads')
@@ -192,45 +193,66 @@ router.post('/enviar-boas-vindas', async (req, res) => {
       .eq('id', leadId)
       .single()
 
-    if (!lead) return res.status(404).json({ success: false, error: 'Lead nao encontrado' })
+    if (!lead) {
+      return res.status(404).json({ success: false, error: 'Lead não encontrado' })
+    }
+
+    if (!lead.telefone) {
+      return res.status(400).json({ success: false, error: 'Lead sem telefone' })
+    }
+
+    await supabase.from('leads').update({ whatsapp_etapa: 'capital' }).eq('id', lead.id)
 
     const primeiraEtapa = FLUXO_QUALIFICACAO[0]
     const texto = primeiraEtapa.pergunta(lead.nome?.split(' ')[0] || 'você')
 
-    await supabase.from('leads').update({ whatsapp_etapa: 'capital' }).eq('id', lead.id)
     const resultado = await enviarMensagem(lead.telefone, texto)
 
-    res.json({ success: resultado.success, simulated: resultado.simulated })
+    res.json({
+      success: resultado.success,
+      simulated: resultado.simulated || false,
+      error: resultado.error
+    })
   } catch (err) {
     console.error('[WhatsApp/BoasVindas] Erro:', err.message)
     res.status(500).json({ success: false, error: err.message })
   }
 })
 
-// ─── GET /api/whatsapp/status ─────────────────────────────────
+// ============================================================
+// GET /api/whatsapp/status
+// ============================================================
 router.get('/status', async (_req, res) => {
-  const configured = !!process.env.EVOLUTION_API_KEY
+  const { verificarConexao } = await import('../comunicacao/whatsapp.js')
+  const status = await verificarConexao()
+
   res.json({
     success: true,
-    configured,
+    configured: !!process.env.EVOLUTION_API_KEY,
     instance: process.env.EVOLUTION_INSTANCE || 'lead-pro',
     webhook_url: `${process.env.DASHBOARD_URL || 'https://leadcapture-proprod.vercel.app'}/api/whatsapp/webhook`,
+    ...status
   })
 })
 
-// ─── Helpers ─────────────────────────────────────────────────
+// ============================================================
+// Helpers
+// ============================================================
 function calcularScore(capital, urgencia) {
   let score = 0
-  if (capital >= 500000)      score += 50
+
+  if (capital >= 500000) score += 50
   else if (capital >= 300000) score += 40
   else if (capital >= 150000) score += 30
-  else if (capital >= 80000)  score += 20
-  else                        score += 10
+  else if (capital >= 80000) score += 20
+  else score += 10
 
-  if (urgencia === 'imediato')     score += 30
+  if (urgencia === 'imediato') score += 30
   else if (urgencia === 'curto_prazo') score += 20
   else if (urgencia === 'medio_prazo') score += 10
-  else                             score += 5
+  else score += 5
+
+  if (capital && urgencia) score += 20
 
   return Math.min(score, 100)
 }
@@ -255,6 +277,7 @@ async function notificarConsultor(leadId, tenantId, score) {
         dir.telefone,
         `🔥 *LEAD QUENTE via WhatsApp!*\n\n*${lead.nome}*\nScore: ${score}\nCapital: R$ ${Number(lead.capital_disponivel).toLocaleString('pt-BR')}\nRegião: ${lead.regiao_interesse || 'não informado'}\n\nAcesse o dashboard agora!`
       )
+      await new Promise(r => setTimeout(r, 1500))
     }
   }
 }

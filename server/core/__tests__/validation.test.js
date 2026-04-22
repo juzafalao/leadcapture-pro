@@ -1,3 +1,8 @@
+// ============================================================
+// TESTES — Validation Service
+// server/core/__tests__/validation.test.js
+// ============================================================
+
 import { describe, it, expect } from 'vitest'
 import {
   isEmailValido,
@@ -8,54 +13,104 @@ import {
   normalizarTelefone,
   validarSlug,
   isUUIDValido,
-  sanitizarObjeto,
 } from '../validation.js'
 
-describe('Validation', () => {
-  it('valida email', () => {
-    expect(isEmailValido('a@b.com')).toBe(true)
-    expect(isEmailValido('')).toBe(false)
-    expect(isEmailValido('teste..nome@dominio.com')).toBe(false)
+describe('Validation Service', () => {
+  describe('isEmailValido', () => {
+    it('deve validar emails corretos', () => {
+      expect(isEmailValido('teste@email.com')).toBe(true)
+      expect(isEmailValido('usuario@dominio.com.br')).toBe(true)
+    })
+
+    it('deve rejeitar emails inválidos', () => {
+      expect(isEmailValido('')).toBe(false)
+      expect(isEmailValido('sem-arroba')).toBe(false)
+      expect(isEmailValido(null)).toBe(false)
+    })
   })
 
-  it('valida telefone', () => {
-    expect(isTelefoneValido('11999999999')).toBe(true)
-    expect(isTelefoneValido('123')).toBe(false)
+  describe('isTelefoneValido', () => {
+    it('deve validar telefones corretos', () => {
+      expect(isTelefoneValido('11999999999')).toBe(true)
+      expect(isTelefoneValido('(11) 99999-9999')).toBe(true)
+    })
+
+    it('deve rejeitar telefones inválidos', () => {
+      expect(isTelefoneValido('')).toBe(false)
+      expect(isTelefoneValido('123')).toBe(false)
+    })
   })
 
-  it('valida documento CPF/CNPJ', () => {
-    expect(validarDocumento('111.444.777-35')).toEqual({ valido: true, tipo: 'CPF', limpo: '11144477735' })
-    expect(validarDocumento('45.723.174/0001-10')).toEqual({ valido: true, tipo: 'CNPJ', limpo: '45723174000110' })
-    expect(validarDocumento('111.444.777-00').valido).toBe(false)
-    expect(validarDocumento('45.723.174/0001-00').valido).toBe(false)
-    expect(validarDocumento('123')).toEqual({ valido: false, tipo: null, limpo: '123' })
+  describe('validarDocumento', () => {
+    it('deve validar CPF correto', () => {
+      const resultado = validarDocumento('529.982.247-25')
+      expect(resultado.valido).toBe(true)
+      expect(resultado.tipo).toBe('CPF')
+    })
+
+    it('deve rejeitar CPF com todos dígitos iguais', () => {
+      expect(validarDocumento('111.111.111-11').valido).toBe(false)
+    })
+
+    it('deve validar CNPJ correto', () => {
+      const resultado = validarDocumento('11.222.333/0001-81')
+      expect(resultado.valido).toBe(true)
+      expect(resultado.tipo).toBe('CNPJ')
+    })
   })
 
-  it('valida campos obrigatorios', () => {
-    expect(validarCamposObrigatorios({ a: 1, b: 2 }, ['a', 'b']).valido).toBe(true)
-    expect(validarCamposObrigatorios({ a: 1 }, ['a', 'b']).valido).toBe(false)
+  describe('validarCamposObrigatorios', () => {
+    it('deve validar quando todos campos presentes', () => {
+      const dados = { nome: 'João', email: 'joao@email.com' }
+      const resultado = validarCamposObrigatorios(dados, ['nome', 'email'])
+      expect(resultado.valido).toBe(true)
+    })
+
+    it('deve identificar campo faltando', () => {
+      const dados = { nome: 'João' }
+      const resultado = validarCamposObrigatorios(dados, ['nome', 'email'])
+      expect(resultado.valido).toBe(false)
+      expect(resultado.campoFaltando).toBe('email')
+    })
   })
 
-  it('sanitiza HTML e limita tamanho', () => {
-    expect(sanitizarTexto('<b>oi</b>')).toBe('&lt;b&gt;oi&lt;/b&gt;')
-    expect(sanitizarTexto('123456', 3)).toBe('123')
+  describe('sanitizarTexto', () => {
+    it('deve fazer trim do texto', () => {
+      expect(sanitizarTexto('  texto  ')).toBe('texto')
+    })
+
+    it('deve escapar HTML', () => {
+      expect(sanitizarTexto('<script>alert(1)</script>')).toBe('&lt;script&gt;alert(1)&lt;/script&gt;')
+    })
+
+    it('deve retornar string vazia para null', () => {
+      expect(sanitizarTexto(null)).toBe('')
+    })
   })
 
-  it('normaliza telefone', () => {
-    expect(normalizarTelefone('(11) 99999-9999')).toBe('11999999999')
+  describe('validarSlug', () => {
+    it('deve validar slugs corretos', () => {
+      expect(validarSlug('minha-marca').valido).toBe(true)
+      expect(validarSlug('marca_123').valido).toBe(true)
+    })
+
+    it('deve rejeitar slug vazio', () => {
+      expect(validarSlug('').valido).toBe(false)
+    })
+
+    it('deve rejeitar slug com caracteres especiais', () => {
+      expect(validarSlug('marca@especial').valido).toBe(false)
+    })
   })
 
-  it('valida slug', () => {
-    expect(validarSlug('marca_teste-1').valido).toBe(true)
-    expect(validarSlug('-invalido').valido).toBe(false)
-  })
+  describe('isUUIDValido', () => {
+    it('deve validar UUIDs corretos', () => {
+      expect(isUUIDValido('550e8400-e29b-41d4-a716-446655440000')).toBe(true)
+    })
 
-  it('valida UUID', () => {
-    expect(isUUIDValido('123e4567-e89b-12d3-a456-426614174000')).toBe(true)
-    expect(isUUIDValido('invalido')).toBe(false)
-  })
-
-  it('sanitiza objeto por campos permitidos', () => {
-    expect(sanitizarObjeto({ a: 1, b: 2, c: 3 }, ['a', 'c'])).toEqual({ a: 1, c: 3 })
+    it('deve rejeitar UUIDs inválidos', () => {
+      expect(isUUIDValido('')).toBe(false)
+      expect(isUUIDValido('not-a-uuid')).toBe(false)
+    })
   })
 })

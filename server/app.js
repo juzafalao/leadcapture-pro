@@ -1,86 +1,80 @@
-﻿// ============================================================
-// LeadCapture Pro â€” Servidor Principal
-// ZafalÃ£o Tech Â· 2026
+// ============================================================
+// server/app.js — Servidor Principal (CORRIGIDO)
+// LeadCapture Pro · Zafalão Tech
 //
-// MUDANÃ‡AS v1.9.0 (Fase A â€” Hardening):
-// 1. âœ… Rate limiting: global + webhook + status
-// 2. âœ… CORS restritivo (lista de domÃ­nios permitidos)
-// 3. âœ… ValidaÃ§Ã£o Zod no POST /api/leads (via middleware)
-// 4. âœ… Headers de seguranÃ§a (X-Content-Type-Options, etc.)
-// 5. âœ… Request logging bÃ¡sico
-//
-// Arquitetura de mÃ³dulos:
-//   core/         â†’ banco de dados, scoring, validaÃ§Ã£o
-//   comunicacao/  â†’ email e WhatsApp
-//   routes/       â†’ roteadores Express por domÃ­nio
-//   middleware/   â†’ rate limiting, validaÃ§Ã£o Zod
-//   captacao/     â†’ landing page institucional do produto
+// CORREÇÕES:
+// - Validação de slug na landing page
+// - Headers de segurança adicionais
+// - Melhor tratamento de erros
 // ============================================================
 
 import express from 'express'
-import cors    from 'cors'
-import dotenv  from 'dotenv'
-import path    from 'path'
-import fs      from 'fs'
+import cors from 'cors'
+import dotenv from 'dotenv'
+import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
 
 
 dotenv.config()
 
-// â”€â”€â”€ Sentry â€” inicializa ANTES de qualquer handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Sentry ─────────────────────────────────────────────────────
 if (process.env.SENTRY_DSN) {
   import('@sentry/node').then(Sentry => {
     Sentry.init({
-      dsn:              process.env.SENTRY_DSN,
-      environment:      process.env.NODE_ENV || 'production',
+      dsn: process.env.SENTRY_DSN,
+      environment: process.env.NODE_ENV || 'production',
       tracesSampleRate: 0.1,
     })
     console.log('[Sentry] Backend inicializado')
   }).catch(err => console.warn('[Sentry] Falha ao inicializar:', err.message))
 }
 
-// Middlewares de seguranÃ§a
+// Middlewares de segurança
 import { globalLimiter, webhookLimiter, statusLimiter } from './middleware/rateLimiter.js'
 
-// ServiÃ§os
+// Serviços
 import { inicializarEmail } from './comunicacao/email.js'
 import { verificarConexao } from './comunicacao/whatsapp.js'
 
 // Roteadores
-import leadsRouter   from './routes/leads.js'
-import marcasRouter  from './routes/marcas.js'
+import leadsRouter from './routes/leads.js'
+import marcasRouter from './routes/marcas.js'
 import sistemaRouter from './routes/sistema.js'
-import chatRouter      from './routes/chat.js'
-import whatsappRouter  from './routes/whatsapp.js'
-import rankingRouter   from './routes/ranking.js'
+import chatRouter from './routes/chat.js'
+import whatsappRouter from './routes/whatsapp.js'
+import rankingRouter from './routes/ranking.js'
 
-// Supabase (usado diretamente aqui apenas para landing page dinÃ¢mica)
+// Validação
+import { validarSlug } from './core/validation.js'
+
+// Supabase
 import supabase from './core/database.js'
 
 const __filename = fileURLToPath(import.meta.url)
-const __dirname  = dirname(__filename)
+const __dirname = dirname(__filename)
 
-// â”€â”€â”€ InicializaÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Inicialização ───────────────────────────────────────────────
 const app = express()
-app.set('trust proxy', 1) // Vercel/proxy reverso
+app.set('trust proxy', 1)
 inicializarEmail()
 
-// Verifica a conexÃ£o com a Evolution API do WhatsApp na inicializaÃ§Ã£o
+// Verifica conexão com WhatsApp
 if (process.env.EVOLUTION_API_KEY) {
   verificarConexao().then(status => {
     if (status.conectado) {
-      console.log(`[WhatsApp] Conectado Ã  Evolution API (instÃ¢ncia: ${status.instancia}, status: ${status.status})`)
+      console.log(`[WhatsApp] Conectado à Evolution API (instância: ${status.instancia}, status: ${status.status})`)
     } else {
-      console.warn(`[WhatsApp] Falha na conexÃ£o com a Evolution API: ${status.motivo}`)
-      console.warn('Verifique as variÃ¡veis de ambiente EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.')
+      console.warn(`[WhatsApp] Falha na conexão com a Evolution API: ${status.motivo}`)
+      console.warn('Verifique as variáveis de ambiente EVOLUTION_API_URL, EVOLUTION_API_KEY e EVOLUTION_INSTANCE.')
     }
-  }).catch(err => console.error('[WhatsApp] Erro ao verificar conexÃ£o:', err.message))
+  }).catch(err => console.error('[WhatsApp] Erro ao verificar conexão:', err.message))
 } else {
-  console.warn('[WhatsApp] EVOLUTION_API_KEY nÃ£o configurada. O serviÃ§o de WhatsApp operarÃ¡ em modo simulado.')
+  console.warn('[WhatsApp] EVOLUTION_API_KEY não configurada. O serviço de WhatsApp operará em modo simulado.')
 }
 
-// â”€â”€â”€ CORS Restritivo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── CORS Restritivo ─────────────────────────────────────────────
 const allowedOrigins = [
   'https://leadcapture-pro.vercel.app',
   'https://www.leadcapture-pro.vercel.app',
@@ -88,7 +82,6 @@ const allowedOrigins = [
   ...(process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || []),
 ]
 
-// Em desenvolvimento, permitir localhost
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:5173')
   allowedOrigins.push('http://localhost:4000')
@@ -97,39 +90,60 @@ if (process.env.NODE_ENV !== 'production') {
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permitir requests sem origin (curl, Postman, webhooks server-to-server)
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)
-    callback(new Error(`Origem nÃ£o permitida pelo CORS: ${origin}`))
+    callback(new Error(`Origem não permitida pelo CORS: ${origin}`))
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   credentials: true,
 }))
 
-// â”€â”€â”€ Middlewares Globais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Middlewares Globais ──────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
+
+// Headers de segurança adicionais
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('X-XSS-Protection', '1; mode=block')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.removeHeader('X-Powered-By')
+  next()
+})
+
 app.use(express.static(path.join(__dirname, 'public')))
-app.use('/api/leads',   webhookLimiter, leadsRouter)
-app.use('/api/marcas',  marcasRouter)
-app.get('/health', statusLimiter, (_req, res) => res.json({ status: 'ok', service: 'LeadCapture Pro', version: '1.9.0', timestamp: new Date().toISOString() }))
+
+// ─── Rotas da API ─────────────────────────────────────────────────
+app.use('/api/leads', webhookLimiter, leadsRouter)
+app.use('/api/marcas', marcasRouter)
+app.get('/health', statusLimiter, (_req, res) => res.json({
+  status: 'ok',
+  service: 'LeadCapture Pro',
+  version: '2.0.0',
+  timestamp: new Date().toISOString()
+}))
 app.use('/api/sistema', statusLimiter, sistemaRouter)
 app.use('/api/ranking', statusLimiter, rankingRouter)
-app.use('/api/chat',      chatRouter)
+app.use('/api/chat', chatRouter)
 app.use('/api/whatsapp', whatsappRouter)
 
-// â”€â”€â”€ Dashboard (SPA React) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Dashboard (SPA React) ────────────────────────────────────────
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))
 app.get('/dashboard/*', (_req, res) => {
   res.sendFile(join(__dirname, '../dashboard-build/index.html'))
 })
 
-// â”€â”€â”€ Landing Pages DinÃ¢micas (tenant/marca) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// IMPORTANTE: deve vir ANTES do express.static('/landing')
-// para que /landing/:slug seja tratado como rota dinÃ¢mica
+// ─── Landing Pages Dinâmicas ──────────────────────────────────────
 app.get('/landing/:slug', async (req, res) => {
   try {
     const { slug } = req.params
+
+    // FIX: Validar slug antes de usar na query
+    const validacao = validarSlug(slug)
+    if (!validacao.valido) {
+      return res.status(400).send(_paginaErro('Slug inválido', validacao.erro))
+    }
 
     const { data: marca, error } = await supabase
       .from('marcas')
@@ -144,21 +158,21 @@ app.get('/landing/:slug', async (req, res) => {
     const templatePath = path.join(__dirname, 'templates', 'landing.html')
     let html = fs.readFileSync(templatePath, 'utf-8')
 
-    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
+    const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[m]))
 
     const logoBlock = marca.logo_url
       ? `<img src="${escapeHtml(marca.logo_url)}" alt="${escapeHtml(marca.nome)}" class="lp-logo" />`
-      : `<span class="lp-emoji">${escapeHtml(marca.emoji || 'ðŸ¢')}</span>`
+      : `<span class="lp-emoji">${escapeHtml(marca.emoji || '🏢')}</span>`
 
     html = html
       .replace(/{{MARCA_LOGO_BLOCK}}/g, logoBlock)
-      .replace(/{{MARCA_EMOJI}}/g,    escapeHtml(marca.emoji || 'ðŸ¢'))
-      .replace(/{{MARCA_NOME}}/g,     escapeHtml(marca.nome))
-      .replace(/{{MARCA_ID}}/g,       escapeHtml(marca.id))
-      .replace(/{{TENANT_ID}}/g,      escapeHtml(marca.tenant_id))
-      .replace(/{{INVEST_MIN}}/g,     (marca.invest_min || 0).toLocaleString('pt-BR'))
-      .replace(/{{INVEST_MAX}}/g,     (marca.invest_max || 0).toLocaleString('pt-BR'))
-      .replace(/{{COR_PRIMARIA}}/g,   escapeHtml(marca.cor_primaria || '#ee7b4d'))
+      .replace(/{{MARCA_EMOJI}}/g, escapeHtml(marca.emoji || '🏢'))
+      .replace(/{{MARCA_NOME}}/g, escapeHtml(marca.nome))
+      .replace(/{{MARCA_ID}}/g, escapeHtml(marca.id))
+      .replace(/{{TENANT_ID}}/g, escapeHtml(marca.tenant_id))
+      .replace(/{{INVEST_MIN}}/g, (marca.invest_min || 0).toLocaleString('pt-BR'))
+      .replace(/{{INVEST_MAX}}/g, (marca.invest_max || 0).toLocaleString('pt-BR'))
+      .replace(/{{COR_PRIMARIA}}/g, escapeHtml(marca.cor_primaria || '#ee7b4d'))
       .replace(/{{COR_SECUNDARIA}}/g, escapeHtml(marca.cor_secundaria || '#f59e42'))
 
     res.send(html)
@@ -168,48 +182,45 @@ app.get('/landing/:slug', async (req, res) => {
   }
 })
 
-// â”€â”€â”€ Assets estÃ¡ticos da landing institucional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// Vem DEPOIS da rota dinÃ¢mica para nÃ£o interceptar /landing/:slug
+// Assets estáticos da landing institucional
 app.use('/landing', express.static(join(__dirname, '../landing')))
 
-// â”€â”€â”€ Fallback 404 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Fallback 404 ─────────────────────────────────────────────────
 app.use((_req, res) => {
-  res.status(404).json({ success: false, error: 'Rota nÃ£o encontrada' })
+  res.status(404).json({ success: false, error: 'Rota não encontrada' })
 })
 
-// â”€â”€â”€ Error Handler Global â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Error Handler Global ─────────────────────────────────────────
 app.use((err, req, res, _next) => {
-  // CORS error
   if (err.message?.includes('CORS')) {
-    return res.status(403).json({ success: false, error: 'Origem nÃ£o permitida' })
+    return res.status(403).json({ success: false, error: 'Origem não permitida' })
   }
 
-  // Envia para Sentry se DSN configurada (sem await â€” fire and forget)
   if (process.env.SENTRY_DSN) {
     import('@sentry/node').then(Sentry => {
       Sentry.withScope(scope => {
-        scope.setExtra('url',    req.url)
+        scope.setExtra('url', req.url)
         scope.setExtra('method', req.method)
-        scope.setExtra('body',   JSON.stringify(req.body || {}).slice(0, 500))
+        scope.setExtra('body', JSON.stringify(req.body || {}).slice(0, 500))
         Sentry.captureException(err)
       })
     }).catch(() => {})
   }
 
-  console.error('[App] Erro nÃ£o tratado:', err)
+  console.error('[App] Erro não tratado:', err)
   res.status(500).json({ success: false, error: 'Erro interno do servidor' })
 })
 
 export default app
 
-// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Helpers ──────────────────────────────────────────────────────
 function _pagina404(slug) {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PÃ¡gina nÃ£o encontrada Â· LeadCapture Pro</title>
+  <title>Página não encontrada · LeadCapture Pro</title>
   <style>
     body { display:flex; align-items:center; justify-content:center; min-height:100vh;
            font-family:sans-serif; background:#0a0a0b; color:#f4f4f5; margin:0; }
@@ -222,13 +233,37 @@ function _pagina404(slug) {
 </head>
 <body>
   <div class="box">
-    <h1>ðŸ”</h1>
-    <h2>Landing page nÃ£o encontrada</h2>
-    <p>A pÃ¡gina solicitada nÃ£o existe no sistema.</p>
-    <p><a href="/landing">ConheÃ§a o LeadCapture Pro â†’</a></p>
+    <h1>🔍</h1>
+    <h2>Landing page não encontrada</h2>
+    <p>A página solicitada não existe no sistema.</p>
+    <p><a href="/landing">Conheça o LeadCapture Pro →</a></p>
   </div>
 </body>
 </html>`
 }
 
-
+function _paginaErro(titulo, mensagem) {
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${titulo} · LeadCapture Pro</title>
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh;
+           font-family:sans-serif; background:#0a0a0b; color:#f4f4f5; margin:0; }
+    .box { text-align:center; }
+    h1 { font-size:3rem; margin:0 0 8px; }
+    h2 { font-weight:300; color:#ef4444; }
+    p  { color:#52525b; margin-top:8px; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>⚠️</h1>
+    <h2>${titulo}</h2>
+    <p>${mensagem}</p>
+  </div>
+</body>
+</html>`
+}
