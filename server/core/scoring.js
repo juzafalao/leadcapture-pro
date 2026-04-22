@@ -20,7 +20,7 @@ export const CAPITAL_MAP = {
  */
 export function resolverCapital(valor) {
   if (!valor && valor !== 0) return null
-  if (typeof valor === 'number') return valor
+  if (typeof valor === 'number') return valor > 0 ? valor : null
   const str = String(valor).trim()
   if (CAPITAL_MAP[str] !== undefined) return CAPITAL_MAP[str]
   const num = Number(str.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''))
@@ -54,10 +54,12 @@ const CATEGORIA_THRESHOLDS = {
  * @returns {number} Score de 50 a 95
  */
 export function calcularScore(capital = 0) {
+  const capitalResolvido = resolverCapital(capital) ?? 0
+
   // Ordenar decrescentemente por min para garantir que o maior patamar atingido seja selecionado
   const entrada = [...SCORING_TABLE]
     .sort((a, b) => b.min - a.min)
-    .find(item => capital >= item.min)
+    .find(item => capitalResolvido >= item.min)
   return entrada ? entrada.score : 50
 }
 
@@ -78,8 +80,7 @@ export function determinarCategoria(score) {
  * @returns {{ capital: number, score: number, categoria: string }}
  */
 export function processarCapital(capitalRaw) {
-  const capitalStr = String(capitalRaw ?? '0').replace(/\D/g, '')
-  const capital = parseInt(capitalStr, 10) || 0
+  const capital = resolverCapital(capitalRaw) ?? 0
   const score = calcularScore(capital)
   const categoria = determinarCategoria(score)
 
