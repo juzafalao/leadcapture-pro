@@ -19,6 +19,7 @@ export function isEmailValido(email) {
  */
 export function isTelefoneValido(telefone) {
   const soDigitos = String(telefone ?? '').replace(/\D/g, '')
+  // BR local: 10-11 dígitos. Com DDI: até 13 (ex.: 55 + DDD + número).
   return soDigitos.length >= 10 && soDigitos.length <= 13
 }
 
@@ -99,7 +100,9 @@ export function sanitizarObjeto(valor) {
 
     for (const [chave, item] of Object.entries(valor)) {
       if (['__proto__', 'constructor', 'prototype'].includes(chave)) continue
-      resultado[chave] = sanitizarObjeto(item)
+      const chaveSegura = sanitizarChaveObjeto(chave)
+      if (!chaveSegura) continue
+      resultado[chaveSegura] = sanitizarObjeto(item)
     }
 
     return resultado
@@ -167,4 +170,10 @@ function validarCNPJ(cnpj) {
   const d2 = calcular(cnpj.slice(0, 13), [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2])
 
   return d1 === Number(cnpj[12]) && d2 === Number(cnpj[13])
+}
+
+function sanitizarChaveObjeto(chave) {
+  return String(chave ?? '')
+    .replace(/[^\w.-]/g, '')
+    .slice(0, 80)
 }

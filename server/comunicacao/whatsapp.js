@@ -8,7 +8,7 @@ import { retryWithBackoff } from '../core/retry.js'
 const EVOLUTION_API_URL    = process.env.EVOLUTION_API_URL    || 'http://localhost:8080'
 const EVOLUTION_API_KEY    = process.env.EVOLUTION_API_KEY    || ''
 const EVOLUTION_INSTANCE   = process.env.EVOLUTION_INSTANCE   || 'lead-pro'
-const CONNECTION_CACHE_TTL_MS = Number(process.env.WHATSAPP_STATUS_CACHE_MS || 15000)
+const WHATSAPP_STATUS_CACHE_TTL_MS = Number(process.env.WHATSAPP_STATUS_CACHE_MS || 15000)
 
 const connectionCache = {
   value: null,
@@ -155,6 +155,6 @@ async function parseApiResponse(response) {
 
 function cacheConnectionResult(value) {
   connectionCache.value = value
-  connectionCache.expiresAt = Date.now() + CONNECTION_CACHE_TTL_MS
+  connectionCache.expiresAt = Date.now() + WHATSAPP_STATUS_CACHE_TTL_MS
   return value
 }
