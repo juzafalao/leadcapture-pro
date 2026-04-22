@@ -1,35 +1,33 @@
-﻿// ============================================================
-// useKanban.js â€” Kanban de alta performance
-// LeadCapture Pro â€” ZafalÃ£o Tech
+// ============================================================
+// useKanban.js — Kanban de alta performance (CORRIGIDO)
+// LeadCapture Pro — Zafalão Tech
 //
-// FONTE ÃšNICA DE VERDADE: status_comercial (banco)
-// Kanban + Modal listbox sempre refletem o mesmo dado
+// FIX: Memory leak no debounce global corrigido
 // ============================================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { useEffect } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 
-// Fallback usado APENAS quando banco nÃ£o retorna status_comercial
+// Fallback usado APENAS quando banco não retorna status_comercial
 export const COLUNAS_PADRAO = [
-  { id: 'novo',       label: 'Novo Lead',      slug: 'novo',       cor: '#ee7b4d' },
-  { id: 'contato',    label: 'Em Contato',     slug: 'contato',    cor: '#F59E0B' },
-  { id: 'agendado',   label: 'Agendado',       slug: 'agendado',   cor: '#3B82F6' },
-  { id: 'negociacao', label: 'Em NegociaÃ§Ã£o',  slug: 'negociacao', cor: '#8B5CF6' },
-  { id: 'convertido', label: 'Vendido',        slug: 'convertido', cor: '#10B981' },
-  { id: 'perdido',    label: 'Perdido',        slug: 'perdido',    cor: '#EF4444' },
+  { id: 'novo', label: 'Novo Lead', slug: 'novo', cor: '#ee7b4d' },
+  { id: 'contato', label: 'Em Contato', slug: 'contato', cor: '#F59E0B' },
+  { id: 'agendado', label: 'Agendado', slug: 'agendado', cor: '#3B82F6' },
+  { id: 'negociacao', label: 'Em Negociação', slug: 'negociacao', cor: '#8B5CF6' },
+  { id: 'convertido', label: 'Vendido', slug: 'convertido', cor: '#10B981' },
+  { id: 'perdido', label: 'Perdido', slug: 'perdido', cor: '#EF4444' },
 ]
 
-// â”€â”€ Status Colunas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Status Colunas ─────────────────────────────────────────────────────
 export function useStatusColunas(tenantId) {
   return useQuery({
     queryKey: ['status-colunas', tenantId],
     staleTime: 1000 * 60 * 10,
-    gcTime:    1000 * 60 * 30,
+    gcTime: 1000 * 60 * 30,
     queryFn: async () => {
       if (!tenantId) return COLUNAS_PADRAO
 
-      // Sem "ordem" no SELECT â€” coluna nÃ£o existe no schema atual
       const { data, error } = await supabase
         .from('status_comercial')
         .select('id, label, slug, cor')
@@ -38,22 +36,35 @@ export function useStatusColunas(tenantId) {
       if (error || !data?.length) return COLUNAS_PADRAO
 
       return data.map(s => ({
-        id:    s.id,
+        id: s.id,
         label: s.label,
-        slug:  s.slug?.toLowerCase().trim(),
-        cor:   s.cor || '#6366F1',
+        slug: s.slug?.toLowerCase().trim(),
+        cor: s.cor || '#6366F1',
       }))
     },
   })
 }
 
-// â”€â”€ Kanban Leads â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Kanban Leads ───────────────────────────────────────────────────────
 export function useKanbanLeads({ tenantId, colunas = [] }) {
   const qc = useQueryClient()
 
-  // Realtime â€” invalida cache ao receber qualquer mudanÃ§a em leads
+  // FIX: Debounce local (não global) com cleanup adequado
+  const debounceRef = useRef(null)
+
+  // Cleanup no unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [])
+
+  // Realtime — invalida cache ao receber qualquer mudança em leads
   useEffect(() => {
     if (!colunas.length) return
+
     const channel = supabase
       .channel(`kanban-${tenantId ?? 'all'}`)
       .on('postgres_changes', {
@@ -62,20 +73,30 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
         table: 'leads',
         ...(tenantId ? { filter: `tenant_id=eq.${tenantId}` } : {}),
       }, () => {
-        if (window.__kanbanDebounce) clearTimeout(window.__kanbanDebounce)
-        window.__kanbanDebounce = setTimeout(() => {
+        // FIX: Limpa timeout anterior corretamente
+        if (debounceRef.current) {
+          clearTimeout(debounceRef.current)
+        }
+        debounceRef.current = setTimeout(() => {
           qc.invalidateQueries({ queryKey: ['kanban', tenantId] })
         }, 800)
       })
       .subscribe()
-    return () => { supabase.removeChannel(channel) }
+
+    return () => {
+      // FIX: Limpa debounce no unmount
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+      supabase.removeChannel(channel)
+    }
   }, [tenantId, colunas.length, qc])
 
   return useQuery({
     queryKey: ['kanban', tenantId],
     staleTime: 1000 * 60 * 5,
-    gcTime:    1000 * 60 * 10,
-    enabled:   colunas.length > 0,
+    gcTime: 1000 * 60 * 10,
+    enabled: colunas.length > 0,
     queryFn: async () => {
       let query = supabase
         .from('leads')
@@ -99,9 +120,9 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
       const leads = data ?? []
 
       // Lookups O(1)
-      const idParaSlug   = new Map(colunas.map(c => [c.id,   c.slug]))
+      const idParaSlug = new Map(colunas.map(c => [c.id, c.slug]))
       const slugsValidos = new Set(colunas.map(c => c.slug))
-      const primeiraCol  = colunas[0]?.slug ?? 'novo'
+      const primeiraCol = colunas[0]?.slug ?? 'novo'
 
       // Inicializa mapa de colunas
       const mapa = Object.fromEntries(colunas.map(c => [c.slug, []]))
@@ -109,7 +130,7 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
       for (const lead of leads) {
         let slugFinal = primeiraCol
 
-        // 1. Prioridade mÃ¡xima: id_status â†’ lookup por UUID
+        // 1. Prioridade máxima: id_status → lookup por UUID
         if (lead.id_status) {
           const slugPorId = idParaSlug.get(lead.id_status)
           if (slugPorId && slugsValidos.has(slugPorId)) {
@@ -133,7 +154,7 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
           slugFinal = slugTexto
         }
 
-        // SeguranÃ§a: garante que a coluna existe
+        // Segurança: garante que a coluna existe
         if (!(slugFinal in mapa)) slugFinal = primeiraCol
         mapa[slugFinal].push(lead)
       }
@@ -143,19 +164,19 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
   })
 }
 
-// â”€â”€ Mover Lead â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Mover Lead ──────────────────────────────────────────────────────────
 // Optimistic update: card move INSTANTANEAMENTE, rollback em erro
 export function useMoverLead() {
   const qc = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ leadId, novoStatusSlug, novoStatusId }) => {
-      // Sempre atualiza os dois campos para manter consistÃªncia
+      // Sempre atualiza os dois campos para manter consistência
       const { data, error } = await supabase
         .from('leads')
         .update({
-          id_status:  novoStatusId || null,
-          status:     novoStatusSlug,
+          id_status: novoStatusId || null,
+          status: novoStatusSlug,
           updated_at: new Date().toISOString(),
         })
         .eq('id', leadId)
