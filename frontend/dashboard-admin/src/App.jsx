@@ -83,7 +83,12 @@ function AuthenticatedLayout({ children }) {
       <Suspense fallback={null}>
         <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
       </Suspense>
-      <main className="flex-1 min-h-screen flex flex-col lg:pl-32">
+      {/* Placeholder que empurra o conteúdo acompanhando a largura do sidebar via CSS var */}
+      <div
+        className="hidden lg:block shrink-0"
+        style={{ width: 'var(--sidebar-w, 240px)', transition: 'width 0.3s ease' }}
+      />
+      <main className="flex-1 min-h-screen flex flex-col min-w-0">
         <Suspense fallback={null}>
           <Header onMenuClick={() => setMobileMenuOpen(true)} />
         </Suspense>
