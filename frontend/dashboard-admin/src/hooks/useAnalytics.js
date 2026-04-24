@@ -36,7 +36,7 @@ export function useAnalytics(tenantId, periodo = '30') {
           marca:id_marca (id, nome, emoji),
           status_comercial:id_status (id, label, slug),
           motivo_desistencia:id_motivo_desistencia (id, nome),
-          operador:id_operador_responsavel (id, nome, avatar_url)
+          operador:id_operador_responsavel (id, nome, avatar_url, gestor_id, gestor:gestor_id (id, nome))
         `)
         .is('deleted_at', null)
         .gte('created_at', inicio.toISOString())
@@ -50,9 +50,11 @@ export function useAnalytics(tenantId, periodo = '30') {
       if (error) throw error
       const rows = leads || []
 
-      const vendidos  = rows.filter(l => ['vendido','convertido'].includes(l.status_comercial?.slug?.toLowerCase()))
-      const perdidos  = rows.filter(l => l.status_comercial?.slug?.toLowerCase() === 'perdido')
-      const pipeline  = rows.filter(l => ['negociacao','negociação','proposta','em_negociacao'].includes(l.status_comercial?.slug?.toLowerCase()))
+      // Resolve slug preferindo status_comercial, fazendo fallback para o campo texto
+      const getSlug = l => l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
+      const vendidos  = rows.filter(l => ['vendido','convertido'].includes(getSlug(l)))
+      const perdidos  = rows.filter(l => getSlug(l) === 'perdido')
+      const pipeline  = rows.filter(l => ['negociacao','negociação','proposta','em_negociacao','agendado'].includes(getSlug(l)))
       const total     = rows.length
 
       const soma = arr => arr.reduce((a, l) => a + (parseFloat(l.capital_disponivel) || 0), 0)
@@ -108,11 +110,13 @@ export function useAnalytics(tenantId, periodo = '30') {
             id,
             nome:       l.operador.nome || 'Sem nome',
             avatar_url: l.operador.avatar_url || null,
+            gestorId:   l.operador.gestor_id || null,
+            gestorNome: l.operador.gestor?.nome || null,
             leads: 0, vendidos: 0, perdidos: 0, receita: 0,
           }
         }
         consultMap[id].leads++
-        const slug = l.status_comercial?.slug?.toLowerCase()
+        const slug = getSlug(l)
         if (['vendido','convertido'].includes(slug)) {
           consultMap[id].vendidos++
           consultMap[id].receita += parseFloat(l.capital_disponivel || 0)
@@ -126,6 +130,22 @@ export function useAnalytics(tenantId, periodo = '30') {
         }))
         .sort((a, b) => b.receita - a.receita)
 
+      // Agrega por gestor
+      const gestorMap = {}
+      porConsultor.forEach(c => {
+        const gid   = c.gestorId   || '__sem_gestor__'
+        const gnome = c.gestorNome || 'Sem Gestor'
+        if (!gestorMap[gid]) gestorMap[gid] = { id: gid, nome: gnome, leads: 0, vendidos: 0, perdidos: 0, receita: 0, consultores: [] }
+        gestorMap[gid].leads     += c.leads
+        gestorMap[gid].vendidos  += c.vendidos
+        gestorMap[gid].perdidos  += c.perdidos
+        gestorMap[gid].receita   += c.receita
+        gestorMap[gid].consultores.push(c)
+      })
+      const porGestor = Object.values(gestorMap)
+        .map(g => ({ ...g, txConversao: g.leads > 0 ? ((g.vendidos / g.leads) * 100).toFixed(1) : '0.0' }))
+        .sort((a, b) => b.receita - a.receita)
+
       return {
         total, vendidos: vendidos.length, perdidos: perdidos.length, pipeline: pipeline.length,
         capitalFechado, capitalPerdido, capitalPipeline,
@@ -133,7 +153,7 @@ export function useAnalytics(tenantId, periodo = '30') {
         forecast, previsaoIA, pace90,
         evolucao, porMarca, motivosPerda, ultimosLeads,
         mediadiaria: mediadiaria.toFixed(1),
-        porConsultor,
+        porConsultor, porGestor,
       }
     }
   })
@@ -144,7 +164,7 @@ export function useRealtimeLeads(tenantId, onNew) {
   useEffect(() => {
     if (!tenantId && tenantId !== null) return
     const channelConfig = {
-      event: 'INSERT',
+      event: '*',
       schema: 'public',
       table: 'leads',
     }
