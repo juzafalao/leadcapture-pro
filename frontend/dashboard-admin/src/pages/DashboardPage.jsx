@@ -309,17 +309,18 @@ export default function DashboardPage() {
       const seteDias = new Date(hoje.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
       let qM = supabase.from('leads')
-        .select('categoria, capital_disponivel, created_at, status, id_operador_responsavel', { count: 'exact' })
+        .select('categoria, capital_disponivel, created_at, status, id_status, id_operador_responsavel, status_comercial:id_status (slug)', { count: 'exact' })
         .is('deleted_at', null)
       if (tenantId) qM = qM.eq('tenant_id', tenantId)
       const { data: ms, count: mc } = await qM.gte('created_at', inicio)
 
+      const getSlug = l => l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
       const hot     = (ms || []).filter(l => l.categoria === 'hot').length
       const warm    = (ms || []).filter(l => l.categoria === 'warm').length
       const cold    = (ms || []).filter(l => l.categoria === 'cold').length
       const capital = (ms || []).reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
       const semana  = (ms || []).filter(l => l.created_at >= seteDias).length
-      const conv    = (ms || []).filter(l => l.status === 'convertido').length
+      const conv    = (ms || []).filter(l => ['vendido','convertido'].includes(getSlug(l))).length
       const semDono = (ms || []).filter(l => !l.id_operador_responsavel).length
 
       setMetrics({ total: mc || 0, hot, warm, cold, capital, semana, convertidos: conv, sem_dono: semDono })
@@ -329,11 +330,13 @@ export default function DashboardPage() {
   useEffect(() => { carregar() }, [carregar])
 
   useEffect(() => {
-    if (!tenantId) return
-    const ch = supabase.channel(`leads-dash-${tenantId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `tenant_id=eq.${tenantId}` }, () => carregar())
+    const channelCfg = { event: '*', schema: 'public', table: 'leads' }
+    if (tenantId) channelCfg.filter = `tenant_id=eq.${tenantId}`
+    const ch = supabase
+      .channel(`leads-dash-${tenantId ?? 'all'}`)
+      .on('postgres_changes', channelCfg, () => carregar())
       .subscribe()
-    return () => { ch.unsubscribe() }
+    return () => { supabase.removeChannel(ch) }
   }, [tenantId, carregar])
 
   const totalPages    = Math.max(1, Math.ceil(total / PER_PAGE))
