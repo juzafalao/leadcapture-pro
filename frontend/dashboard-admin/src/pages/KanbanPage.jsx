@@ -73,6 +73,9 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
           : 'hover:bg-[#131B2E] hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/30 hover:-translate-y-0.5'
         }
       `}
+      style={{
+        borderColor: isDragging ? '#10B98140' : cat.border,
+      }}
     >
       {/* Nome + badge temperatura */}
       <div className="flex items-start justify-between gap-2 mb-2.5">
@@ -104,7 +107,6 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
             </span>
           )}
         </div>
-      )}
 
       {/* Contato */}
       {(lead.telefone || lead.email) && (
@@ -125,8 +127,6 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
               {lead.operador.nome?.split(' ')[0]}
             </span>
           </div>
-        ) : (
-          <span className="text-[9px] text-gray-700 italic">sem consultor</span>
         )}
 
         {/* Score + dias */}
