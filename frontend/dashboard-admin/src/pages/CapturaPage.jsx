@@ -26,6 +26,23 @@ const FIELD_MAP = [
   { key: 'observacao',         aliases: ['obs','observacao','observação','nota','note'],          required: false },
 ]
 
+// ── Score automático por capital investido ────────────────
+function calcularScore(capital) {
+  const cap = parseFloat(capital || 0)
+  if (isNaN(cap) || cap <= 0) return 10
+  if (cap < 10_000)   return Math.round(10 + (cap / 10_000) * 20)
+  if (cap < 50_000)   return Math.round(30 + ((cap - 10_000) / 40_000) * 20)
+  if (cap < 150_000)  return Math.round(50 + ((cap - 50_000) / 100_000) * 20)
+  if (cap < 500_000)  return Math.round(70 + ((cap - 150_000) / 350_000) * 20)
+  return Math.min(100, Math.round(90 + ((cap - 500_000) / 500_000) * 10))
+}
+
+function calcularCategoria(score) {
+  if (score >= 70) return 'hot'
+  if (score >= 40) return 'warm'
+  return 'cold'
+}
+
 function detectMapping(headers) {
   const result = {}
   for (const field of FIELD_MAP) {
@@ -121,19 +138,21 @@ function ImportacaoPlanilha({ tenantId }) {
 
     for (let i = 0; i < validos.length; i += BATCH) {
       const batch = validos.slice(i, i + BATCH).map(row => {
-        const cap = getVal(row, 'capital_disponivel')
+        const capRaw  = getVal(row, 'capital_disponivel')
+        const capNum  = capRaw ? parseFloat(capRaw.replace(/[^\d.,]/g,'').replace(',','.')) || null : null
+        const score   = calcularScore(capNum)
         return {
           tenant_id:          tenantId,
           nome:               getVal(row, 'nome'),
           telefone:           getVal(row, 'telefone') || null,
           email:              getVal(row, 'email') || null,
-          capital_disponivel: cap ? parseFloat(cap.replace(/[^\d.,]/g,'').replace(',','.')) || null : null,
+          capital_disponivel: capNum,
           regiao_interesse:   getVal(row, 'regiao_interesse') || null,
           fonte:              getVal(row, 'fonte') || 'importacao_planilha',
           observacao:         getVal(row, 'observacao') || null,
           status:             'novo',
-          score:              0,
-          categoria:          'cold',
+          score,
+          categoria:          calcularCategoria(score),
           created_at:         new Date().toISOString(),
         }
       })

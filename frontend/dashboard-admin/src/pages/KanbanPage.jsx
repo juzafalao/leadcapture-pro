@@ -126,7 +126,7 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
           {lead.operador ? lead.operador.nome.split(' ')[0] : ''}
         </span>
         {dias && (
-          <span className="text-[9px] text-gray-700 tabular-nums">{dias}</span>
+          <span className="text-[9px] text-gray-500 tabular-nums">{dias}</span>
         )}
       </div>
     </div>

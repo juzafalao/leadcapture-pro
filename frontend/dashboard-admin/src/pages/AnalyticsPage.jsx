@@ -84,15 +84,17 @@ function CustomTooltip({ active, payload, label }) {
 }
 
 const PERIODOS = [
-  { label: '7D',   value: '7' },
-  { label: '15D',  value: '15' },
-  { label: '30D',  value: '30' },
-  { label: '90D',  value: '90' },
+  { label: 'Hoje',       value: '1' },
+  { label: 'Semanal',    value: '7' },
+  { label: 'Mensal',     value: '30' },
+  { label: 'Trimestral', value: '90' },
+  { label: 'Semestral',  value: '180' },
 ]
 
 export default function AnalyticsPage() {
   const { usuario, isPlatformAdmin } = useAuth()
   const { alertModal, showAlert } = useAlertModal()
+  const isDirector = ['Diretor','Administrador','admin'].includes(usuario?.role) || usuario?.is_super_admin
   const [periodo, setPeriodo] = useState('30')
   const [activeTab, setActiveTab] = useState('overview')
   const [newLeads, setNewLeads] = useState([])
@@ -415,6 +417,87 @@ export default function AnalyticsPage() {
           )}
         </motion.div>
       </div>
+
+      {/* ── ABA EQUIPE (apenas Diretores) ── */}
+      {isDirector && (
+        <div className="px-4 lg:px-10 mt-12 mb-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="bg-[#0F172A] border border-white/5 rounded-3xl p-6 overflow-hidden">
+
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-white">👥 Performance da Equipe</h3>
+              <span className="text-[10px] font-black text-gray-600 uppercase tracking-wider">
+                {d.porConsultor?.length || 0} consultores
+              </span>
+            </div>
+
+            {(d.porConsultor || []).length > 0 ? (
+              <div className="space-y-3">
+                {d.porConsultor.map((cons, i) => (
+                  <motion.div key={cons.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                    className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 hover:border-[#10B981]/20 transition-all">
+                    <div className="flex items-center justify-between gap-4">
+                      {/* Avatar + Nome */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        {cons.avatar_url ? (
+                          <img src={cons.avatar_url} alt={cons.nome} className="w-10 h-10 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-[#10B981]/15 flex items-center justify-center text-[10px] font-black text-[#10B981] shrink-0">
+                            {cons.nome?.charAt(0)}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{cons.nome}</p>
+                          <p className="text-[10px] text-gray-600">{cons.leads} leads</p>
+                        </div>
+                      </div>
+
+                      {/* Stats grid 2x2 */}
+                      <div className="grid grid-cols-2 gap-3 shrink-0">
+                        <div className="text-right">
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Conversões</p>
+                          <p className="text-base font-black text-[#10B981]">{cons.vendidos}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Conv. Rate</p>
+                          <p className="text-base font-black text-white">{cons.txConversao}%</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Receita</p>
+                          <p className="text-sm font-black text-[#10B981] tabular-nums">
+                            {cons.receita >= 1_000_000 ? `R$${(cons.receita / 1_000_000).toFixed(1)}M` :
+                             cons.receita >= 1_000 ? `R$${(cons.receita / 1_000).toFixed(0)}K` :
+                             `R$${Math.round(cons.receita)}`}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Perdidos</p>
+                          <p className="text-base font-black text-red-400">{cons.perdidos}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Barra de conversão */}
+                    <div className="mt-3 h-1 bg-white/[0.03] rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${parseFloat(cons.txConversao)}%` }}
+                        transition={{ duration: 0.8, delay: i * 0.05 + 0.2 }}
+                        className="h-full bg-gradient-to-r from-[#10B981] to-[#059669] rounded-full"
+                      />
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center">
+                <p className="text-gray-600 text-sm">Nenhum consultor com dados no período</p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
+
       {alertModal}
     </div>
   )
