@@ -138,7 +138,6 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
         id_motivo_desistencia:   form.id_motivo_desistencia   || null,
         id_marca:                form.id_marca                || null,
         id_operador_responsavel: form.id_operador_responsavel || null,
-        operador_id:             form.id_operador_responsavel || null,
         updated_at:              new Date().toISOString(),
       }
       const { error: e } = await supabase.from('leads').update(payload).eq('id', lead.id)
@@ -326,7 +325,6 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
                       onChange={e => setForm(p => ({
                         ...p,
                         id_operador_responsavel: e.target.value || null,
-                        operador_id:             e.target.value || null,
                       }))}
                       className={INPUT_CLS}>
                       <option value="">-- Sem responsavel --</option>
