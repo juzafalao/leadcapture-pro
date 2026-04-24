@@ -118,7 +118,7 @@ export default function EmailMarketingPage() {
   const [enviando, setEnviando] = useState(false)
   const [alerta, setAlerta]     = useState(null)
 
-  // Estado de cada automação (carregado do localStorage)
+  // Toggle states — inicia do localStorage e sincroniza com Supabase
   const [ativos, setAtivos] = useState(() =>
     Object.fromEntries(
       TEMPLATES_DEF.map(t => [t.id, loadAtivo(t.id, t.id === 'boas-vindas' || t.id === 'lead-quente')])
@@ -127,6 +127,32 @@ export default function EmailMarketingPage() {
   const [salvando, setSalvando] = useState(null)
 
   const tenantId = isPlatformAdmin?.() ? null : usuario?.tenant_id
+
+  // Carrega estados de automação do Supabase ao montar (sobrescreve localStorage)
+  useEffect(() => {
+    if (!tenantId) return
+    async function carregarTogglesDoDB() {
+      try {
+        const chaves = TEMPLATES_DEF.map(t => `email_automacao_${t.id}`)
+        const { data } = await supabase
+          .from('configuracoes')
+          .select('chave, valor')
+          .eq('tenant_id', tenantId)
+          .in('chave', chaves)
+        if (data?.length) {
+          const atualizado = {}
+          data.forEach(row => {
+            const id = row.chave.replace('email_automacao_', '')
+            const val = JSON.parse(row.valor)
+            atualizado[id] = val
+            saveAtivo(id, val) // sincroniza localStorage
+          })
+          setAtivos(prev => ({ ...prev, ...atualizado }))
+        }
+      } catch { /* mantém estado local */ }
+    }
+    carregarTogglesDoDB()
+  }, [tenantId])
 
   useEffect(() => {
     fetch(`${API_URL}/api/sistema/status`)

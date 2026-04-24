@@ -138,7 +138,7 @@ export default function DashboardOverviewPage() {
 
       // ── Leads do mês (metrics + canal + funil) ──
       let qM = supabase.from('leads')
-        .select('id, categoria, capital_disponivel, created_at, status, id_status, id_operador_responsavel, fonte')
+        .select('id, categoria, capital_disponivel, created_at, status, id_status, id_operador_responsavel, fonte, status_comercial:id_status (slug)')
         .is('deleted_at', null)
         .gte('created_at', mesInicio)
       if (tenantId) qM = qM.eq('tenant_id', tenantId)
@@ -147,12 +147,15 @@ export default function DashboardOverviewPage() {
       }
       const { data: ml } = await qM
 
+      // Resolve slug preferindo status_comercial join, com fallback para campo texto
+      const getSlug = l => l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
+
       const total      = (ml || []).length
       const hot        = (ml || []).filter(l => l.categoria === 'hot').length
       const warm       = (ml || []).filter(l => l.categoria === 'warm').length
       const cold       = (ml || []).filter(l => l.categoria === 'cold').length
       const capital    = (ml || []).reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
-      const convertidos = (ml || []).filter(l => l.status === 'convertido').length
+      const convertidos = (ml || []).filter(l => ['vendido','convertido'].includes(getSlug(l))).length
       const semana     = (ml || []).filter(l => l.created_at >= dias7ago).length
       const sem_dono   = (ml || []).filter(l => !l.id_operador_responsavel).length
       setMetrics({ total, hot, warm, cold, capital, convertidos, semana, sem_dono })
@@ -178,7 +181,16 @@ export default function DashboardOverviewPage() {
       // ── Funil por status ──
       if (statuses?.length) {
         const stMap = {}
-        ;(ml || []).forEach(l => { if (l.id_status) stMap[l.id_status] = (stMap[l.id_status] || 0) + 1 })
+        ;(ml || []).forEach(l => {
+          // Prioridade: id_status (UUID). Fallback: slug do campo status (texto)
+          if (l.id_status) {
+            stMap[l.id_status] = (stMap[l.id_status] || 0) + 1
+          } else if (l.status) {
+            const slug = l.status.toLowerCase().trim()
+            const st = statuses.find(s => s.slug === slug)
+            if (st) stMap[st.id] = (stMap[st.id] || 0) + 1
+          }
+        })
         const maxSt = Math.max(...Object.values(stMap), 1)
         const funnelArr = statuses
           .map(s => ({ label: s.label, count: stMap[s.id] || 0, cor: s.cor, pct: Math.round(((stMap[s.id] || 0) / maxSt) * 100) }))
@@ -188,7 +200,7 @@ export default function DashboardOverviewPage() {
 
       // ── Gráfico 30 dias ──
       let qC = supabase.from('leads')
-        .select('created_at, status')
+        .select('created_at, status, status_comercial:id_status (slug)')
         .is('deleted_at', null)
         .gte('created_at', dias30ago)
       if (tenantId) qC = qC.eq('tenant_id', tenantId)
@@ -205,9 +217,10 @@ export default function DashboardOverviewPage() {
       }
       ;(cl || []).forEach(l => {
         const key = new Date(l.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        const slug = l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
         if (dayMap[key]) {
           dayMap[key].leads++
-          if (l.status === 'convertido') dayMap[key].convertidos++
+          if (['vendido','convertido'].includes(slug)) dayMap[key].convertidos++
         }
       })
       // Mostrar só a cada 5 dias no eixo X para não poluir
@@ -231,14 +244,15 @@ export default function DashboardOverviewPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // Realtime — recarrega ao inserir novo lead
+  // Realtime — recarrega em qualquer mudança de leads (INSERT/UPDATE/DELETE)
   useEffect(() => {
-    if (!tenantId) return
-    const ch = supabase.channel(`dash-ov-${tenantId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'leads', filter: `tenant_id=eq.${tenantId}` },
-        () => fetchAll())
+    const channelCfg = { event: '*', schema: 'public', table: 'leads' }
+    if (tenantId) channelCfg.filter = `tenant_id=eq.${tenantId}`
+    const ch = supabase
+      .channel(`dash-ov-${tenantId ?? 'all'}`)
+      .on('postgres_changes', channelCfg, () => fetchAll())
       .subscribe()
-    return () => { ch.unsubscribe() }
+    return () => { supabase.removeChannel(ch) }
   }, [tenantId, fetchAll])
 
   // ── taxa de conversão ──
