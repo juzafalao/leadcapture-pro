@@ -46,7 +46,7 @@ export function useStatusColunas(tenantId) {
 }
 
 // ── Kanban Leads ───────────────────────────────────────────────────────
-export function useKanbanLeads({ tenantId, colunas = [] }) {
+export function useKanbanLeads({ tenantId, colunas = [], dataInicio = null }) {
   const qc = useQueryClient()
 
   // FIX: Debounce local (não global) com cleanup adequado
@@ -93,7 +93,7 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
   }, [tenantId, colunas.length, qc])
 
   return useQuery({
-    queryKey: ['kanban', tenantId],
+    queryKey: ['kanban', tenantId, dataInicio],
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     enabled: colunas.length > 0,
@@ -111,9 +111,10 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
         `)
         .is('deleted_at', null)
         .order('score', { ascending: false })
-        .limit(200)
+        .limit(500)
 
       if (tenantId) query = query.eq('tenant_id', tenantId)
+      if (dataInicio) query = query.gte('created_at', dataInicio)
 
       const { data, error } = await query
       if (error) throw error

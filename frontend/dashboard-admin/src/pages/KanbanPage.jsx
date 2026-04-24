@@ -209,18 +209,34 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
   )
 })
 
+// ── Filtros de período ────────────────────────────────────
+const FILTROS = [
+  { key: 'diaria',  label: 'Hoje'    },
+  { key: 'semanal', label: 'Semana'  },
+  { key: 'mensal',  label: 'Mês'     },
+  { key: 'geral',   label: 'Geral'   },
+]
+
+function getDataInicio(filtro) {
+  if (filtro === 'diaria')  { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString() }
+  if (filtro === 'semanal') return new Date(Date.now() - 7  * 86400000).toISOString()
+  if (filtro === 'mensal')  return new Date(Date.now() - 30 * 86400000).toISOString()
+  return null
+}
+
 // ── Página principal ──────────────────────────────────────
 export default function KanbanPage() {
   const { usuario } = useAuth()
   const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
 
+  const [filtro,     setFiltro]     = useState('geral')
   const [dragOver,   setDragOver]   = useState(null)
   const [dragLeadId, setDragLeadId] = useState(null)
   const [lead,       setLead]       = useState(null)
   const dragRef = useRef(null)
 
   const { data: colunas = COLUNAS_PADRAO } = useStatusColunas(tenantId)
-  const { data: kanban = {}, isLoading }   = useKanbanLeads({ tenantId, colunas })
+  const { data: kanban = {}, isLoading }   = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
   const { mutateAsync: mover }             = useMoverLead()
 
   const allLeads   = Object.values(kanban).flat()
@@ -276,7 +292,7 @@ export default function KanbanPage() {
     <div className="flex flex-col h-full bg-[#0B1220]">
       {/* Header */}
       <div className="px-4 lg:px-8 pt-5 pb-4 border-b border-white/[0.05] shrink-0">
-        <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
           <div>
             <h1 className="text-xl lg:text-2xl font-bold text-white">
               Funil de <span className="text-[#10B981]">Vendas</span>
@@ -297,6 +313,24 @@ export default function KanbanPage() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Filtro de período */}
+        <div className="flex gap-1">
+          {FILTROS.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFiltro(f.key)}
+              className={[
+                'px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all',
+                filtro === f.key
+                  ? 'bg-[#10B981] text-black'
+                  : 'bg-white/[0.04] text-gray-500 hover:bg-white/[0.07] hover:text-gray-300',
+              ].join(' ')}
+            >
+              {f.label}
+            </button>
+          ))}
         </div>
       </div>
 

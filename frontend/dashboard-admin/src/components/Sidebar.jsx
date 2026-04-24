@@ -118,6 +118,18 @@ const Icons = {
       <path d="M19 12a7 7 0 00-.2-1.6l2-1.5-2-3.5-2.3.7A7 7 0 0014.6 4l-.6-2h-4l-.6 2A7 7 0 007.5 6.1l-2.3-.7-2 3.5 2 1.5A7 7 0 005 12c0 .5.1 1 .2 1.6l-2 1.5 2 3.5 2.3-.7A7 7 0 009.4 20l.6 2h4l.6-2a7 7 0 001.9-2.1l2.3.7 2-3.5-2-1.5c.1-.6.2-1.1.2-1.6z" />
     </svg>
   ),
+  Analytics: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M18 20V10M12 20V4M6 20v-6" strokeLinecap="round" />
+    </svg>
+  ),
+  Importar: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <rect x="2" y="3" width="20" height="18" rx="2" />
+      <path d="M8 3v18M2 9h20M2 15h6" strokeLinecap="round" />
+      <path d="M17 13l2 2-2 2M14 15h5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   Logoff: () => (
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -142,9 +154,10 @@ const SECTIONS = [
     id: 'operacao',
     label: 'Operação',
     items: [
-      { path: '/pipeline', icon: <Icons.Leads />,  label: 'Leads' },
-      { path: '/kanban',   icon: <Icons.Kanban />, label: 'Funil' },
-      { path: '/canais',   icon: <Icons.Canais />, label: 'Canais', roles: ['Gestor','Diretor','Administrador','admin'] },
+      { path: '/pipeline', icon: <Icons.Leads />,   label: 'Leads' },
+      { path: '/kanban',   icon: <Icons.Kanban />,  label: 'Funil' },
+      { path: '/importar', icon: <Icons.Importar />, label: 'Importar Leads', roles: ['Gestor','Diretor','Administrador','admin'] },
+      { path: '/canais',   icon: <Icons.Canais />,  label: 'Canais', roles: ['Gestor','Diretor','Administrador','admin'] },
     ],
   },
   {
@@ -172,6 +185,7 @@ const SECTIONS = [
     roles: ['Gestor','Diretor','Administrador','admin'],
     items: [
       { path: '/relatorios', icon: <Icons.Relatorios />, label: 'Relatórios' },
+      { path: '/analytics',  icon: <Icons.Analytics />,  label: 'Análise',    roles: ['Diretor','Administrador','admin'] },
     ],
   },
   {

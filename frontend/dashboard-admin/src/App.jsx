@@ -29,6 +29,8 @@ const RankingPage           = lazy(() => import('./pages/RankingPage'));
 const CapturaPage           = lazy(() => import('./pages/CapturaPage'));
 const WhatsAppPage          = lazy(() => import('./pages/WhatsAppPage'));
 const QualificacaoPage      = lazy(() => import('./pages/QualificacaoPage'));
+const AnalyticsPage         = lazy(() => import('./pages/AnalyticsPage'));
+const ImportarLeadsPage     = lazy(() => import('./pages/ImportarLeadsPage'));
 
 const Sidebar  = lazy(() => import('./components/Sidebar'));
 const Header   = lazy(() => import('./components/layout/Header'));
@@ -159,8 +161,12 @@ function AppRoutes() {
         {/* PERFORMANCE — todos */}
         <Route path="/ranking"       element={W(RankingPage)} />
 
+        {/* OPERAÇÃO extras */}
+        <Route path="/importar"      element={W(ImportarLeadsPage, ROLES_GESTOR)} />
+
         {/* INTELIGÊNCIA — Gestor+ */}
-        <Route path="/relatorios"    element={W(RelatoriosPage, ROLES_GESTOR)} />
+        <Route path="/relatorios"    element={W(RelatoriosPage,  ROLES_GESTOR)} />
+        <Route path="/analytics"     element={W(AnalyticsPage,   ROLES_DIRETOR)} />
 
         {/* SISTEMA — Diretor+ */}
         <Route path="/backoffice"    element={W(LeadsSistemaPage,   ROLES_ADMIN)} />
