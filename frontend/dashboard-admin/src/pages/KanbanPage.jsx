@@ -11,6 +11,7 @@ import LeadModal from '../components/leads/LeadModal'
 function fmtCapital(v) {
   if (!v) return null
   const n = parseFloat(v)
+  if (isNaN(n) || n <= 0) return null
   if (n >= 1_000_000) return `R$${(n / 1_000_000).toFixed(1)}M`
   if (n >= 1_000)     return `R$${(n / 1_000).toFixed(0)}K`
   return `R$${n.toLocaleString('pt-BR')}`
@@ -18,28 +19,34 @@ function fmtCapital(v) {
 
 function diasAtras(iso) {
   if (!iso) return null
-  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000)
-  if (d === 0) return 'hoje'
-  if (d === 1) return '1d'
-  return `${d}d`
+  const ms = Date.now() - new Date(iso).getTime()
+  const h  = Math.floor(ms / 3_600_000)
+  const d  = Math.floor(ms / 86_400_000)
+  if (h < 1)  return 'agora'
+  if (h < 24) return `${h}h atrás`
+  if (d === 1) return '1d atrás'
+  if (d < 7)  return `${d}d atrás`
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-// ── Temperatura ──────────────────────────────────────────
-const CAT = {
-  hot:  { cor: '#EF4444', bg: '#EF444418', label: 'HOT'   },
-  warm: { cor: '#F59E0B', bg: '#F59E0B15', label: 'MORNO' },
-  cold: { cor: '#64748B', bg: '#64748B12', label: 'FRIO'  },
+function getInitials(nome) {
+  if (!nome) return '?'
+  return nome.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()
 }
 
 // ── Canal de origem ──────────────────────────────────────
 const CANAL_MAP = [
-  { match: ['whatsapp','wpp','zap'],              label: 'WhatsApp',  color: '#25D366', bg: '#25D36615' },
-  { match: ['instagram','insta'],                 label: 'Instagram', color: '#E1306C', bg: '#E1306C15' },
-  { match: ['facebook','fb'],                     label: 'Facebook',  color: '#1877F2', bg: '#1877F215' },
-  { match: ['n8n','make','zapier','automac'],      label: 'n8n',       color: '#EA580C', bg: '#EA580C15' },
-  { match: ['form','lp','landing','site'],         label: 'Formulário',color: '#8B5CF6', bg: '#8B5CF615' },
-  { match: ['api','webhook'],                      label: 'API',       color: '#06B6D4', bg: '#06B6D415' },
-  { match: ['import','planilha','csv'],            label: 'Importação',color: '#64748B', bg: '#64748B15' },
+  { match: ['whatsapp','wpp','zap'],              label: 'WhatsApp',   color: '#25D366', bg: '#25D36620' },
+  { match: ['instagram','insta'],                 label: 'Instagram',  color: '#E1306C', bg: '#E1306C20' },
+  { match: ['facebook','fb'],                     label: 'Facebook',   color: '#1877F2', bg: '#1877F220' },
+  { match: ['google','ads'],                      label: 'Google Ads', color: '#FBBC05', bg: '#FBBC0520' },
+  { match: ['chatbot','bot'],                     label: 'Chatbot',    color: '#F97316', bg: '#F9731620' },
+  { match: ['indicacao','referral','ind'],         label: 'Indicação',  color: '#8B5CF6', bg: '#8B5CF620' },
+  { match: ['n8n','make','zapier'],               label: 'N8N',        color: '#EA580C', bg: '#EA580C20' },
+  { match: ['form','lp','landing','site','website'], label: 'Website', color: '#06B6D4', bg: '#06B6D420' },
+  { match: ['api','webhook'],                     label: 'API',        color: '#8B5CF6', bg: '#8B5CF620' },
+  { match: ['import','planilha','csv'],           label: 'Importação', color: '#64748B', bg: '#64748B20' },
+  { match: ['manual'],                            label: 'Manual',     color: '#64748B', bg: '#64748B20' },
 ]
 
 function getCanal(fonte) {
@@ -50,11 +57,11 @@ function getCanal(fonte) {
 
 // ── Card do lead ─────────────────────────────────────────
 const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragEnd, onClick }) {
-  const cat      = CAT[(lead.categoria || 'cold').toLowerCase()] || CAT.cold
   const score    = lead.score ?? 0
   const canal    = getCanal(lead.fonte)
   const cap      = fmtCapital(lead.capital_disponivel)
   const dias     = diasAtras(lead.created_at)
+  const ini      = getInitials(lead.nome)
   const corScore = score >= 80 ? '#EF4444' : score >= 60 ? '#F59E0B' : '#64748B'
 
   return (
@@ -63,138 +70,105 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
       onDragStart={(e) => onDragStart(e, lead)}
       onDragEnd={onDragEnd}
       onClick={() => onClick(lead)}
-      style={{ borderLeftColor: cat.cor }}
-      className={`
-        bg-[#0F172A] rounded-xl border border-white/[0.07] border-l-[3px]
-        p-3.5 cursor-grab active:cursor-grabbing select-none
-        transition-all duration-150
-        ${isDragging
+      className={[
+        'bg-[#0F172A] rounded-xl border border-white/[0.07] p-3.5',
+        'cursor-grab active:cursor-grabbing select-none transition-all duration-150',
+        isDragging
           ? 'opacity-40 scale-[0.97]'
-          : 'hover:bg-[#131B2E] hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/30 hover:-translate-y-0.5'
-        }
-      `}
-      style={{
-        borderColor: isDragging ? '#10B98140' : cat.border,
-      }}
+          : 'hover:bg-[#131B2E] hover:border-white/[0.14] hover:shadow-xl hover:shadow-black/30 hover:-translate-y-0.5',
+      ].join(' ')}
     >
-      {/* Nome + badge temperatura */}
-      <div className="flex items-start justify-between gap-2 mb-2.5">
-        <p className="text-[13.5px] font-bold text-white leading-snug flex-1 min-w-0 truncate">
-          {lead.nome}
-        </p>
-        <span
-          className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0"
-          style={{ background: cat.bg, color: cat.cor }}
-        >
-          {cat.label}
-        </span>
+      {/* Nome + avatar + score */}
+      <div className="flex items-start gap-2.5 mb-2.5">
+        <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0">
+          <span className="text-[9px] font-black text-gray-400 tracking-tight">{ini}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12.5px] font-bold text-white leading-snug truncate">{lead.nome}</p>
+          {(lead.telefone || lead.email) && (
+            <p className="text-[10px] text-gray-500 truncate mt-0.5">
+              {lead.telefone || lead.email}
+            </p>
+          )}
+        </div>
+        {score > 0 && (
+          <span
+            className="text-[10px] font-black tabular-nums shrink-0 mt-0.5"
+            style={{ color: corScore }}
+          >
+            {score}
+          </span>
+        )}
       </div>
 
-      {/* Tags: canal + capital */}
-      {(canal || cap) && (
-        <div className="flex flex-wrap gap-1.5 mb-2.5">
-          {canal && (
-            <span
-              className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-              style={{ background: canal.bg, color: canal.color }}
-            >
-              {canal.label}
-            </span>
-          )}
-          {cap && (
-            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981]">
-              {cap}
-            </span>
-          )}
-        </div>
-
-      {/* Contato */}
-      {(lead.telefone || lead.email) && (
-        <p className="text-[10.5px] text-gray-500 truncate mb-0.5">
-          {lead.telefone || lead.email}
-        </p>
-      )}
-
-      {/* Rodapé */}
-      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/[0.05]">
-        {/* Consultor */}
-        {lead.operador ? (
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 bg-[#10B981]/15 text-[#10B981]">
-              {lead.operador.nome?.charAt(0)}
-            </div>
-            <span className="text-[10px] text-gray-500 truncate">
-              {lead.operador.nome?.split(' ')[0]}
-            </span>
-          </div>
+      {/* Canal + capital */}
+      <div className="flex items-center justify-between gap-2 min-h-[22px]">
+        {canal ? (
+          <span
+            className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+            style={{ background: canal.bg, color: canal.color }}
+          >
+            {canal.label}
+          </span>
+        ) : (
+          <span />
         )}
+        {cap && (
+          <span className="text-[12px] font-black text-white tabular-nums shrink-0">
+            {cap}
+          </span>
+        )}
+      </div>
 
-        {/* Score + dias */}
-        <div className="flex items-center gap-2 shrink-0">
-          {score > 0 && (
-            <span className="text-[10px] font-black tabular-nums" style={{ color: corScore }}>
-              {score}
-            </span>
-          )}
-          {dias && (
-            <span className="text-[9px] text-gray-700 tabular-nums">{dias}</span>
-          )}
-        </div>
+      {/* Rodapé: consultor + dias */}
+      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-white/[0.05]">
+        <span className="text-[10px] text-gray-600 truncate">
+          {lead.operador ? lead.operador.nome.split(' ')[0] : ''}
+        </span>
+        {dias && (
+          <span className="text-[9px] text-gray-700 tabular-nums">{dias}</span>
+        )}
       </div>
     </div>
   )
 })
 
-// ── Coluna ───────────────────────────────────────────────
+// ── Coluna ────────────────────────────────────────────────
 const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDragStart, onDragEnd, onDrop, onLeadClick }) {
   const isOver  = dragOver === coluna.slug
-  const hot     = leads.filter(l => (l.categoria || '').toLowerCase() === 'hot').length
   const capital = leads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
-
-  function fmtK(v) {
-    return v >= 1_000_000 ? `R$${(v / 1_000_000).toFixed(1)}M`
-      : v >= 1_000 ? `R$${(v / 1_000).toFixed(0)}K`
-      : `R$${Math.round(v)}`
-  }
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
       <div
-        className={`flex items-center justify-between px-3 py-2.5 mb-2 rounded-xl border transition-all ${
-          isOver ? 'border-[#10B981]/40 bg-[#10B981]/5' : 'bg-[#0A0F1E] border-white/[0.07]'
-        }`}
+        className={[
+          'px-3 py-2.5 mb-2 rounded-xl border transition-all',
+          isOver ? 'border-white/[0.12] bg-white/[0.04]' : 'bg-[#0A0F1E] border-white/[0.06]',
+        ].join(' ')}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: coluna.cor }} />
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-300 truncate">
-            {coluna.label}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {hot > 0 && (
-            <span className="text-[9px] font-black text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">
-              {hot}🔥
-            </span>
-          )}
-          <span className="text-[9px] font-black text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-full tabular-nums">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: coluna.cor }} />
+            <span className="text-[11px] font-black text-white truncate">{coluna.label}</span>
+          </div>
+          <span className="text-[10px] font-black text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-full tabular-nums shrink-0 ml-1">
             {leads.length}
           </span>
         </div>
+        {capital > 0 && (
+          <p className="text-[9px] font-bold text-gray-600 tabular-nums mt-0.5 pl-4">
+            {capital.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </p>
+        )}
       </div>
-
-      {/* Capital da coluna */}
-      {capital > 0 && (
-        <p className="text-[9px] font-black text-[#10B981]/50 text-center mb-2 tabular-nums">
-          {fmtK(capital)}
-        </p>
-      )}
 
       {/* Drop zone */}
       <div
-        className={`flex-1 rounded-xl p-1.5 space-y-2 min-h-[60px] transition-all ${
-          isOver ? 'bg-[#10B981]/[0.03] ring-1 ring-dashed ring-[#10B981]/25' : ''
-        }`}
+        className={[
+          'flex-1 rounded-xl p-1.5 space-y-2 min-h-[60px] transition-all',
+          isOver ? 'bg-[#10B981]/[0.03] ring-1 ring-dashed ring-[#10B981]/20' : '',
+        ].join(' ')}
         onDragOver={(e) => { e.preventDefault(); onDrop('over', coluna.slug) }}
         onDragLeave={() => onDrop('leave', coluna.slug)}
         onDrop={(e) => onDrop('drop', coluna.slug, e)}
@@ -204,9 +178,9 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
             <motion.div
               key={lead.id}
               layout
-              initial={{ opacity: 0, y: 6, scale: 0.98 }}
+              initial={{ opacity: 0, y: 8, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.14 }}
             >
               <LeadCard
@@ -221,13 +195,13 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
         </AnimatePresence>
 
         {leads.length === 0 && !isOver && (
-          <div className="h-14 flex items-center justify-center rounded-xl border border-dashed border-white/[0.05]">
+          <div className="h-14 flex items-center justify-center rounded-xl border border-dashed border-white/[0.04]">
             <p className="text-[9px] text-gray-700 uppercase tracking-wider">Vazio</p>
           </div>
         )}
         {isOver && (
-          <div className="h-12 flex items-center justify-center rounded-xl border border-dashed border-[#10B981]/30">
-            <p className="text-[9px] text-[#10B981]/60 uppercase tracking-wider">Solte aqui</p>
+          <div className="h-12 flex items-center justify-center rounded-xl border border-dashed border-[#10B981]/25">
+            <p className="text-[9px] text-[#10B981]/50 uppercase tracking-wider">Solte aqui</p>
           </div>
         )}
       </div>
@@ -235,7 +209,7 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
   )
 })
 
-// ── Página principal ─────────────────────────────────────
+// ── Página principal ──────────────────────────────────────
 export default function KanbanPage() {
   const { usuario } = useAuth()
   const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
@@ -249,12 +223,17 @@ export default function KanbanPage() {
   const { data: kanban = {}, isLoading }   = useKanbanLeads({ tenantId, colunas })
   const { mutateAsync: mover }             = useMoverLead()
 
-  const totalLeads = Object.values(kanban).reduce((a, b) => a + b.length, 0)
+  const allLeads   = Object.values(kanban).flat()
+  const totalLeads = allLeads.length
   const totalConv  = kanban['convertido']?.length ?? 0
-  const totalHot   = Object.values(kanban).flat().filter(l => (l.categoria || '').toLowerCase() === 'hot').length
   const txConv     = totalLeads > 0 ? Math.round((totalConv / totalLeads) * 100) : 0
-  const totalCap   = Object.values(kanban).flat().reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
-  const fmtK = v => v >= 1_000_000 ? `R$${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `R$${(v / 1_000).toFixed(0)}K` : `R$${Math.round(v)}`
+  const totalCap   = allLeads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
+
+  function fmtK(v) {
+    if (v >= 1_000_000) return `R$${(v / 1_000_000).toFixed(1)}M`
+    if (v >= 1_000)     return `R$${(v / 1_000).toFixed(0)}K`
+    return `R$${Math.round(v)}`
+  }
 
   const onDragStart = useCallback((e, l) => {
     dragRef.current = l
@@ -285,11 +264,13 @@ export default function KanbanPage() {
     finally { dragRef.current = null; setDragLeadId(null) }
   }, [colunas, dragOver, mover, tenantId])
 
-  if (isLoading) return (
-    <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
-      <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
-    </div>
-  )
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
+        <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full bg-[#0B1220]">
@@ -305,13 +286,12 @@ export default function KanbanPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { label: 'Total',       value: totalLeads,     color: 'text-white',     border: 'border-white/[0.07]' },
-              { label: '🔥 Hot',      value: totalHot,       color: 'text-red-400',   border: 'border-red-500/20'   },
-              { label: 'Convertidos', value: totalConv,      color: 'text-[#10B981]', border: 'border-[#10B981]/20' },
-              { label: 'Conversão',   value: `${txConv}%`,   color: 'text-gray-300',  border: 'border-white/[0.07]' },
-              { label: 'Capital',     value: fmtK(totalCap), color: 'text-[#10B981]', border: 'border-[#10B981]/20' },
+              { label: 'Total',       value: totalLeads,     color: 'text-white'      },
+              { label: 'Convertidos', value: totalConv,      color: 'text-[#10B981]'  },
+              { label: 'Conversão',   value: `${txConv}%`,   color: 'text-gray-300'   },
+              { label: 'Capital',     value: fmtK(totalCap), color: 'text-[#10B981]'  },
             ].map(kpi => (
-              <div key={kpi.label} className={`bg-[#0A0F1E] border ${kpi.border} rounded-xl px-3 py-2 text-center min-w-[64px]`}>
+              <div key={kpi.label} className="bg-[#0A0F1E] border border-white/[0.07] rounded-xl px-3 py-2 text-center min-w-[64px]">
                 <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-0.5">{kpi.label}</p>
                 <p className={`text-sm font-black tabular-nums ${kpi.color}`}>{kpi.value}</p>
               </div>
