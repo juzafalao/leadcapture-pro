@@ -11,7 +11,7 @@ import { useEffect, useRef, useCallback } from 'react'
 
 // Fallback usado APENAS quando banco não retorna status_comercial
 export const COLUNAS_PADRAO = [
-  { id: 'novo', label: 'Novo Lead', slug: 'novo', cor: '#ee7b4d' },
+  { id: 'novo', label: 'Lead Novo', slug: 'novo', cor: '#ee7b4d' },
   { id: 'contato', label: 'Em Contato', slug: 'contato', cor: '#F59E0B' },
   { id: 'agendado', label: 'Agendado', slug: 'agendado', cor: '#3B82F6' },
   { id: 'negociacao', label: 'Em Negociação', slug: 'negociacao', cor: '#8B5CF6' },
