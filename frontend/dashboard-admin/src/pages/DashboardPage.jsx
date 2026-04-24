@@ -95,7 +95,6 @@ function LeadRow({ lead, operadores, podeAtribuir, usuario, onOpenModal, onReloa
     try {
       await supabase.from('leads').update({
         id_operador_responsavel: opId,
-        operador_id:             opId,
         updated_at:              new Date().toISOString(),
       }).eq('id', lead.id)
       onReload?.()
@@ -279,7 +278,7 @@ export default function DashboardPage() {
       let q = supabase.from('leads').select(`
         id, tenant_id, nome, email, telefone, cidade, estado,
         capital_disponivel, categoria, score, status, fonte,
-        id_operador_responsavel, operador_id, created_at, id_status, id_marca,
+        id_operador_responsavel, created_at, id_status, id_marca,
         status_comercial:id_status ( id, label, slug, cor ),
         marca:id_marca ( id, nome, emoji ),
         operador:id_operador_responsavel ( id, nome )

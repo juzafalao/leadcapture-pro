@@ -71,12 +71,12 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
       experiencia_anterior: lead.experiencia_anterior || false,
       urgencia: lead.urgencia || 'normal',
     })
-    if (lead.operador_id) {
-      // Busca o consultor atribuído
+    const opId = lead.id_operador_responsavel || lead.operador?.id
+    if (opId) {
       supabase
         .from('usuarios')
         .select('id, nome, role, email')
-        .eq('id', lead.operador_id)
+        .eq('id', opId)
         .single()
         .then(({ data }) => setConsultorAtribuido(data))
     }

@@ -444,7 +444,6 @@ router.put('/:id/assign-consultant', async (req, res) => {
     .from('leads')
     .update({
       id_operador_responsavel: consultantId,
-      operador_id:             consultantId,
       updated_at:              new Date().toISOString(),
     })
     .eq('id', leadId)

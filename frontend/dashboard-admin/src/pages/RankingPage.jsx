@@ -311,7 +311,7 @@ export default function RankingPage() {
 
       const mapa = {}
       for (const l of leads) {
-        const uid = l.id_operador_responsavel || l.operador_id
+        const uid = l.id_operador_responsavel
         if (!uid) continue
         if (!mapa[uid]) mapa[uid] = { total: 0, hot: 0, conv: 0, capital: 0 }
         mapa[uid].total++
