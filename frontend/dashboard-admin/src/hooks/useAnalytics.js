@@ -22,15 +22,21 @@ export function useAnalytics(tenantId, periodo = '30') {
     queryFn: async () => {
       const hoje = new Date()
       const inicio = new Date()
-      inicio.setDate(hoje.getDate() - parseInt(periodo))
+      if (periodo === '1') {
+        inicio.setHours(0, 0, 0, 0)
+      } else {
+        inicio.setDate(hoje.getDate() - parseInt(periodo))
+      }
 
       let query = supabase
         .from('leads')
         .select(`
           id, nome, categoria, status, capital_disponivel, created_at, fonte,
+          id_operador_responsavel,
           marca:id_marca (id, nome, emoji),
           status_comercial:id_status (id, label, slug),
-          motivo_desistencia:id_motivo_desistencia (id, nome)
+          motivo_desistencia:id_motivo_desistencia (id, nome),
+          operador:id_operador_responsavel (id, nome, avatar_url)
         `)
         .is('deleted_at', null)
         .gte('created_at', inicio.toISOString())
@@ -92,6 +98,34 @@ export function useAnalytics(tenantId, periodo = '30') {
       const ultimosLeads = rows.slice(0, 20)
       const pace90 = mediadiaria * 90
 
+      // ── Performance por consultor ───────────────────────
+      const consultMap = {}
+      rows.forEach(l => {
+        if (!l.operador?.id) return
+        const id = l.operador.id
+        if (!consultMap[id]) {
+          consultMap[id] = {
+            id,
+            nome:       l.operador.nome || 'Sem nome',
+            avatar_url: l.operador.avatar_url || null,
+            leads: 0, vendidos: 0, perdidos: 0, receita: 0,
+          }
+        }
+        consultMap[id].leads++
+        const slug = l.status_comercial?.slug?.toLowerCase()
+        if (['vendido','convertido'].includes(slug)) {
+          consultMap[id].vendidos++
+          consultMap[id].receita += parseFloat(l.capital_disponivel || 0)
+        }
+        if (slug === 'perdido') consultMap[id].perdidos++
+      })
+      const porConsultor = Object.values(consultMap)
+        .map(c => ({
+          ...c,
+          txConversao: c.leads > 0 ? ((c.vendidos / c.leads) * 100).toFixed(1) : '0.0',
+        }))
+        .sort((a, b) => b.receita - a.receita)
+
       return {
         total, vendidos: vendidos.length, perdidos: perdidos.length, pipeline: pipeline.length,
         capitalFechado, capitalPerdido, capitalPipeline,
@@ -99,6 +133,7 @@ export function useAnalytics(tenantId, periodo = '30') {
         forecast, previsaoIA, pace90,
         evolucao, porMarca, motivosPerda, ultimosLeads,
         mediadiaria: mediadiaria.toFixed(1),
+        porConsultor,
       }
     }
   })

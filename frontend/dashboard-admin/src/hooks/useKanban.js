@@ -103,6 +103,7 @@ export function useKanbanLeads({ tenantId, colunas = [] }) {
         .select(`
           id, nome, score, categoria, tenant_id, status,
           capital_disponivel, regiao_interesse, fonte, created_at,
+          telefone, email,
           id_marca, id_status, id_operador_responsavel,
           marca:id_marca (id, nome, emoji),
           status_comercial:id_status (id, label, slug, cor),
