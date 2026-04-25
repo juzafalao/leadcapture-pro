@@ -116,7 +116,7 @@ router.get('/usuarios', async (req, res) => {
 
     const [{ data: leads }, { data: metas }, { data: faixas }] = await Promise.all([
       c.from('leads')
-       .select('id, categoria, capital_disponivel, id_operador_responsavel, operador_id, status')
+       .select('id, categoria, capital_disponivel, id_operador_responsavel, status')
        .eq('tenant_id', tenantId).gte('created_at', inicio).lte('created_at', fim).is('deleted_at', null),
       c.from('ranking_metas').select('*').eq('tenant_id', tenantId).eq('ano', ano).eq('mes', mes),
       c.from('ranking_config').select('*').eq('tenant_id', tenantId).eq('ativo', true).order('de'),
@@ -130,7 +130,7 @@ router.get('/usuarios', async (req, res) => {
 
     const mapa = {}
     for (const l of (leads || [])) {
-      const uid = l.id_operador_responsavel || l.operador_id
+      const uid = l.id_operador_responsavel
       if (!uid) continue
       if (!mapa[uid]) mapa[uid] = { total: 0, hot: 0, conv: 0, capital: 0 }
       mapa[uid].total++
