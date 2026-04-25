@@ -6,7 +6,8 @@
 import { Router } from 'express'
 import supabase from '../core/database.js'
 import { verificarConexao } from '../comunicacao/whatsapp.js'
-import { getScoringTable }  from '../core/scoring.js'
+import { getScoringTable, getScoringTableFromConfig, DEFAULT_SCORING_CONFIG } from '../core/scoring.js'
+import { getScoringConfig, invalidateScoringCache } from '../core/scoringConfig.js'
 
 const router = Router()
 
@@ -118,6 +119,93 @@ router.get('/scoring', (_req, res) => {
       cold: 'score < 60',
     },
   })
+})
+
+// ─────────────────────────────────────────────
+// GET /api/sistema/scoring-config
+// Retorna config de scoring do tenant do usuário logado
+// ─────────────────────────────────────────────
+router.get('/scoring-config', async (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) return res.status(401).json({ success: false, error: 'Token obrigatório' })
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) return res.status(401).json({ success: false, error: 'Token inválido' })
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('tenant_id')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (!usuario?.tenant_id) return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
+
+  const config = await getScoringConfig(usuario.tenant_id)
+  res.json({
+    success: true,
+    config,
+    tabela: getScoringTableFromConfig(config),
+    isDefault: config === DEFAULT_SCORING_CONFIG,
+  })
+})
+
+// ─────────────────────────────────────────────
+// PUT /api/sistema/scoring-config
+// Salva config de scoring personalizada para o tenant
+// ─────────────────────────────────────────────
+router.put('/scoring-config', async (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) return res.status(401).json({ success: false, error: 'Token obrigatório' })
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) return res.status(401).json({ success: false, error: 'Token inválido' })
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('tenant_id, role, is_super_admin')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (!usuario) return res.status(403).json({ success: false, error: 'Usuário não encontrado' })
+
+  const podeEditar = ['Gestor', 'Diretor', 'Administrador', 'admin'].includes(usuario.role) || usuario.is_super_admin
+  if (!podeEditar) return res.status(403).json({ success: false, error: 'Sem permissão para editar scoring' })
+
+  const { tiers, thresholds, reset } = req.body
+
+  if (reset) {
+    await supabase.from('configuracoes')
+      .delete()
+      .eq('tenant_id', usuario.tenant_id)
+      .eq('chave', 'scoring_config_v1')
+    invalidateScoringCache(usuario.tenant_id)
+    return res.json({ success: true, message: 'Configuração restaurada para os padrões', config: DEFAULT_SCORING_CONFIG })
+  }
+
+  if (!Array.isArray(tiers) || tiers.length === 0) {
+    return res.status(400).json({ success: false, error: 'tiers é obrigatório e deve ser um array' })
+  }
+
+  const config = {
+    tiers: tiers.map(t => ({
+      min:   parseInt(t.min)   || 0,
+      score: parseInt(t.score) || 50,
+      label: String(t.label || ''),
+    })),
+    thresholds: {
+      HOT:  parseInt(thresholds?.HOT)  || DEFAULT_SCORING_CONFIG.thresholds.HOT,
+      WARM: parseInt(thresholds?.WARM) || DEFAULT_SCORING_CONFIG.thresholds.WARM,
+    },
+  }
+
+  const { error } = await supabase.from('configuracoes').upsert(
+    { tenant_id: usuario.tenant_id, chave: 'scoring_config_v1', valor: JSON.stringify(config) },
+    { onConflict: 'tenant_id,chave' }
+  )
+  if (error) return res.status(500).json({ success: false, error: error.message })
+
+  invalidateScoringCache(usuario.tenant_id)
+  res.json({ success: true, message: 'Configuração de scoring salva', config })
 })
 
 export default router

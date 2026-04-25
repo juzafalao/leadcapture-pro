@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { useRelatorios, useFiltrosRelatorio } from '../hooks/useRelatorios'
@@ -8,6 +8,7 @@ import {
   XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer, Legend, CartesianGrid
 } from 'recharts'
 import LoadingSpinner from '../components/shared/LoadingSpinner'
+import { supabase } from '../lib/supabase'
 import {
   exportLeadsCSV, exportFunilCSV, exportConsultorCSV, exportMarcaCSV,
   exportTemporalCSV, exportFonteCSV, exportPerdaCSV, exportRegiaoCSV,
@@ -15,6 +16,89 @@ import {
 } from '../utils/exportUtils'
 
 const COLORS = ['#10B981','#3b82f6','#3b82f6','#8b5cf6','#ec4899','#10b981','#f43f5e','#06b6d4']
+
+function CommissionRulesPanel({ tenantId }) {
+  const [faixas, setFaixas] = useState([])
+  const [meta, setMeta] = useState(null)
+
+  useEffect(() => {
+    if (!tenantId) return
+    const now = new Date()
+    Promise.all([
+      supabase.from('ranking_config').select('*').eq('tenant_id', tenantId).eq('ativo', true).order('de'),
+      supabase.from('ranking_metas').select('*')
+        .eq('tenant_id', tenantId)
+        .eq('ano', now.getFullYear())
+        .eq('mes', now.getMonth() + 1)
+        .is('consultor_id', null)
+        .limit(1),
+    ]).then(([{ data: f }, { data: m }]) => {
+      setFaixas(f || [])
+      setMeta((m || [])[0] || null)
+    })
+  }, [tenantId])
+
+  if (!faixas.length && !meta) return null
+
+  return (
+    <div className="mt-8 bg-[#0F172A] border border-[#EE7B4D]/20 rounded-2xl overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-3">
+        <span className="text-lg">💰</span>
+        <div>
+          <p className="text-xs font-black text-white uppercase tracking-wider">Regras de Ganho Vigentes</p>
+          <p className="text-[9px] text-gray-600">Configuração atual do plano de comissões · {new Date().toLocaleString('pt-BR',{month:'long',year:'numeric'})}</p>
+        </div>
+      </div>
+
+      <div className="p-5 grid lg:grid-cols-2 gap-5">
+
+        {/* Faixas de comissão */}
+        {faixas.length > 0 && (
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-wider text-gray-500 mb-3">Faixas de Comissão</p>
+            <div className="space-y-2">
+              {faixas.map((f, i) => (
+                <div key={i} className="flex items-center justify-between px-3 py-2.5 bg-[#0B1220] border border-white/5 rounded-xl">
+                  <span className="text-xs text-gray-400">
+                    {fmtFull(f.de)} {f.ate ? `até ${fmtFull(f.ate)}` : 'em diante'}
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[#EE7B4D] font-black text-xs">{f.pct}% comissão</span>
+                    {f.bonus > 0 && (
+                      <span className="text-[#F59E0B] text-[11px] font-bold">+{fmtFull(f.bonus)} bônus</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Metas e bônus */}
+        {meta && (
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-wider text-gray-500 mb-3">Metas e Bônus do Mês</p>
+            <div className="space-y-2">
+              {[
+                { label: 'Meta de leads (equipe)', value: meta.meta_leads || meta.meta_valor || '—', unit: 'leads' },
+                { label: 'Meta de capital', value: meta.meta_capital > 0 ? fmtFull(meta.meta_capital) : '—', unit: '' },
+                { label: 'Bônus individual', value: meta.bonus_individual > 0 ? fmtFull(meta.bonus_individual) : '—', unit: '' },
+                { label: 'Bônus de equipe', value: meta.bonus_equipe > 0 ? fmtFull(meta.bonus_equipe) : '—', unit: '' },
+                { label: '% Gestor sobre equipe', value: meta.pct_gestor > 0 ? `${meta.pct_gestor}%` : '—', unit: '' },
+              ].map(({ label, value, unit }) => (
+                <div key={label} className="flex items-center justify-between px-3 py-2 bg-[#0B1220] border border-white/5 rounded-xl">
+                  <span className="text-xs text-gray-500">{label}</span>
+                  <span className="text-xs font-black text-white">{value}{unit ? ` ${unit}` : ''}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
 const fmtK   = v => v >= 1000000 ? `R$ ${(v/1000000).toFixed(1)}mi` : v >= 1000 ? `R$ ${(v/1000).toFixed(0)}k` : `R$ ${Math.round(v)}`
 const fmtFull = v => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:0}).format(v)
 
@@ -196,6 +280,8 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
     </>
   )
 }
+
+const ROLES_DIRETOR = ['Diretor', 'Administrador', 'admin']
 
 export default function RelatoriosPage() {
   const { usuario, isPlatformAdmin } = useAuth()
@@ -685,7 +771,10 @@ export default function RelatoriosPage() {
               <h2 className="text-lg font-bold text-white mb-1">Selecione o Relatório</h2>
               <p className="text-xs text-gray-600">Escolha o tipo de análise que deseja visualizar</p>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {(ROLES_DIRETOR.includes(usuario?.role) || isPlatformAdmin()) && (
+              <CommissionRulesPanel tenantId={isPlatformAdmin() ? null : usuario?.tenant_id} />
+            )}
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
               {TIPOS.map((tipo, i) => (
                 <motion.button key={tipo.id}
                   initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay: i*0.05 }}

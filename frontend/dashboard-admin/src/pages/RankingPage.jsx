@@ -771,7 +771,9 @@ export default function RankingPage() {
                         pct_gestor: get('pct_gestor'),
                       })
                     })
-                    const json = await r.json()
+                    let json
+                    try { json = await r.json() }
+                    catch { json = { success: false, error: `Servidor retornou status ${r.status}. Tente novamente.` } }
                     if (json.success) { alert('Metas salvas!'); carregar() }
                     else alert('Erro ao salvar: ' + (json.error || 'verifique o console'))
                   } catch(e) { alert('Erro: ' + e.message) }

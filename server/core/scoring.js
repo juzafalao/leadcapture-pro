@@ -62,3 +62,38 @@ export function getScoringTable() {
     categoria: determinarCategoria(item.score),
   }))
 }
+
+export const DEFAULT_SCORING_CONFIG = {
+  tiers: SCORING_TABLE,
+  thresholds: CATEGORIA_THRESHOLDS,
+}
+
+export function calcularScoreFromConfig(capital = 0, tiers = SCORING_TABLE) {
+  const entrada = [...tiers].sort((a, b) => b.min - a.min).find(item => capital >= item.min)
+  return entrada ? entrada.score : 50
+}
+
+export function determinarCategoriaFromConfig(score, thresholds = CATEGORIA_THRESHOLDS) {
+  if (score >= (thresholds.HOT ?? 80)) return 'hot'
+  if (score >= (thresholds.WARM ?? 60)) return 'warm'
+  return 'cold'
+}
+
+export function processarCapitalFromConfig(capitalRaw, config = DEFAULT_SCORING_CONFIG) {
+  const tiers = config?.tiers?.length ? config.tiers : SCORING_TABLE
+  const thresholds = config?.thresholds || CATEGORIA_THRESHOLDS
+  const capitalStr = String(capitalRaw ?? '0').replace(/\D/g, '')
+  const capital = parseInt(capitalStr, 10) || 0
+  const score = calcularScoreFromConfig(capital, tiers)
+  const categoria = determinarCategoriaFromConfig(score, thresholds)
+  return { capital, score, categoria }
+}
+
+export function getScoringTableFromConfig(config = DEFAULT_SCORING_CONFIG) {
+  const tiers = config?.tiers?.length ? config.tiers : SCORING_TABLE
+  const thresholds = config?.thresholds || CATEGORIA_THRESHOLDS
+  return tiers
+    .slice()
+    .sort((a, b) => b.min - a.min)
+    .map(item => ({ ...item, categoria: determinarCategoriaFromConfig(item.score, thresholds) }))
+}
