@@ -1,18 +1,17 @@
 // ============================================================
-// ROUTES — /api/whatsapp (CORRIGIDO)
+// ROUTES — /api/whatsapp
 // WhatsApp IA de qualificação de leads via Evolution API
 // LeadCapture Pro — Zafalão Tech
-//
-// CORREÇÕES:
-// - Extração correta de telefone do JID
-// - Busca flexível de lead por telefone
-// - Logs estruturados
 // ============================================================
 
 import { Router } from 'express'
 import supabase from '../core/database.js'
 import { enviarMensagem, normalizarTelefone, extrairTelefoneDoJid } from '../comunicacao/whatsapp.js'
+import { processarMensagemZaya, temConversaZayaAtiva } from '../services/zaya.js'
 import rateLimit from 'express-rate-limit'
+
+// Tenant padrão para novos contatos via ZAYA (configura via env)
+const ZAYA_TENANT_ID = process.env.ZAYA_TENANT_ID || null
 
 const router = Router()
 
@@ -112,11 +111,29 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
       .limit(1)
 
     if (!leads?.length) {
+      // Tenta ZAYA para contatos desconhecidos
+      if (ZAYA_TENANT_ID) {
+        console.log(`[WhatsApp/Webhook] Contato desconhecido ${telefone} → ZAYA`)
+        const nomeContato = data?.pushName || data?.notifyName || null
+        const zayaResult = await processarMensagemZaya(telefone, mensagem, ZAYA_TENANT_ID, nomeContato)
+        if (zayaResult.handled) return res.json({ success: true, zaya: true })
+      }
       console.log(`[WhatsApp/Webhook] Lead não encontrado para telefone: ${telefone}`)
       return res.json({ success: true, ignorado: true, motivo: 'lead não encontrado' })
     }
 
     const lead = leads[0]
+
+    // Se há conversa ZAYA ativa para este lead, roteia para ZAYA
+    if (ZAYA_TENANT_ID) {
+      const zayaAtiva = await temConversaZayaAtiva(telefone, lead.tenant_id)
+      if (zayaAtiva) {
+        console.log(`[WhatsApp/Webhook] Conversa ZAYA ativa para ${telefone}`)
+        const zayaResult = await processarMensagemZaya(telefone, mensagem, lead.tenant_id)
+        if (zayaResult.handled) return res.json({ success: true, zaya: true })
+      }
+    }
+
     const etapaAtual = lead.whatsapp_etapa || 'capital'
 
     if (etapaAtual === 'finalizado') {
@@ -220,6 +237,29 @@ router.post('/enviar-boas-vindas', async (req, res) => {
 })
 
 // ============================================================
+// GET /api/whatsapp/zaya/conversas
+// Retorna conversas ZAYA do tenant (requer auth Supabase no header)
+// ============================================================
+router.get('/zaya/conversas', async (req, res) => {
+  try {
+    const tenantId = req.query.tenant_id
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenant_id obrigatório' })
+
+    const { data, error } = await supabase
+      .from('zaya_conversas')
+      .select('id, telefone, status, criado_em, atualizado_em, lead_id, historico')
+      .eq('tenant_id', tenantId)
+      .order('atualizado_em', { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+    res.json({ success: true, conversas: data || [] })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// ============================================================
 // GET /api/whatsapp/status
 // ============================================================
 router.get('/status', async (_req, res) => {
@@ -231,6 +271,10 @@ router.get('/status', async (_req, res) => {
     configured: !!process.env.EVOLUTION_API_KEY,
     instance: process.env.EVOLUTION_INSTANCE || 'lead-pro',
     webhook_url: `${process.env.DASHBOARD_URL || 'https://leadcapture-proprod.vercel.app'}/api/whatsapp/webhook`,
+    zaya: {
+      enabled: !!process.env.ZAYA_TENANT_ID && !!process.env.ANTHROPIC_API_KEY,
+      tenant_id: process.env.ZAYA_TENANT_ID || null,
+    },
     ...status
   })
 })
