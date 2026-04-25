@@ -191,22 +191,23 @@ export function useMoverLead() {
 
     // Card move imediatamente na UI
     onMutate: async ({ leadId, novoStatusSlug, novoStatusId, tenantId }) => {
-      const queryKey = ['kanban', tenantId]
-      await qc.cancelQueries({ queryKey })
-      const snapshot = qc.getQueryData(queryKey)
+      const prefixKey = ['kanban', tenantId]
+      await qc.cancelQueries({ queryKey: prefixKey })
 
-      qc.setQueryData(queryKey, (mapaAtual) => {
+      // Collect all matching kanban queries (different dataInicio values)
+      const allEntries = qc.getQueriesData({ queryKey: prefixKey })
+      const snapshots = allEntries.map(([key, data]) => ({ key, data }))
+
+      const updater = (mapaAtual) => {
         if (!mapaAtual) return mapaAtual
         const novoMapa = {}
         let leadMovido = null
-
         for (const [slug, leads] of Object.entries(mapaAtual)) {
           novoMapa[slug] = leads.filter(l => {
             if (l.id === leadId) { leadMovido = l; return false }
             return true
           })
         }
-
         if (leadMovido && novoMapa[novoStatusSlug] !== undefined) {
           novoMapa[novoStatusSlug] = [
             { ...leadMovido, id_status: novoStatusId, status: novoStatusSlug },
@@ -214,14 +215,22 @@ export function useMoverLead() {
           ]
         }
         return novoMapa
-      })
+      }
 
-      return { snapshot, queryKey }
+      for (const { key } of snapshots) {
+        qc.setQueryData(key, updater)
+      }
+
+      return { snapshots }
     },
 
     // Rollback em caso de erro de rede/servidor
     onError: (_err, _vars, context) => {
-      if (context?.snapshot) qc.setQueryData(context.queryKey, context.snapshot)
+      if (context?.snapshots) {
+        for (const { key, data } of context.snapshots) {
+          qc.setQueryData(key, data)
+        }
+      }
     },
 
     onSettled: (_data, _err, { tenantId }) => {

@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { supabase } from '../lib/supabase'
+import { COLUNAS_PADRAO } from '../hooks/useKanban'
 import { useNavigate } from 'react-router-dom'
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -179,20 +180,20 @@ export default function DashboardOverviewPage() {
       setChannelData(canalArr)
 
       // ── Funil por status ──
-      if (statuses?.length) {
+      const statusList = statuses?.length ? statuses : COLUNAS_PADRAO
+      {
         const stMap = {}
         ;(ml || []).forEach(l => {
-          // Prioridade: id_status (UUID). Fallback: slug do campo status (texto)
           if (l.id_status) {
             stMap[l.id_status] = (stMap[l.id_status] || 0) + 1
           } else if (l.status) {
             const slug = l.status.toLowerCase().trim()
-            const st = statuses.find(s => s.slug === slug)
+            const st = statusList.find(s => s.slug === slug)
             if (st) stMap[st.id] = (stMap[st.id] || 0) + 1
           }
         })
         const maxSt = Math.max(...Object.values(stMap), 1)
-        const funnelArr = statuses
+        const funnelArr = statusList
           .map(s => ({ label: s.label, count: stMap[s.id] || 0, cor: s.cor, pct: Math.round(((stMap[s.id] || 0) / maxSt) * 100) }))
           .filter(s => s.count > 0)
         setFunnelData(funnelArr)
