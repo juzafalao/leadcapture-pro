@@ -6,7 +6,8 @@
 
 import { Router } from 'express'
 import supabase from '../core/database.js'
-import { processarCapital, resolverCapital } from '../core/scoring.js'
+import { processarCapitalFromConfig, resolverCapital } from '../core/scoring.js'
+import { getScoringConfig } from '../core/scoringConfig.js'
 import {
   isEmailValido,
   isTelefoneValido,
@@ -57,7 +58,8 @@ router.post('/', validateLead, async (req, res) => {
     }
 
     if (leadData.capital_disponivel) {
-      const { score, categoria } = processarCapital(leadData.capital_disponivel)
+      const scoringConfig = await getScoringConfig(leadData.tenant_id)
+      const { score, categoria } = processarCapitalFromConfig(leadData.capital_disponivel, scoringConfig)
       leadData.score = score
       leadData.categoria = categoria
     }
@@ -217,7 +219,8 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
     }
 
     const capitalRaw = form.capital || form['Capital disponível'] || form.capital_disponivel || '0'
-    const { capital, score, categoria } = processarCapital(capitalRaw)
+    const scoringConfig = await getScoringConfig(tenant_id)
+    const { capital, score, categoria } = processarCapitalFromConfig(capitalRaw, scoringConfig)
 
     const mensagem = form.mensagem || form['Mensagem'] || form.message || ''
 

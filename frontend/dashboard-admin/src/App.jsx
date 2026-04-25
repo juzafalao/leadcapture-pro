@@ -35,6 +35,7 @@ const ImportarLeadsPage     = lazy(() => import('./pages/ImportarLeadsPage'));
 const Sidebar  = lazy(() => import('./components/Sidebar'));
 const Header   = lazy(() => import('./components/layout/Header'));
 const ChatBot  = lazy(() => import('./components/ChatBot'));
+const FloatingCalculator = lazy(() => import('./components/FloatingCalculator'));
 
 // -- Query Client -----------------------------------------
 const queryClient = new QueryClient({
@@ -102,6 +103,9 @@ function AuthenticatedLayout({ children }) {
       </main>
       <Suspense fallback={null}>
         <ChatBot />
+      </Suspense>
+      <Suspense fallback={null}>
+        <FloatingCalculator />
       </Suspense>
     </div>
   );
