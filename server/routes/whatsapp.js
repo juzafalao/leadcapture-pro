@@ -1,18 +1,17 @@
 // ============================================================
-// ROUTES — /api/whatsapp (CORRIGIDO)
+// ROUTES — /api/whatsapp
 // WhatsApp IA de qualificação de leads via Evolution API
 // LeadCapture Pro — Zafalão Tech
-//
-// CORREÇÕES:
-// - Extração correta de telefone do JID
-// - Busca flexível de lead por telefone
-// - Logs estruturados
 // ============================================================
 
 import { Router } from 'express'
 import supabase from '../core/database.js'
 import { enviarMensagem, normalizarTelefone, extrairTelefoneDoJid } from '../comunicacao/whatsapp.js'
+import { processarMensagemAgente, temConversaAgenteAtiva } from '../services/agente.js'
 import rateLimit from 'express-rate-limit'
+
+// Tenant padrão para novos contatos via agente IA (configura via env)
+const AGENTE_TENANT_ID = process.env.AGENTE_TENANT_ID || null
 
 const router = Router()
 
@@ -112,11 +111,29 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
       .limit(1)
 
     if (!leads?.length) {
+      // Tenta agente IA para contatos desconhecidos
+      if (AGENTE_TENANT_ID) {
+        console.log(`[WhatsApp/Webhook] Contato desconhecido ${telefone} → agente IA`)
+        const nomeContato = data?.pushName || data?.notifyName || null
+        const result = await processarMensagemAgente(telefone, mensagem, AGENTE_TENANT_ID, nomeContato)
+        if (result.handled) return res.json({ success: true, agente: true })
+      }
       console.log(`[WhatsApp/Webhook] Lead não encontrado para telefone: ${telefone}`)
       return res.json({ success: true, ignorado: true, motivo: 'lead não encontrado' })
     }
 
     const lead = leads[0]
+
+    // Se há conversa de agente IA ativa para este lead, roteia para o agente
+    if (AGENTE_TENANT_ID) {
+      const agenteAtivo = await temConversaAgenteAtiva(telefone, lead.tenant_id)
+      if (agenteAtivo) {
+        console.log(`[WhatsApp/Webhook] Conversa agente ativa para ${telefone}`)
+        const result = await processarMensagemAgente(telefone, mensagem, lead.tenant_id)
+        if (result.handled) return res.json({ success: true, agente: true })
+      }
+    }
+
     const etapaAtual = lead.whatsapp_etapa || 'capital'
 
     if (etapaAtual === 'finalizado') {
@@ -220,6 +237,29 @@ router.post('/enviar-boas-vindas', async (req, res) => {
 })
 
 // ============================================================
+// GET /api/whatsapp/agente/conversas
+// Retorna conversas do agente IA do tenant
+// ============================================================
+router.get('/agente/conversas', async (req, res) => {
+  try {
+    const tenantId = req.query.tenant_id
+    if (!tenantId) return res.status(400).json({ success: false, error: 'tenant_id obrigatório' })
+
+    const { data, error } = await supabase
+      .from('agente_conversas')
+      .select('id, telefone, status, criado_em, atualizado_em, lead_id, historico')
+      .eq('tenant_id', tenantId)
+      .order('atualizado_em', { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+    res.json({ success: true, conversas: data || [] })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
+// ============================================================
 // GET /api/whatsapp/status
 // ============================================================
 router.get('/status', async (_req, res) => {
@@ -231,6 +271,11 @@ router.get('/status', async (_req, res) => {
     configured: !!process.env.EVOLUTION_API_KEY,
     instance: process.env.EVOLUTION_INSTANCE || 'lead-pro',
     webhook_url: `${process.env.DASHBOARD_URL || 'https://leadcapture-proprod.vercel.app'}/api/whatsapp/webhook`,
+    agente: {
+      enabled: !!process.env.AGENTE_TENANT_ID && !!process.env.ANTHROPIC_API_KEY,
+      nome:      process.env.AGENTE_NOME || 'Agente Z',
+      tenant_id: process.env.AGENTE_TENANT_ID || null,
+    },
     ...status
   })
 })

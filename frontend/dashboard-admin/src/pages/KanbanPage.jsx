@@ -219,8 +219,8 @@ const FILTROS = [
 
 function getDataInicio(filtro) {
   if (filtro === 'diaria')  { const d = new Date(); d.setHours(0,0,0,0); return d.toISOString() }
-  if (filtro === 'semanal') return new Date(Date.now() - 7  * 86400000).toISOString()
-  if (filtro === 'mensal')  return new Date(Date.now() - 30 * 86400000).toISOString()
+  if (filtro === 'semanal') { const d = new Date(); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); d.setHours(0,0,0,0); return d.toISOString() }
+  if (filtro === 'mensal')  { const d = new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.toISOString() }
   return null
 }
 
