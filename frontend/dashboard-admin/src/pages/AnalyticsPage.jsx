@@ -83,6 +83,165 @@ function CustomTooltip({ active, payload, label }) {
   )
 }
 
+// ── Componente Performance por Equipe ──────────────────────
+function fmtRec(v) {
+  if (v >= 1_000_000) return `R$${(v / 1_000_000).toFixed(1)}M`
+  if (v >= 1_000)     return `R$${(v / 1_000).toFixed(0)}K`
+  return `R$${Math.round(v)}`
+}
+
+function ConsultorRow({ cons, i }) {
+  return (
+    <motion.div
+      key={cons.id}
+      initial={{ opacity: 0, x: -16 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: i * 0.04 }}
+      className="bg-white/[0.02] border border-white/[0.05] rounded-2xl p-4 hover:border-[#10B981]/25 transition-all"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
+            {cons.avatar_url ? (
+              <img src={cons.avatar_url} alt={cons.nome} className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#10B981]/15 flex items-center justify-center text-[11px] font-black text-[#10B981]">
+                {cons.nome?.charAt(0)}
+              </div>
+            )}
+            <span className={[
+              'absolute -top-1 -left-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black',
+              i === 0 ? 'bg-yellow-400 text-black' : i === 1 ? 'bg-gray-400 text-black' : i === 2 ? 'bg-orange-600 text-white' : 'bg-white/10 text-gray-400',
+            ].join(' ')}>
+              {i + 1}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-white truncate">{cons.nome}</p>
+            <p className="text-[10px] text-gray-600">{cons.leads} leads · {cons.perdidos} perdidos</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 shrink-0">
+          <div className="text-right">
+            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Vendas</p>
+            <p className="text-base font-black text-[#10B981]">{cons.vendidos}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Taxa</p>
+            <p className={`text-base font-black ${parseFloat(cons.txConversao) >= 20 ? 'text-green-400' : parseFloat(cons.txConversao) >= 10 ? 'text-yellow-400' : 'text-red-400'}`}>
+              {cons.txConversao}%
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] text-gray-600 uppercase tracking-wider">Receita</p>
+            <p className="text-sm font-black text-white tabular-nums">{fmtRec(cons.receita)}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 h-1 bg-white/[0.03] rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(parseFloat(cons.txConversao), 100)}%` }}
+          transition={{ duration: 0.8, delay: i * 0.04 + 0.2 }}
+          className="h-full rounded-full bg-gradient-to-r from-[#10B981] to-[#059669]"
+        />
+      </div>
+    </motion.div>
+  )
+}
+
+function EquipeSection({ porGestor, porConsultor }) {
+  const [gestorSel, setGestorSel] = React.useState('todos')
+
+  const consultoresVisiveis = gestorSel === 'todos'
+    ? porConsultor
+    : (porGestor.find(g => g.id === gestorSel)?.consultores || [])
+
+  const gestorAtivo = gestorSel !== 'todos' ? porGestor.find(g => g.id === gestorSel) : null
+
+  return (
+    <div className="px-4 lg:px-10 mt-12 mb-8">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+        className="bg-[#0F172A] border border-white/5 rounded-3xl p-6">
+
+        {/* Header + seletor de gestor */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-white">👥 Performance da Equipe</h3>
+            <p className="text-[10px] text-gray-600 mt-0.5">Atualização em tempo real</p>
+          </div>
+
+          {porGestor.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-gray-600 uppercase tracking-wider shrink-0">Time:</span>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setGestorSel('todos')}
+                  className={[
+                    'px-3 py-1.5 rounded-xl text-[10px] font-black transition-all',
+                    gestorSel === 'todos' ? 'bg-[#10B981] text-black' : 'bg-white/[0.05] text-gray-400 hover:text-white',
+                  ].join(' ')}
+                >
+                  Todos
+                </button>
+                {porGestor.map(g => (
+                  <button
+                    key={g.id}
+                    onClick={() => setGestorSel(g.id)}
+                    className={[
+                      'px-3 py-1.5 rounded-xl text-[10px] font-black transition-all',
+                      gestorSel === g.id ? 'bg-[#10B981] text-black' : 'bg-white/[0.05] text-gray-400 hover:text-white',
+                    ].join(' ')}
+                  >
+                    {g.nome}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Resumo do gestor selecionado */}
+        {gestorAtivo && (
+          <motion.div
+            key={gestorAtivo.id}
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5 p-4 bg-[#10B981]/5 border border-[#10B981]/15 rounded-2xl"
+          >
+            {[
+              { label: 'Leads do Time',  value: gestorAtivo.leads,               color: 'text-white'     },
+              { label: 'Vendas',         value: gestorAtivo.vendidos,             color: 'text-[#10B981]' },
+              { label: 'Taxa Conv.',     value: `${gestorAtivo.txConversao}%`,    color: 'text-[#10B981]' },
+              { label: 'Receita Total',  value: fmtRec(gestorAtivo.receita),      color: 'text-[#10B981]' },
+            ].map(kpi => (
+              <div key={kpi.label} className="text-center">
+                <p className="text-[9px] text-gray-600 uppercase tracking-wider mb-1">{kpi.label}</p>
+                <p className={`text-xl font-black tabular-nums ${kpi.color}`}>{kpi.value}</p>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* Lista de consultores */}
+        {consultoresVisiveis.length > 0 ? (
+          <div className="space-y-2.5">
+            {consultoresVisiveis.map((cons, i) => (
+              <ConsultorRow key={cons.id} cons={cons} i={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="py-12 text-center">
+            <p className="text-gray-600 text-sm">Nenhum consultor com dados no período</p>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  )
+}
+
 const PERIODOS = [
   { label: 'Hoje',       value: '1' },
   { label: 'Semanal',    value: '7' },
@@ -418,85 +577,8 @@ export default function AnalyticsPage() {
         </motion.div>
       </div>
 
-      {/* ── ABA EQUIPE (apenas Diretores) ── */}
-      {isDirector && (
-        <div className="px-4 lg:px-10 mt-12 mb-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="bg-[#0F172A] border border-white/5 rounded-3xl p-6 overflow-hidden">
-
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">👥 Performance da Equipe</h3>
-              <span className="text-[10px] font-black text-gray-600 uppercase tracking-wider">
-                {d.porConsultor?.length || 0} consultores
-              </span>
-            </div>
-
-            {(d.porConsultor || []).length > 0 ? (
-              <div className="space-y-3">
-                {d.porConsultor.map((cons, i) => (
-                  <motion.div key={cons.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
-                    className="bg-white/[0.02] border border-white/[0.06] rounded-2xl p-4 hover:border-[#10B981]/20 transition-all">
-                    <div className="flex items-center justify-between gap-4">
-                      {/* Avatar + Nome */}
-                      <div className="flex items-center gap-3 min-w-0">
-                        {cons.avatar_url ? (
-                          <img src={cons.avatar_url} alt={cons.nome} className="w-10 h-10 rounded-full object-cover shrink-0" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-full bg-[#10B981]/15 flex items-center justify-center text-[10px] font-black text-[#10B981] shrink-0">
-                            {cons.nome?.charAt(0)}
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-white truncate">{cons.nome}</p>
-                          <p className="text-[10px] text-gray-600">{cons.leads} leads</p>
-                        </div>
-                      </div>
-
-                      {/* Stats grid 2x2 */}
-                      <div className="grid grid-cols-2 gap-3 shrink-0">
-                        <div className="text-right">
-                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Conversões</p>
-                          <p className="text-base font-black text-[#10B981]">{cons.vendidos}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Conv. Rate</p>
-                          <p className="text-base font-black text-white">{cons.txConversao}%</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Receita</p>
-                          <p className="text-sm font-black text-[#10B981] tabular-nums">
-                            {cons.receita >= 1_000_000 ? `R$${(cons.receita / 1_000_000).toFixed(1)}M` :
-                             cons.receita >= 1_000 ? `R$${(cons.receita / 1_000).toFixed(0)}K` :
-                             `R$${Math.round(cons.receita)}`}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[9px] text-gray-600 uppercase tracking-wider">Perdidos</p>
-                          <p className="text-base font-black text-red-400">{cons.perdidos}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Barra de conversão */}
-                    <div className="mt-3 h-1 bg-white/[0.03] rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${parseFloat(cons.txConversao)}%` }}
-                        transition={{ duration: 0.8, delay: i * 0.05 + 0.2 }}
-                        className="h-full bg-gradient-to-r from-[#10B981] to-[#059669] rounded-full"
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-12 text-center">
-                <p className="text-gray-600 text-sm">Nenhum consultor com dados no período</p>
-              </div>
-            )}
-          </motion.div>
-        </div>
-      )}
+      {/* ── PERFORMANCE DA EQUIPE (apenas Diretores) ── */}
+      {isDirector && <EquipeSection porGestor={d.porGestor || []} porConsultor={d.porConsultor || []} />}
 
       {alertModal}
     </div>
