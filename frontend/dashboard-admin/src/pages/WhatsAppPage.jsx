@@ -1,4 +1,4 @@
-// WhatsAppPage.jsx — Integração WhatsApp Business + ZAYA
+// WhatsAppPage.jsx — Integração WhatsApp Business + Agente IA
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { MessageCircle, Smartphone, Zap, Shield, CheckCircle, Bot, Copy, ChevronDown, ChevronUp, Clock, UserCheck, AlertCircle } from 'lucide-react'
@@ -12,8 +12,8 @@ const RECURSOS = [
   { icon: Shield,        color: '#8B5CF6', label: 'Anti-spam & Blacklist', desc: 'Bloqueio automático de contatos indesejados' },
 ]
 
-const SQL_ZAYA = `-- Execute no Supabase SQL Editor
-CREATE TABLE IF NOT EXISTS zaya_conversas (
+const SQL_AGENTE = `-- Execute no Supabase SQL Editor
+CREATE TABLE IF NOT EXISTS agente_conversas (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id    uuid NOT NULL,
   lead_id      uuid REFERENCES leads(id) ON DELETE SET NULL,
@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS zaya_conversas (
   atualizado_em timestamptz DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_zaya_conversas_telefone   ON zaya_conversas(telefone);
-CREATE INDEX IF NOT EXISTS idx_zaya_conversas_tenant_status ON zaya_conversas(tenant_id, status);`
+CREATE INDEX IF NOT EXISTS idx_agente_conversas_telefone   ON agente_conversas(telefone);
+CREATE INDEX IF NOT EXISTS idx_agente_conversas_tenant_status ON agente_conversas(tenant_id, status);`
 
 const STATUS_LABEL = { ativa: 'Ativa', handoff: 'Handoff', encerrada: 'Encerrada' }
 const STATUS_COLOR = { ativa: '#10B981', handoff: '#F59E0B', encerrada: '#6B7280' }
@@ -38,7 +38,7 @@ function ZayaConversas({ tenantId }) {
   useEffect(() => {
     if (!tenantId) return
     supabase
-      .from('zaya_conversas')
+      .from('agente_conversas')
       .select('id, telefone, status, criado_em, atualizado_em, historico')
       .eq('tenant_id', tenantId)
       .order('atualizado_em', { ascending: false })
@@ -48,7 +48,7 @@ function ZayaConversas({ tenantId }) {
   }, [tenantId])
 
   if (loading) return <p className="text-[11px] text-gray-600 text-center py-4">Carregando conversas...</p>
-  if (!conversas.length) return <p className="text-[11px] text-gray-600 text-center py-4">Nenhuma conversa ZAYA ainda.</p>
+  if (!conversas.length) return <p className="text-[11px] text-gray-600 text-center py-4">Nenhuma conversa do agente ainda.</p>
 
   return (
     <div className="space-y-2">
@@ -109,7 +109,7 @@ export default function WhatsAppPage() {
   const tenantId = usuario?.tenant_id || usuario?.tenant?.id
 
   const copySQL = () => {
-    navigator.clipboard.writeText(SQL_ZAYA).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+    navigator.clipboard.writeText(SQL_AGENTE).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
 
   return (
@@ -175,14 +175,14 @@ export default function WhatsAppPage() {
         </p>
       </motion.div>
 
-      {/* ZAYA */}
+      {/* Agente IA */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.55 }}
         className="bg-[#0F172A] border border-[#8B5CF6]/25 rounded-2xl overflow-hidden mb-6"
       >
-        {/* ZAYA Header */}
+        {/* Agente Header */}
         <div className="px-6 py-5 border-b border-white/[0.05]">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9]">
@@ -190,14 +190,14 @@ export default function WhatsAppPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-[15px] font-bold text-white">ZAYA</h2>
+                <h2 className="text-[15px] font-bold text-white">Agente Z</h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#8B5CF6] font-semibold">Premium</span>
               </div>
-              <p className="text-[11px] text-gray-500">Consultora Virtual de Expansão com IA</p>
+              <p className="text-[11px] text-gray-500">Agente Virtual de Captação com IA</p>
             </div>
           </div>
           <p className="text-[12px] text-gray-400 leading-relaxed">
-            ZAYA qualifica novos contatos via WhatsApp usando inteligência artificial (Claude). Quando há informações suficientes,
+            O Agente Z qualifica novos contatos via WhatsApp usando inteligência artificial (Claude). Quando há informações suficientes,
             ela encerra a conversa e envia um resumo completo para o consultor humano, com o lead já criado no sistema.
           </p>
         </div>
@@ -208,7 +208,7 @@ export default function WhatsAppPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { icon: MessageCircle, color: '#25D366', step: '1', title: 'Contato via WhatsApp', desc: 'Um novo número manda mensagem para o número da empresa' },
-              { icon: Bot,           color: '#8B5CF6', step: '2', title: 'ZAYA qualifica',       desc: 'Conversa natural para coletar nome, capital e cidade' },
+              { icon: Bot,           color: '#8B5CF6', step: '2', title: 'Agente Z qualifica',   desc: 'Conversa natural para coletar nome, capital e cidade' },
               { icon: UserCheck,     color: '#10B981', step: '3', title: 'Handoff humano',       desc: 'Lead criado + resumo enviado ao consultor pelo WhatsApp' },
             ].map((s, i) => (
               <div key={i} className="flex gap-3">
@@ -229,7 +229,8 @@ export default function WhatsAppPage() {
           <div className="space-y-3">
             {[
               { var: 'ANTHROPIC_API_KEY', desc: 'Chave da API Claude (Anthropic)', link: null },
-              { var: 'ZAYA_TENANT_ID',    desc: `ID do tenant dono deste número — use: ${tenantId || 'seu tenant_id'}`, link: null },
+              { var: 'AGENTE_TENANT_ID',  desc: `ID do tenant dono deste número — use: ${tenantId || 'seu tenant_id'}`, link: null },
+              { var: 'AGENTE_NOME',       desc: 'Nome do agente exibido nas mensagens (padrão: "Agente Z")', link: null },
               { var: 'EVOLUTION_API_KEY', desc: 'Já configurada para Evolution API', link: null },
             ].map((v, i) => (
               <div key={i} className="flex items-start gap-3 bg-black/20 rounded-xl px-4 py-3">
@@ -257,10 +258,10 @@ export default function WhatsAppPage() {
           </div>
           <div className="flex items-start gap-2 mb-3">
             <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-gray-500">Execute o SQL abaixo no Supabase SQL Editor para criar a tabela <code className="text-[#8B5CF6]">zaya_conversas</code>.</p>
+            <p className="text-[11px] text-gray-500">Execute o SQL abaixo no Supabase SQL Editor para criar a tabela <code className="text-[#8B5CF6]">agente_conversas</code>.</p>
           </div>
           {showSql && (
-            <pre className="text-[10px] font-mono bg-black/40 rounded-xl p-4 overflow-x-auto text-gray-400 leading-relaxed whitespace-pre-wrap">{SQL_ZAYA}</pre>
+            <pre className="text-[10px] font-mono bg-black/40 rounded-xl p-4 overflow-x-auto text-gray-400 leading-relaxed whitespace-pre-wrap">{SQL_AGENTE}</pre>
           )}
         </div>
 
