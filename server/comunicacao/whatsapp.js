@@ -83,7 +83,7 @@ export async function enviarMensagem(telefone, mensagem) {
           },
           body: JSON.stringify({
             number: numero,
-            textMessage: { text: mensagem },
+            text: mensagem,
             options: { delay: 1200, presence: 'composing' },
           }),
           signal: controller.signal,
