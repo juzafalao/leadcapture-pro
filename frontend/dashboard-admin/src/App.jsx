@@ -29,7 +29,6 @@ const RankingPage           = lazy(() => import('./pages/RankingPage'));
 const CapturaPage           = lazy(() => import('./pages/CapturaPage'));
 const WhatsAppPage          = lazy(() => import('./pages/WhatsAppPage'));
 const AgentePage            = lazy(() => import('./pages/AgentePage'));
-const QualificacaoPage      = lazy(() => import('./pages/QualificacaoPage'));
 const AnalyticsPage         = lazy(() => import('./pages/AnalyticsPage'));
 const ImportarLeadsPage     = lazy(() => import('./pages/ImportarLeadsPage'));
 
@@ -160,7 +159,6 @@ function AppRoutes() {
         <Route path="/captura"       element={W(CapturaPage,      ROLES_GESTOR)} />
         <Route path="/whatsapp"      element={W(WhatsAppPage,     ROLES_GESTOR)} />
         <Route path="/agente"        element={W(AgentePage)} />
-        <Route path="/qualificacao"  element={W(QualificacaoPage, ROLES_GESTOR)} />
         <Route path="/automacao"     element={W(AutomacaoPage,    ROLES_GESTOR)} />
         <Route path="/email-marketing" element={W(EmailMarketingPage, ROLES_GESTOR)} />
 
