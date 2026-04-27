@@ -9,7 +9,7 @@
 // 4. Feedback visual de sucesso/erro
 // ============================================================
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -259,6 +259,58 @@ function ScoringConfigSection({ tenantId }) {
   )
 }
 
+function IntegrationStatusSection() {
+  const [waStatus, setWaStatus] = useState(null)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    mountedRef.current = true
+    const url = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token
+      return fetch(`${url}/api/whatsapp/status`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (mountedRef.current) setWaStatus(data) })
+      .catch(() => {})
+    return () => { mountedRef.current = false }
+  }, [])
+
+  const waLabel = () => {
+    if (!waStatus) return { text: 'Verificando...', color: 'text-gray-500' }
+    if (!waStatus.configured) return { text: 'Não configurado', color: 'text-yellow-500' }
+    if (waStatus.conectado) return { text: `Conectado (${waStatus.instancia || 'lead-pro'})`, color: 'text-green-500' }
+    return { text: waStatus.motivo || 'Desconectado', color: 'text-red-400' }
+  }
+
+  const wa = waLabel()
+
+  const integracoes = [
+    { icon: '💬', name: 'WhatsApp (Evolution API)', status: wa.text,          color: wa.color            },
+    { icon: '🔗', name: 'Google Forms',              status: 'Ativo',           color: 'text-green-500'   },
+    { icon: '⚡', name: 'n8n Automação',              status: 'Não configurado', color: 'text-yellow-500'  },
+    { icon: '📧', name: 'SMTP E-mail',                status: 'Simulado',        color: 'text-blue-400'    },
+  ]
+
+  return (
+    <Section title="Integrações">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {integracoes.map(({ icon, name, status, color }) => (
+          <div key={name} className="flex items-center gap-4 bg-[#0B1220] border border-white/5 rounded-2xl p-4">
+            <span className="text-2xl">{icon}</span>
+            <div>
+              <p className="text-sm font-bold text-white">{name}</p>
+              <p className={`text-xs font-bold ${color}`}>{status}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  )
+}
+
 export default function SettingsPage() {
   const { usuario } = useAuth()
 
@@ -450,24 +502,7 @@ export default function SettingsPage() {
             ))}
           </Section>
 
-          <Section title="Integrações">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {[
-                { icon: '💬', name: 'WhatsApp',      status: 'Não configurado', color: 'text-yellow-500' },
-                { icon: '🔗', name: 'Google Forms',   status: 'Ativo',           color: 'text-green-500'  },
-                { icon: '⚡', name: 'n8n Automação',  status: 'Não configurado', color: 'text-yellow-500' },
-                { icon: '📧', name: 'SMTP E-mail',    status: 'Simulado',        color: 'text-blue-400'   },
-              ].map(({ icon, name, status, color }) => (
-                <div key={name} className="flex items-center gap-4 bg-[#0B1220] border border-white/5 rounded-2xl p-4">
-                  <span className="text-2xl">{icon}</span>
-                  <div>
-                    <p className="text-sm font-bold text-white">{name}</p>
-                    <p className={`text-xs font-bold ${color}`}>{status}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Section>
+          <IntegrationStatusSection />
 
           <motion.button
             type="submit"
