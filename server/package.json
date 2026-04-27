@@ -1,13 +1,15 @@
 {
   "name": "leadcapture-server",
   "version": "1.0.0",
-  "description": "Server para operações sensíveis do LeadCapture (encrypt keys, envio WhatsApp)",
+  "type": "module",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@sentry/node": "^10.47.0",
     "@supabase/supabase-js": "^2.39.0",
     "@upstash/ratelimit": "^2.0.0",
     "@upstash/redis": "^1.34.0",
@@ -15,13 +17,15 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.5.0",
     "googleapis": "^126.0.0",
     "nodemailer": "^8.0.1",
     "qrcode": "^1.5.4",
-    "twilio": "^4.8.0"
+    "resend": "^6.10.0",
+    "twilio": "^4.20.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"
-  },
-  "type": "module"
+  }
 }

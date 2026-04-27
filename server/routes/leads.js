@@ -100,6 +100,20 @@ router.post('/', validateLead, async (req, res) => {
       .map(u => u.email)
       .filter(e => e && e.includes('@') && !e.endsWith('.local') && !e.includes('demo-') && !e.includes('fake'))
 
+    async function isEmailAtivo(tenantId, id) {
+      if (!tenantId) return true
+      try {
+        const { data } = await supabase
+          .from('configuracoes')
+          .select('valor')
+          .eq('tenant_id', tenantId)
+          .eq('chave', `email_automacao_${id}`)
+          .maybeSingle()
+        if (!data) return true
+        return JSON.parse(data.valor) !== false
+      } catch { return true }
+    }
+
     async function comRetry(fn, tipo, maxTentativas = 3) {
       for (let t = 1; t <= maxTentativas; t++) {
         try {
@@ -136,7 +150,12 @@ router.post('/', validateLead, async (req, res) => {
     setImmediate(async () => {
       const notifPromises = []
 
-      if (lead.email?.includes('@')) {
+      const [ativoBoasVindas, ativoLeadQuente] = await Promise.all([
+        isEmailAtivo(lead.tenant_id, 'boas-vindas'),
+        isEmailAtivo(lead.tenant_id, 'lead-quente'),
+      ])
+
+      if (lead.email?.includes('@') && ativoBoasVindas) {
         notifPromises.push(
           comRetry(() => enviarBoasVindasLead(lead, marcaFallback), 'email-boas-vindas-lead')
         )
@@ -146,7 +165,7 @@ router.post('/', validateLead, async (req, res) => {
         comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna')
       )
 
-      if (lead.score >= 65) {
+      if (lead.score >= 65 && ativoLeadQuente) {
         notifPromises.push(
           comRetry(() => notificarLeadQuente(lead, marcaFallback, emailsNotif), 'email-lead-quente')
         )

@@ -97,24 +97,30 @@ function ResumoCard({ resumo }) {
   const tempColor = TEMP_CONFIG[resumo.temperatura]?.color || '#6B7280'
 
   const fields = [
-    { icon: User,          label: 'Nome',          val: resumo.nome },
-    { icon: DollarSign,    label: 'Capital',        val: resumo.capital || (resumo.capital_estimado ? fmtCapital(resumo.capital_estimado) : null) },
-    { icon: MapPin,        label: 'Contexto',       val: resumo.contexto_vida },
-    { icon: Calendar,      label: 'Urgência',       val: resumo.urgencia },
-    { icon: User,          label: 'Decisores',      val: resumo.decisores },
-    { icon: AlertTriangle, label: 'Objeções',       val: resumo.objecoes },
-    { icon: CheckCircle,   label: 'Próximo passo',  val: resumo.proximo_passo },
+    { icon: User,          label: 'Nome',           val: resumo.nome },
+    { icon: DollarSign,    label: 'Capital',         val: resumo.capital || (resumo.capital_estimado ? fmtCapital(resumo.capital_estimado) : null) },
+    { icon: MapPin,        label: 'Contexto',        val: resumo.contexto_vida },
+    { icon: Calendar,      label: 'Urgência',        val: resumo.urgencia },
+    { icon: User,          label: 'Decisores',       val: resumo.decisores },
+    { icon: AlertTriangle, label: 'Objeções',        val: resumo.objecoes },
+    { icon: CheckCircle,   label: 'Perfil ICP',      val: resumo.icp_justificativa },
+    { icon: CheckCircle,   label: 'Próximo passo',   val: resumo.proximo_passo },
   ]
 
   return (
     <div className="space-y-3">
-      {/* Temperatura + tom */}
+      {/* Temperatura + ICP + tom */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
           style={{ background: TEMP_CONFIG[resumo.temperatura]?.bg || 'rgba(107,114,128,0.1)', color: tempColor }}>
           <TempIcon className="w-3 h-3" />
           {TEMP_CONFIG[resumo.temperatura]?.label || resumo.temperatura || '—'}
         </div>
+        {resumo.icp_perfil && resumo.icp_perfil !== 'INDEFINIDO' && (
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20">
+            {resumo.icp_perfil === 'DIVERSIFICADOR' ? '💼 Diversificador' : '🧑‍💼 CLT Empreendedor'}
+          </div>
+        )}
         {resumo.tom_emocional && (
           <span className="text-[10px] text-gray-500 italic">{resumo.tom_emocional}</span>
         )}
@@ -361,12 +367,18 @@ export default function AgentePage() {
             {!loading && lista.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
                 <Bot className="w-10 h-10 text-gray-700 mb-3" />
-                <p className="text-[13px] text-gray-500 font-medium">Nenhuma conversa</p>
-                <p className="text-[11px] text-gray-700 mt-1">
-                  {filtro === 'todas'
-                    ? 'Configure o AGENTE_TENANT_ID no servidor para ativar'
-                    : `Sem conversas com status "${filtro}"`}
+                <p className="text-[13px] text-gray-500 font-medium">
+                  {filtro === 'todas' ? 'Nenhuma conversa ainda' : `Sem conversas "${filtro}"`}
                 </p>
+                {filtro === 'todas' && (
+                  <div className="mt-3 space-y-1 text-left bg-white/[0.03] border border-white/5 rounded-xl p-4 max-w-xs">
+                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-2">Para ativar o Agente Z</p>
+                    <p className="text-[11px] text-gray-600">1. Defina <code className="text-[#8B5CF6]">AGENTE_TENANT_ID</code> no servidor</p>
+                    <p className="text-[11px] text-gray-600">2. Confirme que <code className="text-[#8B5CF6]">ANTHROPIC_API_KEY</code> está configurado</p>
+                    <p className="text-[11px] text-gray-600">3. Envie uma mensagem no WhatsApp conectado</p>
+                    <p className="text-[11px] text-gray-600">4. A conversa aparecerá aqui em tempo real</p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install && cd frontend/dashboard-admin && npm install && npx vite build",
+  "buildCommand": "npm install && npm install --prefix server && cd frontend/dashboard-admin && npm install && npx vite build",
   "outputDirectory": "frontend/dashboard-admin/dist",
   "headers": [
     {
