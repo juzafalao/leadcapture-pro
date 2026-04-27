@@ -159,7 +159,7 @@ function AppRoutes() {
         {/* AUTOMAÇÃO — Gestor+ */}
         <Route path="/captura"       element={W(CapturaPage,      ROLES_GESTOR)} />
         <Route path="/whatsapp"      element={W(WhatsAppPage,     ROLES_GESTOR)} />
-        <Route path="/agente"        element={W(AgentePage,       ROLES_GESTOR)} />
+        <Route path="/agente"        element={W(AgentePage)} />
         <Route path="/qualificacao"  element={W(QualificacaoPage, ROLES_GESTOR)} />
         <Route path="/automacao"     element={W(AutomacaoPage,    ROLES_GESTOR)} />
         <Route path="/email-marketing" element={W(EmailMarketingPage, ROLES_GESTOR)} />

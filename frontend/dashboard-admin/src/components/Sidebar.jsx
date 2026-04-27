@@ -163,6 +163,7 @@ const SECTIONS = [
     items: [
       { path: '/pipeline', icon: <Icons.Leads />,   label: 'Leads' },
       { path: '/kanban',   icon: <Icons.Kanban />,  label: 'Funil' },
+      { path: '/agente',   icon: <Icons.Agente />,  label: 'Agente Z',  badge: 'IA' },
       { path: '/importar', icon: <Icons.Importar />, label: 'Importar Leads', roles: ['Gestor','Diretor','Administrador','admin'] },
       { path: '/canais',   icon: <Icons.Canais />,  label: 'Canais', roles: ['Gestor','Diretor','Administrador','admin'] },
     ],
@@ -174,7 +175,6 @@ const SECTIONS = [
     items: [
       { path: '/captura',          icon: <Icons.Captura />,       label: 'Captura de Leads', badge: 'Beta' },
       { path: '/whatsapp',         icon: <Icons.WhatsApp />,      label: 'WhatsApp',         badge: 'Beta' },
-      { path: '/agente',           icon: <Icons.Agente />,        label: 'Agente Z',          badge: 'IA' },
       { path: '/qualificacao',     icon: <Icons.Qualificacao />,  label: 'Qualificação',     badge: 'Beta' },
       { path: '/automacao',        icon: <Icons.Automacao />,     label: 'Automação n8n' },
       { path: '/email-marketing',  icon: <Icons.EmailMarketing />,label: 'Email Marketing' },
