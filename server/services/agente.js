@@ -13,44 +13,99 @@ import { getScoringConfig } from '../core/scoringConfig.js'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 const AGENTE_NOME       = process.env.AGENTE_NOME || 'Agente Z'
+const AGENTE_SEGMENTO   = process.env.AGENTE_SEGMENTO || 'franquias'
 const MAX_TURNS         = 14
 
 // ── System Prompt ──────────────────────────────────────────
 function buildSystemPrompt() {
-  return `Você é ${AGENTE_NOME}, consultora virtual de expansão de franquias.
-Seu papel é qualificar interessados em abrir uma franquia de forma natural e empática.
+  return `Você é ${AGENTE_NOME}, consultora da equipe de expansão de uma rede de ${AGENTE_SEGMENTO}.
 
-Você precisa coletar as seguintes informações ao longo da conversa:
-• Nome completo do interessado
-• Capital disponível para investimento (peça como valor em reais)
-• Cidade e estado de interesse
-• Prazo aproximado para decisão
+QUEM VOCÊ É:
+- ${AGENTE_NOME}, consultora humana da equipe de expansão
+- Calorosa, honesta, curiosa genuinamente sobre a história do lead
+- Nunca fria, nunca robótica, nunca apressada
+- Conversa como uma amiga que entende muito do assunto — não como uma vendedora
 
-Diretrizes:
-- Seja conversacional e não faça todas as perguntas de uma vez
-- Máximo 120 palavras por mensagem
-- Use emojis moderadamente (1-2 por mensagem)
-- Responda sempre em português brasileiro
-- Não mencione marcas ou franchises específicos que você não conheça
-- Se o usuário pedir para falar com um humano, encerre imediatamente com a ferramenta disponível
-- Quando tiver coletado nome, capital e cidade, encerre usando a ferramenta encerrar_conversa`
+ESTILO DE COMUNICAÇÃO:
+- Mensagens curtas (máximo 3 frases por resposta)
+- Uma pergunta por vez, nunca duas
+- Usa o nome da pessoa quando sabe
+- Valida SEMPRE o que a pessoa disse antes de avançar
+- Emojis com moderação — quando reforçam emoção genuína
+- Linguagem natural, como WhatsApp de verdade
+- NUNCA use: "Certamente!", "Claro!", "Estou aqui para ajudar!", "Ótima pergunta!"
+
+FLUXO DE QUALIFICAÇÃO (nessa ordem):
+1. Abertura calorosa com apresentação breve
+2. Entender a MOTIVAÇÃO (por que quer um negócio próprio agora?)
+3. Entender o CONTEXTO DE VIDA (empregado? empreendedor? quer complementar renda?)
+4. Entender o momento FINANCEIRO (capital disponível — sem citar números, deixa a pessoa falar primeiro)
+5. Entender QUEM DECIDE JUNTO (cônjuge, sócio, familiar?)
+6. Entender URGÊNCIA (prazo que pensa para começar)
+7. Quando qualificado: propor conexão natural com o especialista
+
+COMO LIDAR COM OBJEÇÕES:
+- "Não tenho muito dinheiro": Explore o que eles têm, mencione que existem formas de financiamento, não feche portas
+- "Preciso pensar": Valide o tempo de reflexão, pergunte o que mais precisa entender antes de decidir
+- "É muito caro": Redirecione — "o que 'caro' significa pra você? Deixa eu entender melhor o seu cenário"
+- "Tenho medo de fracassar": Valide o medo, fale em suporte da rede, não prometa nada
+- "Meu cônjuge não topou ainda": Inclua a conversa, pergunte o que ele/ela teria dúvida
+
+REGRAS ABSOLUTAS:
+- NUNCA cite valores específicos de investimento
+- NUNCA prometa retorno, lucro ou prazo de retorno de investimento
+- NUNCA minta sobre ser humana — se perguntada diretamente, seja honesta
+- NUNCA pressione — se o lead disse não ou não está pronto, respeite
+- Quando o lead estiver quente: use a ferramenta encerrar_conversa
+
+CRITÉRIO DE LEAD QUENTE (acione o handoff):
+- Demonstrou interesse genuíno
+- Tem capital disponível (qualquer valor)
+- Prazo de decisão em até 6 meses
+- Já respondeu sobre quem decide junto
+
+AO FAZER HANDOFF:
+Diga algo como: "Pelo que você me contou, acho que vale demais uma conversa com nosso especialista — ele consegue montar um cenário real, sem enrolação, exatamente pro seu perfil. Posso já conectar vocês?"`
 }
+
+// ── Summary Prompt (used to structure handoff data) ────────
+const SUMMARY_PROMPT = `Com base na conversa abaixo entre o agente e um lead, gere um resumo estruturado em JSON para o consultor humano.
+
+Extraia exatamente estes campos (use null se não houver informação):
+{
+  "nome": "nome da pessoa se mencionado",
+  "motivacao": "por que quer um negócio próprio (resumo curto)",
+  "contexto_vida": "situação atual (emprego, etc)",
+  "capital": "o que disse sobre capital disponível",
+  "capital_estimado": número em reais ou null,
+  "decisores": "quem decide junto",
+  "urgencia": "prazo para decidir",
+  "objecoes": "objeções ou medos levantados",
+  "temperatura": "QUENTE | MORNO | FRIO",
+  "proximo_passo": "recomendação para o consultor",
+  "tom_emocional": "como o lead pareceu emocionalmente"
+}
+
+Responda APENAS com o JSON válido, sem texto adicional.
+
+CONVERSA:`
 
 // ── Tool Definition ────────────────────────────────────────
 const AGENTE_TOOLS = [
   {
     name: 'encerrar_conversa',
-    description: 'Encerra a qualificação quando tiver nome + capital + cidade, ou quando o usuário pedir para falar com um humano.',
+    description: 'Encerra a qualificação quando o lead demonstrou interesse genuíno e respondeu sobre capital + prazo + quem decide, OU quando pediu para falar com um humano.',
     input_schema: {
       type: 'object',
       properties: {
         nome:               { type: 'string', description: 'Nome completo do interessado' },
-        capital_disponivel: { type: 'number', description: 'Capital disponível em reais (inteiro). Use 0 se não informado.' },
+        capital_disponivel: { type: 'number', description: 'Capital disponível em reais estimado. Use 0 se não informado.' },
         cidade:             { type: 'string', description: 'Cidade de interesse' },
         estado:             { type: 'string', description: 'UF do estado de interesse' },
         prazo:              { type: 'string', enum: ['imediato', 'curto_prazo', 'explorando'], description: 'Prazo para decisão' },
-        mensagem_despedida: { type: 'string', description: 'Mensagem final para o usuário informando que um consultor entrará em contato' },
-        resumo_consultor:   { type: 'string', description: 'Resumo estruturado da conversa para o consultor humano (máx 300 palavras)' },
+        mensagem_despedida: { type: 'string', description: 'Mensagem final calorosa para o usuário informando que um consultor especialista entrará em contato' },
+        resumo_consultor:   { type: 'string', description: 'Resumo em texto livre da conversa para o consultor humano (motivação, contexto, objeções, tom emocional)' },
+        temperatura:        { type: 'string', enum: ['QUENTE', 'MORNO', 'FRIO'], description: 'Temperatura do lead' },
       },
       required: ['mensagem_despedida', 'resumo_consultor'],
     },
@@ -145,7 +200,7 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model:      'claude-haiku-4-5-20251001',
+        model:      'claude-sonnet-4-6',
         max_tokens: 600,
         system:     buildSystemPrompt(),
         tools:      AGENTE_TOOLS,
@@ -183,7 +238,8 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
     }
 
     if (toolInput) {
-      await _executarHandoff(conversaId, leadId, tenantId, toolInput)
+      const historicoFinal = [...historicoAtualizado, { role: 'assistant', content: apiData.content }]
+      await _executarHandoff(conversaId, leadId, tenantId, toolInput, historicoFinal)
     }
 
     return { handled: true }
@@ -211,8 +267,11 @@ export async function temConversaAgenteAtiva(telefone, tenantId) {
 }
 
 // ── Handoff para consultor humano ──────────────────────────
-async function _executarHandoff(conversaId, leadId, tenantId, dados) {
-  const { nome, capital_disponivel, cidade, estado, prazo } = dados
+async function _executarHandoff(conversaId, leadId, tenantId, dados, historico) {
+  const { nome, capital_disponivel, cidade, estado, prazo, temperatura } = dados
+
+  // Gera resumo estruturado via Claude usando o histórico completo
+  const resumoRich = await _gerarResumoEstruturado(historico).catch(() => null)
 
   if (leadId) {
     const updates = { status: 'em_negociacao', updated_at: new Date().toISOString() }
@@ -220,10 +279,13 @@ async function _executarHandoff(conversaId, leadId, tenantId, dados) {
     if (cidade) updates.cidade = cidade
     if (estado) updates.estado = estado
     if (prazo)  updates.urgencia = prazo
-    if (capital_disponivel) {
+
+    // Usa capital_estimado do resumo estruturado se mais preciso
+    const capitalFinal = resumoRich?.capital_estimado || capital_disponivel
+    if (capitalFinal) {
       const scoringConfig = await getScoringConfig(tenantId).catch(() => null)
-      const { score, categoria } = processarCapitalFromConfig(capital_disponivel, scoringConfig)
-      updates.capital_disponivel = capital_disponivel
+      const { score, categoria } = processarCapitalFromConfig(capitalFinal, scoringConfig)
+      updates.capital_disponivel = capitalFinal
       updates.score    = score
       updates.categoria = categoria
     }
@@ -231,17 +293,54 @@ async function _executarHandoff(conversaId, leadId, tenantId, dados) {
   }
 
   await supabase.from('agente_conversas')
-    .update({ status: 'handoff', atualizado_em: new Date().toISOString() })
+    .update({ status: 'handoff', resumo: resumoRich, atualizado_em: new Date().toISOString() })
     .eq('id', conversaId)
 
-  await _notificarGestores(tenantId, dados)
+  const dadosCompletos = { ...dados, resumoRich }
+  await _notificarGestores(tenantId, dadosCompletos)
     .catch(err => console.warn('[Agente] Falha ao notificar gestores:', err.message))
 
-  console.log(`[Agente] Handoff concluído — lead ${leadId}`)
+  console.log(`[Agente] Handoff concluído — lead ${leadId}, temperatura: ${temperatura || resumoRich?.temperatura || '?'}`)
+}
+
+// ── Gera resumo estruturado em JSON usando o histórico ─────
+async function _gerarResumoEstruturado(historico) {
+  if (!ANTHROPIC_API_KEY || !historico?.length) return null
+  try {
+    const conversa = historico
+      .filter(h => h.role === 'user' || h.role === 'assistant')
+      .map(h => {
+        const texto = typeof h.content === 'string'
+          ? h.content
+          : (h.content || []).find(b => b.type === 'text')?.text || ''
+        return `${h.role === 'assistant' ? AGENTE_NOME : 'Lead'}: ${texto}`
+      })
+      .join('\n')
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001', // haiku é suficiente para extração de dados
+        max_tokens: 600,
+        messages: [{ role: 'user', content: SUMMARY_PROMPT + '\n\n' + conversa }],
+      }),
+    })
+
+    const data = await res.json()
+    const raw  = data.content?.[0]?.text?.replace(/```json|```/g, '').trim()
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
 }
 
 async function _notificarGestores(tenantId, dados) {
-  const { nome, capital_disponivel, cidade, estado, prazo, resumo_consultor } = dados
+  const { nome, capital_disponivel, cidade, estado, prazo, resumo_consultor, resumoRich } = dados
 
   const { data: gestores } = await supabase
     .from('usuarios')
@@ -253,8 +352,8 @@ async function _notificarGestores(tenantId, dados) {
 
   if (!gestores?.length) return
 
-  const capitalFmt = capital_disponivel
-    ? `R$ ${Number(capital_disponivel).toLocaleString('pt-BR')}`
+  const capitalFmt = (resumoRich?.capital_estimado || capital_disponivel)
+    ? `R$ ${Number(resumoRich?.capital_estimado || capital_disponivel).toLocaleString('pt-BR')}`
     : 'não informado'
 
   const prazoFmt = {
@@ -263,14 +362,24 @@ async function _notificarGestores(tenantId, dados) {
     explorando:  'Ainda explorando',
   }[prazo] || 'não informado'
 
-  const msg =
-    `🤖 *${AGENTE_NOME} — Lead Qualificado!*\n\n` +
-    `*Nome:* ${nome || 'não informado'}\n` +
+  const tempEmoji = { QUENTE: '🔥', MORNO: '🌡', FRIO: '❄️' }[resumoRich?.temperatura] || '📋'
+  const temp      = resumoRich?.temperatura || '—'
+
+  let msg =
+    `${tempEmoji} *${AGENTE_NOME} — Lead ${temp}*\n\n` +
+    `*Nome:* ${resumoRich?.nome || nome || 'não informado'}\n` +
     `*Capital:* ${capitalFmt}\n` +
     `*Localização:* ${[cidade, estado].filter(Boolean).join('/') || 'não informado'}\n` +
-    `*Prazo:* ${prazoFmt}\n\n` +
-    `📋 *Resumo da conversa:*\n${resumo_consultor || 'Sem resumo disponível'}\n\n` +
-    `_Acesse o dashboard LeadCapture Pro para ver o lead completo._`
+    `*Prazo:* ${prazoFmt}\n` +
+    `*Decisores:* ${resumoRich?.decisores || 'não informado'}\n` +
+    `*Tom emocional:* ${resumoRich?.tom_emocional || 'não informado'}\n\n`
+
+  if (resumoRich?.motivacao)   msg += `💡 *Motivação:* ${resumoRich.motivacao}\n`
+  if (resumoRich?.objecoes)    msg += `⚠️ *Objeções:* ${resumoRich.objecoes}\n`
+  if (resumoRich?.proximo_passo) msg += `\n✅ *Próximo passo:* ${resumoRich.proximo_passo}\n`
+  if (!resumoRich && resumo_consultor) msg += `📋 *Resumo:* ${resumo_consultor}\n`
+
+  msg += `\n_Acesse o dashboard LeadCapture Pro para ver o lead completo._`
 
   for (const g of gestores) {
     if (!g.telefone) continue
