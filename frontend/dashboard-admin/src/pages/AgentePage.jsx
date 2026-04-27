@@ -97,24 +97,30 @@ function ResumoCard({ resumo }) {
   const tempColor = TEMP_CONFIG[resumo.temperatura]?.color || '#6B7280'
 
   const fields = [
-    { icon: User,          label: 'Nome',          val: resumo.nome },
-    { icon: DollarSign,    label: 'Capital',        val: resumo.capital || (resumo.capital_estimado ? fmtCapital(resumo.capital_estimado) : null) },
-    { icon: MapPin,        label: 'Contexto',       val: resumo.contexto_vida },
-    { icon: Calendar,      label: 'Urgência',       val: resumo.urgencia },
-    { icon: User,          label: 'Decisores',      val: resumo.decisores },
-    { icon: AlertTriangle, label: 'Objeções',       val: resumo.objecoes },
-    { icon: CheckCircle,   label: 'Próximo passo',  val: resumo.proximo_passo },
+    { icon: User,          label: 'Nome',           val: resumo.nome },
+    { icon: DollarSign,    label: 'Capital',         val: resumo.capital || (resumo.capital_estimado ? fmtCapital(resumo.capital_estimado) : null) },
+    { icon: MapPin,        label: 'Contexto',        val: resumo.contexto_vida },
+    { icon: Calendar,      label: 'Urgência',        val: resumo.urgencia },
+    { icon: User,          label: 'Decisores',       val: resumo.decisores },
+    { icon: AlertTriangle, label: 'Objeções',        val: resumo.objecoes },
+    { icon: CheckCircle,   label: 'Perfil ICP',      val: resumo.icp_justificativa },
+    { icon: CheckCircle,   label: 'Próximo passo',   val: resumo.proximo_passo },
   ]
 
   return (
     <div className="space-y-3">
-      {/* Temperatura + tom */}
+      {/* Temperatura + ICP + tom */}
       <div className="flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
           style={{ background: TEMP_CONFIG[resumo.temperatura]?.bg || 'rgba(107,114,128,0.1)', color: tempColor }}>
           <TempIcon className="w-3 h-3" />
           {TEMP_CONFIG[resumo.temperatura]?.label || resumo.temperatura || '—'}
         </div>
+        {resumo.icp_perfil && resumo.icp_perfil !== 'INDEFINIDO' && (
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20">
+            {resumo.icp_perfil === 'DIVERSIFICADOR' ? '💼 Diversificador' : '🧑‍💼 CLT Empreendedor'}
+          </div>
+        )}
         {resumo.tom_emocional && (
           <span className="text-[10px] text-gray-500 italic">{resumo.tom_emocional}</span>
         )}

@@ -21,33 +21,35 @@ const webhookLimiter = rateLimit({
   message: { success: false, error: 'Rate limit excedido' }
 })
 
-// Fluxo de qualificação
+// Fluxo de qualificação — configurável via env
+const SEGMENTO_LABEL = process.env.AGENTE_SEGMENTO || 'franquias'
+
 const FLUXO_QUALIFICACAO = [
   {
     etapa: 'capital',
     pergunta: (nome) =>
-      `Olá, ${nome}! 👋 Que ótimo ter seu interesse!\n\nPara te ajudarmos melhor, qual é o capital que você tem disponível para investir?\n\n1️⃣ Até R$ 100 mil\n2️⃣ Entre R$ 100 mil e R$ 300 mil\n3️⃣ Entre R$ 300 mil e R$ 500 mil\n4️⃣ Acima de R$ 500 mil\n\nResponda com o número da opção.`,
+      `Oi, ${nome}! 👋 Que bom receber seu interesse!\n\nPara conectar você ao consultor certo e não perder seu tempo, preciso entender seu perfil de investimento. Qual faixa está mais próxima do seu capital disponível?\n\n1️⃣ Até R$ 150 mil\n2️⃣ R$ 150 mil a R$ 300 mil\n3️⃣ R$ 300 mil a R$ 500 mil\n4️⃣ Acima de R$ 500 mil\n\nResponda com 1, 2, 3 ou 4.`,
   },
   {
     etapa: 'regiao',
     pergunta: () =>
-      `Perfeito! 📍 Em qual cidade ou estado você pretende abrir a franquia?`,
+      `Ótimo! 📍 Em qual cidade ou estado você quer abrir o negócio?`,
   },
   {
     etapa: 'urgencia',
     pergunta: () =>
-      `Entendido! ⏰ Qual é o seu prazo para tomar essa decisão?\n\n1️⃣ Quero abrir nos próximos 3 meses\n2️⃣ Em 6 meses\n3️⃣ Ainda estou pesquisando\n\nResponda com o número.`,
+      `Entendido! Qual é o seu prazo para tomar uma decisão?\n\n1️⃣ Quero começar nos próximos 3 meses\n2️⃣ Em até 6 meses\n3️⃣ Ainda estou pesquisando\n\nResponda com 1, 2 ou 3.`,
   },
   {
     etapa: 'finalizado',
     mensagem: (nome) =>
-      `Obrigado, ${nome}! ✅\n\nUm de nossos consultores especializados vai entrar em contato em breve com as melhores opções para o seu perfil.\n\n_LeadCapture Pro · Zafalão Tech_`,
+      `Perfeito, ${nome}! ✅\n\nSuas informações foram enviadas para nossa equipe de consultores. Alguém especializado vai entrar em contato em breve — geralmente em menos de 1 hora durante o horário comercial.\n\n_Aguarde! Boas oportunidades não esperam._ 🚀`,
   },
 ]
 
 const capitalMap = {
-  '1': 80000, '2': 200000, '3': 400000, '4': 600000,
-  '1️⃣': 80000, '2️⃣': 200000, '3️⃣': 400000, '4️⃣': 600000,
+  '1': 100000, '2': 225000, '3': 400000, '4': 600000,
+  '1️⃣': 100000, '2️⃣': 225000, '3️⃣': 400000, '4️⃣': 600000,
 }
 
 const urgenciaMap = {

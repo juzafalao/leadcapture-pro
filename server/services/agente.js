@@ -11,13 +11,24 @@ import { enviarMensagem, normalizarTelefone } from '../comunicacao/whatsapp.js'
 import { processarCapitalFromConfig } from '../core/scoring.js'
 import { getScoringConfig } from '../core/scoringConfig.js'
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-const AGENTE_NOME       = process.env.AGENTE_NOME || 'Agente Z'
-const AGENTE_SEGMENTO   = process.env.AGENTE_SEGMENTO || 'franquias'
-const MAX_TURNS         = 14
+const ANTHROPIC_API_KEY     = process.env.ANTHROPIC_API_KEY
+const AGENTE_NOME           = process.env.AGENTE_NOME || 'Agente Z'
+const AGENTE_SEGMENTO       = process.env.AGENTE_SEGMENTO || 'franquias'
+const AGENTE_PITCH_PRINCIPAL= process.env.AGENTE_PITCH_PRINCIPAL || ''
+const AGENTE_CAPITAL_MINIMO = parseInt(process.env.AGENTE_CAPITAL_MINIMO || '0', 10)
+const MAX_TURNS             = 14
 
 // ── System Prompt ──────────────────────────────────────────
 function buildSystemPrompt() {
+  const pitchSection = AGENTE_PITCH_PRINCIPAL
+    ? `\nDIFERENCIAIS DO NEGÓCIO (use com moderação — apenas quando o lead perguntar ou demonstrar dúvida):
+${AGENTE_PITCH_PRINCIPAL}\n`
+    : ''
+
+  const capitalCriterio = AGENTE_CAPITAL_MINIMO > 0
+    ? `- Capital disponível declarado (referência: a partir de R$${AGENTE_CAPITAL_MINIMO.toLocaleString('pt-BR')})`
+    : `- Tem capital disponível (qualquer valor)`
+
   return `Você é ${AGENTE_NOME}, consultora da equipe de expansão de uma rede de ${AGENTE_SEGMENTO}.
 
 QUEM VOCÊ É:
@@ -34,6 +45,14 @@ ESTILO DE COMUNICAÇÃO:
 - Emojis com moderação — quando reforçam emoção genuína
 - Linguagem natural, como WhatsApp de verdade
 - NUNCA use: "Certamente!", "Claro!", "Estou aqui para ajudar!", "Ótima pergunta!"
+${pitchSection}
+IDENTIFICAÇÃO DE PERFIL (interno — não verbalize diretamente):
+Ao longo da conversa, identifique mentalmente o perfil do lead:
+- DIVERSIFICADOR: já tem negócio ou emprego estável, quer renda extra/passiva, capital geralmente acima de R$150k, busca patrimônio sem precisar operar ativamente
+- CLT_EMPREENDEDOR: assalariado que quer sair do emprego, precisa de segurança e provas concretas, prazo normalmente 6-12 meses, precisa de mais validação emocional
+
+Para DIVERSIFICADOR: enfatize autonomia, operação passiva e retorno sobre capital.
+Para CLT_EMPREENDEDOR: enfatize segurança da rede, histórico de sucesso e suporte constante.
 
 FLUXO DE QUALIFICAÇÃO (nessa ordem):
 1. Abertura calorosa com apresentação breve
@@ -60,7 +79,7 @@ REGRAS ABSOLUTAS:
 
 CRITÉRIO DE LEAD QUENTE (acione o handoff):
 - Demonstrou interesse genuíno
-- Tem capital disponível (qualquer valor)
+${capitalCriterio}
 - Prazo de decisão em até 6 meses
 - Já respondeu sobre quem decide junto
 
@@ -82,7 +101,9 @@ Extraia exatamente estes campos (use null se não houver informação):
   "urgencia": "prazo para decidir",
   "objecoes": "objeções ou medos levantados",
   "temperatura": "QUENTE | MORNO | FRIO",
-  "proximo_passo": "recomendação para o consultor",
+  "icp_perfil": "DIVERSIFICADOR | CLT_EMPREENDEDOR | INDEFINIDO",
+  "icp_justificativa": "frase curta explicando por que classificou nesse perfil",
+  "proximo_passo": "recomendação específica para o consultor dado o perfil ICP",
   "tom_emocional": "como o lead pareceu emocionalmente"
 }
 
