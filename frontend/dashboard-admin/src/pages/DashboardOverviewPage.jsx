@@ -1,7 +1,7 @@
 // DashboardOverviewPage.jsx — Visão geral em tempo real
 // KPIs, gráfico de leads, funil, canais, atividade recente
 // Dados reais do Supabase — visível para todos os roles
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -114,7 +114,8 @@ export default function DashboardOverviewPage() {
   const isAdmin     = ['Administrador', 'admin'].includes(role) || usuario?.is_super_admin
   const isDiretor   = role === 'Diretor' || isAdmin
   const isGestor    = role === 'Gestor'  || isDiretor
-  const isConsultor = !isGestor
+  const isConsultor   = !isGestor
+  const debounceRef   = useRef(null)
 
   const [loading,     setLoading]     = useState(true)
   const [metrics,     setMetrics]     = useState({ total: 0, hot: 0, warm: 0, cold: 0, capital: 0, convertidos: 0, semana: 0, sem_dono: 0 })
@@ -127,26 +128,38 @@ export default function DashboardOverviewPage() {
     if (!usuario) return
     setLoading(true)
     try {
-      const hoje     = new Date()
-      const mesInicio  = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString()
-      const dias30ago  = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
-      const dias7ago   = new Date(hoje.getTime() -  7 * 24 * 60 * 60 * 1000).toISOString()
+      const hoje      = new Date()
+      const mesInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString()
+      const dias30ago = new Date(hoje.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      const dias7ago  = new Date(hoje.getTime() -  7 * 24 * 60 * 60 * 1000).toISOString()
 
-      // ── Status options ──
+      // ── Monta as 4 queries e executa em paralelo ──────────
       let qSt = supabase.from('status_comercial').select('id, label, slug, cor').order('ordem')
       if (tenantId) qSt = qSt.eq('tenant_id', tenantId)
-      const { data: statuses } = await qSt
 
-      // ── Leads do mês (metrics + canal + funil) ──
       let qM = supabase.from('leads')
         .select('id, categoria, capital_disponivel, created_at, status, id_status, id_operador_responsavel, fonte, status_comercial:id_status (slug)')
         .is('deleted_at', null)
         .gte('created_at', mesInicio)
       if (tenantId) qM = qM.eq('tenant_id', tenantId)
-      if (isConsultor && usuario?.id) {
-        qM = qM.or(`id_operador_responsavel.eq.${usuario.id},id_operador_responsavel.is.null`)
-      }
-      const { data: ml } = await qM
+      if (isConsultor && usuario?.id) qM = qM.or(`id_operador_responsavel.eq.${usuario.id},id_operador_responsavel.is.null`)
+
+      let qC = supabase.from('leads')
+        .select('created_at, status, status_comercial:id_status (slug)')
+        .is('deleted_at', null)
+        .gte('created_at', dias30ago)
+      if (tenantId) qC = qC.eq('tenant_id', tenantId)
+      if (isConsultor && usuario?.id) qC = qC.or(`id_operador_responsavel.eq.${usuario.id},id_operador_responsavel.is.null`)
+
+      let qR = supabase.from('leads')
+        .select('id, nome, fonte, categoria, created_at, score, marca:id_marca(nome, emoji)')
+        .is('deleted_at', null)
+        .order('created_at', { ascending: false })
+        .limit(8)
+      if (tenantId) qR = qR.eq('tenant_id', tenantId)
+
+      const [{ data: statuses }, { data: ml }, { data: cl }, { data: rl }] =
+        await Promise.all([qSt, qM, qC, qR])
 
       // Resolve slug preferindo status_comercial join, com fallback para campo texto
       const getSlug = l => l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
@@ -200,16 +213,6 @@ export default function DashboardOverviewPage() {
       }
 
       // ── Gráfico 30 dias ──
-      let qC = supabase.from('leads')
-        .select('created_at, status, status_comercial:id_status (slug)')
-        .is('deleted_at', null)
-        .gte('created_at', dias30ago)
-      if (tenantId) qC = qC.eq('tenant_id', tenantId)
-      if (isConsultor && usuario?.id) {
-        qC = qC.or(`id_operador_responsavel.eq.${usuario.id},id_operador_responsavel.is.null`)
-      }
-      const { data: cl } = await qC
-
       const dayMap = {}
       for (let i = 29; i >= 0; i--) {
         const d   = new Date(hoje.getTime() - i * 24 * 60 * 60 * 1000)
@@ -229,13 +232,6 @@ export default function DashboardOverviewPage() {
       setChartData(chartArr)
 
       // ── Leads recentes ──
-      let qR = supabase.from('leads')
-        .select('id, nome, fonte, categoria, created_at, score, marca:id_marca(nome, emoji)')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
-        .limit(8)
-      if (tenantId) qR = qR.eq('tenant_id', tenantId)
-      const { data: rl } = await qR
       setRecentLeads(rl || [])
 
     } finally {
@@ -251,9 +247,15 @@ export default function DashboardOverviewPage() {
     if (tenantId) channelCfg.filter = `tenant_id=eq.${tenantId}`
     const ch = supabase
       .channel(`dash-ov-${tenantId ?? 'all'}`)
-      .on('postgres_changes', channelCfg, () => fetchAll())
+      .on('postgres_changes', channelCfg, () => {
+        clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(fetchAll, 800)
+      })
       .subscribe()
-    return () => { supabase.removeChannel(ch) }
+    return () => {
+      clearTimeout(debounceRef.current)
+      supabase.removeChannel(ch)
+    }
   }, [tenantId, fetchAll])
 
   // ── taxa de conversão ──
