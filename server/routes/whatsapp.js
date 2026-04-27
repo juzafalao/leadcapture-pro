@@ -102,12 +102,12 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
     const telefone = extrairTelefoneDoJid(telefoneRaw)
     console.log(`[WhatsApp/Webhook] Mensagem de ${telefone}: ${mensagem.slice(0, 50)}...`)
 
-    // Busca lead pelo telefone (busca flexível)
-    const telefoneBusca = telefone.slice(-11)
+    // Busca lead pelo telefone — tenta com e sem código do país (55)
+    const telefoneSemCC = telefone.startsWith('55') ? telefone.slice(2) : telefone
     const { data: leads } = await supabase
       .from('leads')
       .select('id, nome, tenant_id, score, categoria, capital_disponivel, regiao_interesse, urgencia, whatsapp_etapa, telefone')
-      .or(`telefone.ilike.%${telefoneBusca},telefone.ilike.%${telefone}`)
+      .or(`telefone.eq.${telefoneSemCC},telefone.eq.${telefone}`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
