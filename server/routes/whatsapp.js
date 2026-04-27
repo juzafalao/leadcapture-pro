@@ -104,13 +104,18 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
 
     // Busca lead pelo telefone — tenta com e sem código do país (55)
     const telefoneSemCC = telefone.startsWith('55') ? telefone.slice(2) : telefone
-    const { data: leads } = await supabase
+    const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('id, nome, tenant_id, score, categoria, capital_disponivel, regiao_interesse, urgencia, whatsapp_etapa, telefone')
       .or(`telefone.eq.${telefoneSemCC},telefone.eq.${telefone}`)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .limit(1)
+
+    if (leadsError) {
+      console.error('[WhatsApp/Webhook] Erro Supabase ao buscar lead:', leadsError)
+      return res.json({ success: false, error: 'db_error', detail: leadsError.message })
+    }
 
     if (!leads?.length) {
       // Tenta agente IA para contatos desconhecidos
@@ -120,8 +125,8 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
         const result = await processarMensagemAgente(telefone, mensagem, AGENTE_TENANT_ID, nomeContato)
         if (result.handled) return res.json({ success: true, agente: true })
       }
-      console.log(`[WhatsApp/Webhook] Lead não encontrado para telefone: ${telefone}`)
-      return res.json({ success: true, ignorado: true, motivo: 'lead não encontrado' })
+      console.log(`[WhatsApp/Webhook] Lead não encontrado para telefone: ${telefone} (sem CC: ${telefoneSemCC})`)
+      return res.json({ success: true, ignorado: true, motivo: 'lead não encontrado', telefone, telefoneSemCC })
     }
 
     const lead = leads[0]
