@@ -1,5 +1,5 @@
 // KanbanPage — Funil de Vendas
-import { useState, useRef, memo, useCallback } from 'react'
+import { useState, useRef, memo, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import {
@@ -239,7 +239,7 @@ export default function KanbanPage() {
   const { data: kanban = {}, isLoading }   = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
   const { mutateAsync: mover }             = useMoverLead()
 
-  const allLeads   = Object.values(kanban).flat()
+  const allLeads   = useMemo(() => Object.values(kanban).flat(), [kanban])
   const totalLeads = allLeads.length
   const totalConv  = kanban['convertido']?.length ?? 0
   const txConv     = totalLeads > 0 ? Math.round((totalConv / totalLeads) * 100) : 0
