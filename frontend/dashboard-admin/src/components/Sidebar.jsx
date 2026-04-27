@@ -170,7 +170,7 @@ const SECTIONS = [
     items: [
       { path: '/captura',          icon: <Icons.Captura />,       label: 'Captura de Leads', badge: 'Beta' },
       { path: '/whatsapp',         icon: <Icons.WhatsApp />,      label: 'WhatsApp',         badge: 'Beta' },
-      { path: '/automacao',        icon: <Icons.Automacao />,     label: 'Automação n8n' },
+      { path: '/automacao',        icon: <Icons.Automacao />,     label: 'Automação' },
       { path: '/email-marketing',  icon: <Icons.EmailMarketing />,label: 'Email Marketing' },
     ],
   },
