@@ -293,7 +293,7 @@ async function _executarHandoff(conversaId, leadId, tenantId, dados, historico) 
   }
 
   await supabase.from('agente_conversas')
-    .update({ status: 'handoff', atualizado_em: new Date().toISOString() })
+    .update({ status: 'handoff', resumo: resumoRich, atualizado_em: new Date().toISOString() })
     .eq('id', conversaId)
 
   const dadosCompletos = { ...dados, resumoRich }
