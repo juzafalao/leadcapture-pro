@@ -95,10 +95,16 @@ function AuthenticatedLayout({ children }) {
         <div className="flex-1">
           {children}
         </div>
-        <footer className="border-t border-white/[0.05] py-4 text-center bg-[#0F172A]">
-          <p className="text-[9px] text-white/20 font-bold uppercase tracking-[0.2em]">
-            Desenvolvido por -- <span className="text-[#10B981]">Zafalao Tech</span>
-          </p>
+        <footer className="border-t border-white/[0.04] py-5 px-6 bg-[#0F172A]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 max-w-screen-xl mx-auto">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-white/15 font-black uppercase tracking-[0.25em]">Desenvolvido por</span>
+              <span className="text-[10px] font-black text-[#10B981] tracking-wide">Zafalão Tech</span>
+            </div>
+            <p className="text-[9px] text-white/10 font-medium tracking-wider">
+              CNPJ 65.465.771/0001-08 · © {new Date().getFullYear()} LeadCapture Pro · Todos os direitos reservados
+            </p>
+          </div>
         </footer>
       </main>
       <Suspense fallback={null}>
