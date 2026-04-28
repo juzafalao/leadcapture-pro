@@ -452,54 +452,7 @@ export default function RelatoriosPage() {
       )
 
       // ── CONVERSÃO ──────────────────────────
-      case 'conversao': return (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Taxa Conversão" value={`${d.txConversao||0}%`} icon="🎯" sub="Meta: 20%" cor="border-green-500/20" />
-            <StatCard label="Taxa Perda"     value={`${d.txPerda||0}%`}     icon="💔" sub={`${d.perdidos||0} perdidos`} cor="border-red-500/20" />
-            <StatCard label="Ciclo Médio"    value={`${d.cicloMedio||0}d`}  icon="⏱️" sub="Até conversão" />
-            <StatCard label="Score Médio"    value={d.scoreMedio||0}        icon="⚡" sub="De 0 a 100" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
-              <h4 className="text-sm font-bold text-white mb-4">Evolução de Conversões</h4>
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:-20}}>
-                    <defs>
-                      <linearGradient id="gVc" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
-                    <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
-                    <ChartTooltip content={<CustomTooltip />} />
-                    <Area type="monotone" dataKey="vendidos" name="Convertidos" stroke="#10b981" fill="url(#gVc)" strokeWidth={2.5} dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
-              <h4 className="text-sm font-bold text-white mb-4">Distribuição de Status</h4>
-              <div className="h-[240px]">
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <PieChart>
-                    <Pie data={(d.funil||[]).filter(f=>f.count>0)} innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="count" nameKey="etapa" stroke="none">
-                      {(d.funil||[]).filter(f=>f.count>0).map((f,i) => <Cell key={i} fill={f.cor} />)}
-                    </Pie>
-                    <ChartTooltip contentStyle={{backgroundColor:'#0B1220',border:'1px solid rgba(16,185,129,0.2)',borderRadius:'12px'}} />
-                    <Legend verticalAlign="bottom" height={36} formatter={v=><span style={{color:'#6a6a6f',fontSize:'10px'}}>{v}</span>} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
-
-      // ── CONSULTOR ──────────────────────────
+      // ── CONVERSÃO ──────────────────────────
       case 'conversao': {
         const convLeads = (d.leads||[]).filter(l => ['convertido','negociacao'].includes((l.status_comercial?.slug||'').toLowerCase()))
         return (
