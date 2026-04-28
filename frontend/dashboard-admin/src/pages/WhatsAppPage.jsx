@@ -1,282 +1,331 @@
-// WhatsAppPage.jsx — Integração WhatsApp Business + Agente IA
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { MessageCircle, Smartphone, Zap, Shield, CheckCircle, Bot, Copy, ChevronDown, ChevronUp, Clock, UserCheck, AlertCircle } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  MessageCircle, Bot, UserCheck, Clock, ChevronDown, ChevronUp,
+  Flame, Thermometer, Snowflake, Phone, RefreshCw
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../components/AuthContext'
 
-const RECURSOS = [
-  { icon: Smartphone,    color: '#25D366', label: 'Número Conectado',      desc: 'Vincule seu WhatsApp Business API ou Evolution API' },
-  { icon: Zap,           color: '#F59E0B', label: 'Respostas Automáticas', desc: 'Templates de boas-vindas e qualificação automática' },
-  { icon: MessageCircle, color: '#3B82F6', label: 'Conversas Centralizadas', desc: 'Inbox unificado de todos os contatos' },
-  { icon: Shield,        color: '#8B5CF6', label: 'Anti-spam & Blacklist', desc: 'Bloqueio automático de contatos indesejados' },
-]
 
-const SQL_AGENTE = `-- Execute no Supabase SQL Editor
-CREATE TABLE IF NOT EXISTS agente_conversas (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id    uuid NOT NULL,
-  lead_id      uuid REFERENCES leads(id) ON DELETE SET NULL,
-  telefone     text NOT NULL,
-  historico    jsonb NOT NULL DEFAULT '[]',
-  status       text NOT NULL DEFAULT 'ativa',  -- ativa | handoff | encerrada
-  criado_em    timestamptz DEFAULT now(),
-  atualizado_em timestamptz DEFAULT now()
-);
+const TEMP_CONFIG = {
+  QUENTE: { label: 'Quente', color: '#EF4444', bg: '#EF444418', Icon: Flame },
+  MORNO:  { label: 'Morno',  color: '#F59E0B', bg: '#F59E0B18', Icon: Thermometer },
+  FRIO:   { label: 'Frio',   color: '#60A5FA', bg: '#60A5FA18', Icon: Snowflake },
+}
 
-CREATE INDEX IF NOT EXISTS idx_agente_conversas_telefone   ON agente_conversas(telefone);
-CREATE INDEX IF NOT EXISTS idx_agente_conversas_tenant_status ON agente_conversas(tenant_id, status);`
+function fmtDt(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+}
 
-const STATUS_LABEL = { ativa: 'Ativa', handoff: 'Handoff', encerrada: 'Encerrada' }
-const STATUS_COLOR = { ativa: '#10B981', handoff: '#F59E0B', encerrada: '#6B7280' }
+function fmtCapital(val) {
+  if (!val) return null
+  return `R$ ${Number(val).toLocaleString('pt-BR')}`
+}
 
-function AgenteZConversas({ tenantId }) {
-  const [conversas, setConversas] = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [expanded,  setExpanded]  = useState(null)
-
-  useEffect(() => {
-    if (!tenantId) return
-    supabase
-      .from('agente_conversas')
-      .select('id, telefone, status, criado_em, atualizado_em, historico')
-      .eq('tenant_id', tenantId)
-      .order('atualizado_em', { ascending: false })
-      .limit(30)
-      .then(({ data }) => { setConversas(data || []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [tenantId])
-
-  if (loading) return <p className="text-[11px] text-gray-600 text-center py-4">Carregando conversas...</p>
-  if (!conversas.length) return <p className="text-[11px] text-gray-600 text-center py-4">Nenhuma conversa do agente ainda.</p>
+// ── Card de Handoff ──────────────────────────────────────────
+function HandoffCard({ conversa }) {
+  const [expanded, setExpanded] = useState(false)
+  const resumo = conversa.resumo || {}
+  const temp = TEMP_CONFIG[resumo.temperatura] || TEMP_CONFIG.MORNO
+  const TempIcon = temp.Icon
+  const capital = fmtCapital(resumo.capital_estimado)
+  const msgCount = (conversa.historico || []).filter(h => h.role === 'user').length
 
   return (
-    <div className="space-y-2">
-      {conversas.map(c => {
-        const userMessages = (c.historico || []).filter(h => h.role === 'user').length
-        const last = (c.historico || []).filter(h => h.role === 'user').at(-1)?.content || '—'
-        const isOpen = expanded === c.id
-        return (
-          <div key={c.id} className="bg-[#0B1220] border border-white/[0.06] rounded-xl overflow-hidden">
-            <button
-              className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.02] transition-colors"
-              onClick={() => setExpanded(isOpen ? null : c.id)}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: STATUS_COLOR[c.status] || '#6B7280' }} />
-                <div className="min-w-0">
-                  <p className="text-[12px] font-semibold text-white truncate">{c.telefone}</p>
-                  <p className="text-[10px] text-gray-600 truncate mt-0.5">{last.slice(0, 60)}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: `${STATUS_COLOR[c.status]}18`, color: STATUS_COLOR[c.status] }}>
-                  {STATUS_LABEL[c.status] || c.status}
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-[#0F172A] border border-[#10B981]/20 rounded-2xl overflow-hidden"
+    >
+      <button
+        className="w-full text-left px-5 py-4 hover:bg-white/[0.02] transition-colors"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            {/* temperatura badge */}
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+              style={{ background: temp.bg }}>
+              <TempIcon className="w-4 h-4" style={{ color: temp.color }} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                <span className="text-[13px] font-bold text-white">
+                  {resumo.nome || conversa.telefone}
                 </span>
-                <span className="text-[10px] text-gray-600">{userMessages} msg</span>
-                {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-gray-600" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-600" />}
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full"
+                  style={{ background: temp.bg, color: temp.color }}>
+                  {temp.label}
+                </span>
+                {capital && (
+                  <span className="text-[10px] font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full">
+                    {capital}
+                  </span>
+                )}
               </div>
-            </button>
-            {isOpen && (
-              <div className="px-4 pb-4 border-t border-white/[0.04] pt-3 space-y-2 max-h-64 overflow-y-auto">
-                {(c.historico || []).map((h, idx) => {
-                  if (h.role === 'system') return null
-                  const isUser = h.role === 'user'
-                  const text = typeof h.content === 'string'
-                    ? h.content
-                    : (h.content || []).find(b => b.type === 'text')?.text || '[ação automática]'
-                  return (
-                    <div key={idx} className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
-                      <div className={`max-w-[80%] px-3 py-2 rounded-xl text-[11px] leading-relaxed ${isUser ? 'bg-white/[0.06] text-gray-300' : 'bg-[#10B981]/10 text-[#10B981]'}`}>
-                        {text}
-                      </div>
-                    </div>
-                  )
-                })}
+
+              {resumo.resumo_consultor && (
+                <p className="text-[11px] text-gray-400 leading-relaxed line-clamp-2">
+                  {resumo.resumo_consultor}
+                </p>
+              )}
+
+              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                {conversa.telefone && (
+                  <span className="flex items-center gap-1 text-[10px] text-gray-600">
+                    <Phone className="w-3 h-3" /> {conversa.telefone}
+                  </span>
+                )}
+                {(resumo.cidade || resumo.estado) && (
+                  <span className="text-[10px] text-gray-600">
+                    📍 {[resumo.cidade, resumo.estado].filter(Boolean).join(' — ')}
+                  </span>
+                )}
+                {resumo.prazo && (
+                  <span className="text-[10px] text-gray-600">
+                    ⏱ {resumo.prazo}
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-700">{msgCount} msg · {fmtDt(conversa.atualizado_em)}</span>
               </div>
-            )}
+            </div>
           </div>
-        )
-      })}
+
+          <div className="flex items-center gap-2 flex-shrink-0 mt-1">
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981]">
+              Handoff
+            </span>
+            {expanded
+              ? <ChevronUp className="w-3.5 h-3.5 text-gray-600" />
+              : <ChevronDown className="w-3.5 h-3.5 text-gray-600" />}
+          </div>
+        </div>
+      </motion.button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/[0.05] px-5 py-4 space-y-4">
+              {/* Resumo completo */}
+              {resumo.motivacao && (
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-1">Motivação</p>
+                  <p className="text-[12px] text-gray-300">{resumo.motivacao}</p>
+                </div>
+              )}
+              {resumo.perfil && (
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-1">Perfil</p>
+                  <p className="text-[12px] text-gray-300">{resumo.perfil}</p>
+                </div>
+              )}
+              {resumo.capital && (
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-1">Capital (dito pelo lead)</p>
+                  <p className="text-[12px] text-gray-300">{resumo.capital}</p>
+                </div>
+              )}
+
+              {/* Histórico da conversa */}
+              {conversa.historico?.length > 0 && (
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-2">Conversa</p>
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                    {conversa.historico.map((h, idx) => {
+                      if (h.role === 'system') return null
+                      const isUser = h.role === 'user'
+                      const text = typeof h.content === 'string'
+                        ? h.content
+                        : (h.content || []).find(b => b.type === 'text')?.text || '[ação automática]'
+                      return (
+                        <div key={idx} className={`flex ${isUser ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-[85%] px-3 py-2 rounded-xl text-[11px] leading-relaxed ${
+                            isUser
+                              ? 'bg-white/[0.06] text-gray-300'
+                              : 'bg-[#10B981]/10 text-[#10B981]'
+                          }`}>
+                            {text}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  )
+}
+
+// ── Card de conversa ativa (simplificado) ───────────────────
+function ConversaAtivaCard({ conversa }) {
+  const last = (conversa.historico || []).filter(h => h.role === 'user').at(-1)?.content || '—'
+  const msgCount = (conversa.historico || []).filter(h => h.role === 'user').length
+
+  return (
+    <div className="bg-[#0F172A] border border-white/[0.06] rounded-xl px-4 py-3 flex items-center gap-3">
+      <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse flex-shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[12px] font-semibold text-white truncate">{conversa.telefone}</p>
+        <p className="text-[10px] text-gray-600 truncate">{typeof last === 'string' ? last.slice(0, 70) : '—'}</p>
+      </div>
+      <div className="text-right flex-shrink-0">
+        <p className="text-[10px] text-gray-600">{msgCount} msg</p>
+        <p className="text-[10px] text-gray-700">{fmtDt(conversa.atualizado_em)}</p>
+      </div>
     </div>
   )
 }
 
+// ── Página principal ─────────────────────────────────────────
 export default function WhatsAppPage() {
   const { usuario } = useAuth()
-  const [copied, setCopied] = useState(false)
-  const [showSql, setShowSql] = useState(false)
+  const [conversas,  setConversas]  = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+
   const tenantId = usuario?.tenant_id || usuario?.tenant?.id
 
-  const copySQL = () => {
-    navigator.clipboard.writeText(SQL_AGENTE).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+  const carregar = useCallback(async () => {
+    if (!tenantId) { setLoading(false); return }
+    try {
+      const { data } = await supabase
+        .from('agente_conversas')
+        .select('id, telefone, status, criado_em, atualizado_em, historico, resumo, lead_id')
+        .eq('tenant_id', tenantId)
+        .order('atualizado_em', { ascending: false })
+        .limit(50)
+      setConversas(data || [])
+    } catch {
+      setConversas([])
+    }
+    setLoading(false)
+    setRefreshing(false)
+  }, [tenantId])
+
+  useEffect(() => { carregar() }, [carregar])
+
+  useEffect(() => {
+    if (!tenantId) return
+    const channel = supabase
+      .channel('agente-conversas-watcher')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'agente_conversas',
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => carregar())
+      .subscribe()
+    return () => supabase.removeChannel(channel)
+  }, [tenantId, carregar])
+
+  const handoffs  = conversas.filter(c => c.status === 'handoff')
+  const ativas    = conversas.filter(c => c.status === 'ativa')
+  const encerradas = conversas.filter(c => c.status === 'encerrada')
+
+  function handleRefresh() {
+    setRefreshing(true)
+    carregar()
   }
 
   return (
     <div className="min-h-full bg-[#0B1220] px-4 lg:px-10 py-6 lg:py-8">
 
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: '#25D36618' }}>
-            <MessageCircle className="w-5 h-5" style={{ color: '#25D366' }} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">WhatsApp</h1>
-            <p className="text-[11px] text-gray-500 mt-0.5">Integração com WhatsApp Business API</p>
-          </div>
-        </div>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#F59E0B]/10 border border-[#F59E0B]/20">
-          <div className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-          <span className="text-[11px] font-semibold text-[#F59E0B]">Em desenvolvimento — em breve disponível</span>
-        </div>
-      </div>
-
-      {/* Recursos */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        {RECURSOS.map((r, i) => {
-          const Icon = r.icon
-          return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="bg-[#0F172A] border border-white/[0.06] rounded-2xl p-5"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${r.color}18` }}>
-                  <Icon className="w-5 h-5" style={{ color: r.color }} />
-                </div>
-                <p className="text-[13px] font-semibold text-white">{r.label}</p>
-              </div>
-              <p className="text-[11px] text-gray-500 leading-relaxed">{r.desc}</p>
-              <div className="mt-3 flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5 text-gray-700" />
-                <span className="text-[10px] text-gray-600">Planejado para próxima release</span>
-              </div>
-            </motion.div>
-          )
-        })}
-      </div>
-
-      {/* Integração atual */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="bg-[#0F172A] border border-[#25D366]/20 rounded-2xl p-6 mb-6"
-      >
-        <p className="text-[11px] font-black uppercase tracking-wider mb-2" style={{ color: '#25D366' }}>Integração atual</p>
-        <p className="text-[13px] text-gray-300 leading-relaxed">
-          O WhatsApp já está integrado via <strong className="text-white">Evolution API</strong> para receber leads automaticamente.
-          Configure o webhook em <a href="/canais" className="hover:underline" style={{ color: '#25D366' }}>Canais</a> ou
-          ajuste os fluxos em <a href="/automacao" className="hover:underline" style={{ color: '#25D366' }}>Automação n8n</a>.
-        </p>
-      </motion.div>
-
-      {/* Agente IA */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.55 }}
-        className="bg-[#0F172A] border border-[#8B5CF6]/25 rounded-2xl overflow-hidden mb-6"
-      >
-        {/* Agente Header */}
-        <div className="px-6 py-5 border-b border-white/[0.05]">
+      <div className="flex items-start justify-between mb-8">
+        <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#8B5CF6] to-[#6D28D9]">
-              <Bot className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center bg-[#25D36618]">
+              <MessageCircle className="w-5 h-5 text-[#25D366]" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-[15px] font-bold text-white">Agente Z</h2>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#8B5CF6] font-semibold">Premium</span>
-              </div>
-              <p className="text-[11px] text-gray-500">Agente Virtual de Captação com IA</p>
+              <h1 className="text-2xl font-bold text-white">WhatsApp</h1>
+              <p className="text-[11px] text-gray-500 mt-0.5">Handoff Inteligente — resumos do Agente Z</p>
             </div>
           </div>
-          <p className="text-[12px] text-gray-400 leading-relaxed">
-            O Agente Z qualifica novos contatos via WhatsApp usando inteligência artificial (Claude). Quando há informações suficientes,
-            ela encerra a conversa e envia um resumo completo para o consultor humano, com o lead já criado no sistema.
+          <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-600 mt-1">
+            H A N D O F F &nbsp; I N T E L I G E N T E
           </p>
         </div>
+        <button onClick={handleRefresh} disabled={refreshing}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 border border-white/5">
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Atualizando...' : 'Atualizar'}
+        </button>
+      </div>
 
-        {/* Como funciona */}
-        <div className="px-6 py-5 border-b border-white/[0.05]">
-          <p className="text-[11px] font-black uppercase tracking-wider text-gray-500 mb-4">Como funciona</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { icon: MessageCircle, color: '#25D366', step: '1', title: 'Contato via WhatsApp', desc: 'Um novo número manda mensagem para o número da empresa' },
-              { icon: Bot,           color: '#8B5CF6', step: '2', title: 'Agente Z qualifica',   desc: 'Conversa natural para coletar nome, capital e cidade' },
-              { icon: UserCheck,     color: '#10B981', step: '3', title: 'Handoff humano',       desc: 'Lead criado + resumo enviado ao consultor pelo WhatsApp' },
-            ].map((s, i) => (
-              <div key={i} className="flex gap-3">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[11px] font-black"
-                  style={{ background: `${s.color}20`, color: s.color }}>{s.step}</div>
-                <div>
-                  <p className="text-[12px] font-semibold text-white">{s.title}</p>
-                  <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{s.desc}</p>
-                </div>
-              </div>
-            ))}
+      {/* Métricas */}
+      <div className="grid grid-cols-3 gap-3 mb-8">
+        {[
+          { label: 'Handoffs',  valor: handoffs.length,   cor: 'text-[#10B981]', border: 'border-[#10B981]/20' },
+          { label: 'Em andamento', valor: ativas.length,  cor: 'text-[#F59E0B]', border: 'border-[#F59E0B]/20' },
+          { label: 'Encerradas', valor: encerradas.length, cor: 'text-gray-400', border: 'border-white/5' },
+        ].map((m, i) => (
+          <div key={i} className={`bg-[#0F172A] border ${m.border} rounded-2xl p-4`}>
+            <p className="text-[9px] font-black uppercase tracking-widest text-gray-600 mb-1">{m.label}</p>
+            <p className={`text-3xl font-black ${m.cor}`}>{loading ? '—' : m.valor}</p>
           </div>
-        </div>
+        ))}
+      </div>
 
-        {/* Configuração */}
-        <div className="px-6 py-5 border-b border-white/[0.05]">
-          <p className="text-[11px] font-black uppercase tracking-wider text-gray-500 mb-4">Configuração</p>
-          <div className="space-y-3">
-            {[
-              { var: 'ANTHROPIC_API_KEY', desc: 'Chave da API Claude (Anthropic)', link: null },
-              { var: 'AGENTE_TENANT_ID',  desc: `ID do tenant dono deste número — use: ${tenantId || 'seu tenant_id'}`, link: null },
-              { var: 'AGENTE_NOME',       desc: 'Nome do agente exibido nas mensagens (padrão: "Agente Z")', link: null },
-              { var: 'EVOLUTION_API_KEY', desc: 'Já configurada para Evolution API', link: null },
-            ].map((v, i) => (
-              <div key={i} className="flex items-start gap-3 bg-black/20 rounded-xl px-4 py-3">
-                <code className="text-[11px] font-mono text-[#8B5CF6] font-bold flex-shrink-0">{v.var}</code>
-                <p className="text-[11px] text-gray-500 leading-relaxed">{v.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* SQL */}
-        <div className="px-6 py-5 border-b border-white/[0.05]">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-black uppercase tracking-wider text-gray-500">Tabela Supabase</p>
-            <div className="flex gap-2">
-              <button onClick={() => setShowSql(s => !s)} className="text-[10px] text-gray-500 hover:text-white transition-colors flex items-center gap-1">
-                {showSql ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                {showSql ? 'ocultar' : 'ver SQL'}
-              </button>
-              <button onClick={copySQL} className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.10] transition-colors text-gray-400">
-                <Copy className="w-3 h-3" />
-                {copied ? 'Copiado!' : 'Copiar SQL'}
-              </button>
-            </div>
-          </div>
-          <div className="flex items-start gap-2 mb-3">
-            <AlertCircle className="w-3.5 h-3.5 text-[#F59E0B] flex-shrink-0 mt-0.5" />
-            <p className="text-[11px] text-gray-500">Execute o SQL abaixo no Supabase SQL Editor para criar a tabela <code className="text-[#8B5CF6]">agente_conversas</code>.</p>
-          </div>
-          {showSql && (
-            <pre className="text-[10px] font-mono bg-black/40 rounded-xl p-4 overflow-x-auto text-gray-400 leading-relaxed whitespace-pre-wrap">{SQL_AGENTE}</pre>
+      {/* Handoffs */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-3">
+          <UserCheck className="w-4 h-4 text-[#10B981]" />
+          <h2 className="text-sm font-bold text-white">Handoffs do Agente Z</h2>
+          {handoffs.length > 0 && (
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981]">
+              {handoffs.length}
+            </span>
           )}
         </div>
 
-        {/* Conversas ativas */}
-        <div className="px-6 py-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="w-3.5 h-3.5 text-gray-500" />
-            <p className="text-[11px] font-black uppercase tracking-wider text-gray-500">Conversas Recentes</p>
+        {loading ? (
+          <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-8 text-center">
+            <p className="text-gray-600 text-sm">Carregando...</p>
           </div>
-          {tenantId
-            ? <AgenteZConversas tenantId={tenantId} />
-            : <p className="text-[11px] text-gray-600 text-center py-4">Faça login para ver as conversas.</p>
-          }
+        ) : handoffs.length === 0 ? (
+          <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-10 text-center">
+            <Bot className="w-8 h-8 text-gray-700 mx-auto mb-3" />
+            <p className="text-gray-500 text-sm font-bold mb-1">Nenhum handoff ainda</p>
+            <p className="text-gray-700 text-xs max-w-xs mx-auto">
+              Quando o Agente Z qualificar um lead e acionar o handoff, o resumo completo aparecerá aqui.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {handoffs.map(c => <HandoffCard key={c.id} conversa={c} />)}
+          </div>
+        )}
+      </div>
+
+      {/* Conversas ativas */}
+      {ativas.length > 0 && (
+        <div className="mb-8">
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-[#F59E0B]" />
+            <h2 className="text-sm font-bold text-white">Em andamento</h2>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#F59E0B]/10 text-[#F59E0B]">
+              {ativas.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {ativas.map(c => <ConversaAtivaCard key={c.id} conversa={c} />)}
+          </div>
         </div>
-      </motion.div>
+      )}
 
     </div>
   )

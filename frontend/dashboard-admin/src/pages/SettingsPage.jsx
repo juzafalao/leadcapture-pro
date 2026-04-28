@@ -311,6 +311,80 @@ function IntegrationStatusSection() {
   )
 }
 
+const SQL_AGENTE = `CREATE TABLE IF NOT EXISTS agente_conversas (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id     uuid NOT NULL,
+  lead_id       uuid REFERENCES leads(id) ON DELETE SET NULL,
+  telefone      text NOT NULL,
+  historico     jsonb NOT NULL DEFAULT '[]',
+  resumo        jsonb,
+  status        text NOT NULL DEFAULT 'ativa',
+  criado_em     timestamptz DEFAULT now(),
+  atualizado_em timestamptz DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_agente_conversas_telefone
+  ON agente_conversas(telefone);
+CREATE INDEX IF NOT EXISTS idx_agente_conversas_tenant_status
+  ON agente_conversas(tenant_id, status);`
+
+function AgenteZConfigSection({ tenantId }) {
+  const [showSql, setShowSql] = React.useState(false)
+  const [copied,  setCopied]  = React.useState(false)
+
+  const copySQL = () => {
+    navigator.clipboard.writeText(SQL_AGENTE).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <Section title="Agente Z — Configuração">
+      <p className="text-xs text-gray-500 mb-5">
+        Variáveis de ambiente necessárias no servidor para ativar o Agente Z (bot de qualificação WhatsApp).
+      </p>
+      <div className="space-y-2 mb-6">
+        {[
+          { v: 'ANTHROPIC_API_KEY',  d: 'Chave da API Claude (Anthropic)' },
+          { v: 'AGENTE_TENANT_ID',   d: `ID do tenant dono do número — use: ${tenantId || 'seu tenant_id'}` },
+          { v: 'AGENTE_NOME',        d: 'Nome do agente nas mensagens (padrão: "Agente Z")' },
+          { v: 'EVOLUTION_API_KEY',  d: 'Chave de autenticação da Evolution API' },
+          { v: 'EVOLUTION_API_URL',  d: 'URL base da Evolution API (ex: http://vps:8080)' },
+          { v: 'EVOLUTION_INSTANCE', d: 'Nome da instância WhatsApp na Evolution API' },
+        ].map(({ v, d }) => (
+          <div key={v} className="flex items-start gap-3 bg-[#0B1220] border border-white/5 rounded-xl px-4 py-2.5">
+            <code className="text-[11px] font-mono text-[#8B5CF6] font-bold shrink-0 mt-0.5">{v}</code>
+            <p className="text-[11px] text-gray-500">{d}</p>
+          </div>
+        ))}
+      </div>
+      <div className="border-t border-white/5 pt-5">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-black uppercase tracking-wider text-gray-500">Tabela Supabase necessária</p>
+          <div className="flex gap-2">
+            <button onClick={() => setShowSql(v => !v)}
+              className="text-[10px] text-gray-500 hover:text-white transition-colors">
+              {showSql ? '▲ ocultar' : '▼ ver SQL'}
+            </button>
+            <button onClick={copySQL}
+              className="text-[10px] px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 transition-colors">
+              {copied ? '✓ Copiado!' : '⎘ Copiar SQL'}
+            </button>
+          </div>
+        </div>
+        <p className="text-[11px] text-gray-600 mb-2">
+          Execute no Supabase SQL Editor para criar a tabela <code className="text-[#8B5CF6]">agente_conversas</code>.
+        </p>
+        {showSql && (
+          <pre className="text-[10px] font-mono bg-black/40 border border-white/5 rounded-xl p-4 overflow-x-auto text-gray-400 leading-relaxed whitespace-pre-wrap">
+            {SQL_AGENTE}
+          </pre>
+        )}
+      </div>
+    </Section>
+  )
+}
+
 export default function SettingsPage() {
   const { usuario } = useAuth()
 
@@ -415,6 +489,9 @@ export default function SettingsPage() {
       <div className="px-4 lg:px-10 max-w-3xl">
         {['Gestor', 'Diretor', 'Administrador', 'admin'].includes(usuario?.role) && (
           <ScoringConfigSection tenantId={usuario?.tenant_id} />
+        )}
+        {['Administrador', 'admin'].includes(usuario?.role) && (
+          <AgenteZConfigSection tenantId={usuario?.tenant_id} />
         )}
         <form onSubmit={handleSave}>
 

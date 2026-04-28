@@ -352,13 +352,18 @@ export default function MonitoramentoPage() {
             </p>
             <div className="bg-[#0B1220] rounded-lg p-2 text-[9px] font-mono text-gray-500 overflow-auto">
               CREATE TABLE IF NOT EXISTS notification_logs (
-              id UUID DEFAULT uuid_generate_v4(),
-              tenant_id UUID, lead_id UUID,
-              tipo TEXT, status TEXT,
-              destinatario TEXT, erro TEXT,
+              id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+              tenant_id UUID,
+              lead_id UUID REFERENCES leads(id) ON DELETE SET NULL,
+              tipo TEXT NOT NULL,
+              status TEXT NOT NULL,
+              destinatario TEXT,
+              erro TEXT,
               tentativas INT DEFAULT 1,
               created_at TIMESTAMPTZ DEFAULT NOW()
               );
+              CREATE INDEX IF NOT EXISTS idx_notif_logs_tenant
+                ON notification_logs(tenant_id, created_at DESC);
             </div>
           </div>
         </div>

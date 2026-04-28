@@ -256,18 +256,18 @@ export default function AutomacaoPage() {
     {
       icon: '📧',
       label: 'E-mail',
-      value: apiStatus?.services?.email?.configurado
-        ? (apiStatus.services.email.resend_configured ? 'Resend' : 'SMTP')
+      value: apiStatus?.services?.email?.ok
+        ? (apiStatus.services.email.resend_configured ? 'Resend' : 'Gmail SMTP')
         : (apiStatus ? 'Modo simulado' : '...'),
-      status: apiStatus?.services?.email?.configurado ? 'Ativo' : 'Simulado',
-      color:  apiStatus?.services?.email?.configurado ? 'text-green-400' : 'text-blue-400',
+      status: apiStatus?.services?.email?.ok ? 'Ativo' : 'Simulado',
+      color:  apiStatus?.services?.email?.ok ? 'text-green-400' : 'text-blue-400',
     },
     {
       icon: '🤖',
       label: 'Agente Z (IA)',
-      value: apiStatus?.agente?.nome ?? (apiStatus ? 'Não configurado' : '...'),
-      status: apiStatus?.agente?.enabled ? 'Ativo' : 'Desabilitado',
-      color:  apiStatus?.agente?.enabled ? 'text-green-400' : 'text-gray-500',
+      value: apiStatus?.services?.agente?.nome ?? (apiStatus ? 'Não configurado' : '...'),
+      status: apiStatus?.services?.agente?.enabled ? 'Ativo' : 'Desabilitado',
+      color:  apiStatus?.services?.agente?.enabled ? 'text-green-400' : 'text-gray-500',
     },
   ]
 
