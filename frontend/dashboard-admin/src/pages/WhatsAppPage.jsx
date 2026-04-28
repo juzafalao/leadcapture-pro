@@ -105,7 +105,7 @@ function HandoffCard({ conversa }) {
               : <ChevronDown className="w-3.5 h-3.5 text-gray-600" />}
           </div>
         </div>
-      </motion.button>
+      </button>
 
       <AnimatePresence>
         {expanded && (
