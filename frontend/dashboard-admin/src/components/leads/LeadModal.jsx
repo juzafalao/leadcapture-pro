@@ -84,18 +84,18 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   const [success, setSuccess] = useState(false)
 
   // Carrega todas as opcoes em paralelo
-  // CORRIGIDO: removido .order('ordem') -- coluna nao existe na tabela
   useEffect(() => {
-    if (!tenantId) return
+    if (!tenantId) { setLoadingOpts(false); return }
     setLoadingOpts(true)
     Promise.all([
       supabase.from('status_comercial')
         .select('id, label, slug, cor')
         .eq('tenant_id', tenantId)
-        .order('label'),                          // <-- 'ordem' nao existe, usa 'label'
+        .order('label'),
       supabase.from('marcas')
         .select('id, nome, emoji')
         .eq('tenant_id', tenantId)
+        .eq('ativo', true)
         .order('nome'),
       supabase.from('motivos_desistencia')
         .select('id, nome')
