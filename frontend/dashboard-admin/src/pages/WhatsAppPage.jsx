@@ -30,7 +30,7 @@ CREATE INDEX IF NOT EXISTS idx_agente_conversas_tenant_status ON agente_conversa
 const STATUS_LABEL = { ativa: 'Ativa', handoff: 'Handoff', encerrada: 'Encerrada' }
 const STATUS_COLOR = { ativa: '#10B981', handoff: '#F59E0B', encerrada: '#6B7280' }
 
-function ZayaConversas({ tenantId }) {
+function AgenteZConversas({ tenantId }) {
   const [conversas, setConversas] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [expanded,  setExpanded]  = useState(null)
@@ -272,7 +272,7 @@ export default function WhatsAppPage() {
             <p className="text-[11px] font-black uppercase tracking-wider text-gray-500">Conversas Recentes</p>
           </div>
           {tenantId
-            ? <ZayaConversas tenantId={tenantId} />
+            ? <AgenteZConversas tenantId={tenantId} />
             : <p className="text-[11px] text-gray-600 text-center py-4">Faça login para ver as conversas.</p>
           }
         </div>
