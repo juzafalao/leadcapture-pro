@@ -180,7 +180,94 @@ function RankingTable({ dados, colunas }) {
   )
 }
 
-// exportCSV e exportPDF são agora tratados pelo handleExportCSV abaixo
+const STATUS_SLUG_LABEL = {
+  novo:        { label: 'Novo',          cor: '#6b7280' },
+  contato:     { label: 'Em Contato',    cor: '#3b82f6' },
+  agendado:    { label: 'Agendado',      cor: '#f59e0b' },
+  negociacao:  { label: 'Em Negociação', cor: '#8b5cf6' },
+  convertido:  { label: 'Convertido',    cor: '#10b981' },
+  perdido:     { label: 'Perdido',       cor: '#ef4444' },
+}
+
+function LeadsGrid({ leads = [], titulo = 'Leads do Período' }) {
+  const [pagina, setPagina] = React.useState(0)
+  const POR_PAG = 10
+  const total = leads.length
+  const slice = leads.slice(pagina * POR_PAG, (pagina + 1) * POR_PAG)
+  const totalPags = Math.ceil(total / POR_PAG)
+
+  if (!total) return null
+
+  return (
+    <div className="bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-white">{titulo}</span>
+          <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-white/5 text-gray-500">{total}</span>
+        </div>
+        {totalPags > 1 && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPagina(p => Math.max(0, p - 1))} disabled={pagina === 0}
+              className="text-xs px-2 py-1 rounded-lg bg-white/5 text-gray-400 disabled:opacity-30 hover:bg-white/10 transition-colors">←</button>
+            <span className="text-[10px] text-gray-600">{pagina + 1}/{totalPags}</span>
+            <button onClick={() => setPagina(p => Math.min(totalPags - 1, p + 1))} disabled={pagina >= totalPags - 1}
+              className="text-xs px-2 py-1 rounded-lg bg-white/5 text-gray-400 disabled:opacity-30 hover:bg-white/10 transition-colors">→</button>
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-white/5 bg-[#0B1220]">
+              {['Nome', 'Capital', 'Score', 'Status', 'Consultor', 'Marca', 'Data'].map(h => (
+                <th key={h} className="px-4 py-2.5 text-left text-[9px] font-black uppercase tracking-wider text-gray-600 whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map((l, i) => {
+              const slug  = (l.status_comercial?.slug || 'novo').toLowerCase()
+              const sConf = STATUS_SLUG_LABEL[slug] || { label: slug, cor: '#6b7280' }
+              const score = l.score || 0
+              const scoreCor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#6b7280'
+              return (
+                <tr key={l.id || i} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-2.5">
+                    <p className="font-semibold text-white truncate max-w-[140px]">{l.nome || '—'}</p>
+                    <p className="text-[10px] text-gray-600 truncate">{l.email || l.telefone || ''}</p>
+                  </td>
+                  <td className="px-4 py-2.5 font-bold text-[#10B981] whitespace-nowrap">
+                    {l.capital_disponivel ? fmtK(l.capital_disponivel) : '—'}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 bg-white/5 rounded-full h-1 overflow-hidden">
+                        <div className="h-full rounded-full" style={{ width: `${score}%`, backgroundColor: scoreCor }} />
+                      </div>
+                      <span className="font-bold" style={{ color: scoreCor }}>{score}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{ background: `${sConf.cor}18`, color: sConf.cor }}>
+                      {sConf.label}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-gray-400 whitespace-nowrap">{l.operador?.nome || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-400 whitespace-nowrap">{l.marca?.emoji} {l.marca?.nome || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-600 whitespace-nowrap">
+                    {l.created_at ? new Date(l.created_at).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function exportPDF() { window.print() }
 
 // ── HEADER COMPARTILHADO ──
@@ -360,6 +447,7 @@ export default function RelatoriosPage() {
               </ResponsiveContainer>
             </div>
           </div>
+          <LeadsGrid leads={d.leads} titulo="Todos os Leads do Período" />
         </div>
       )
 
@@ -412,6 +500,60 @@ export default function RelatoriosPage() {
       )
 
       // ── CONSULTOR ──────────────────────────
+      case 'conversao': {
+        const convLeads = (d.leads||[]).filter(l => ['convertido','negociacao'].includes((l.status_comercial?.slug||'').toLowerCase()))
+        return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Taxa Conversão" value={`${d.txConversao||0}%`} icon="🎯" sub="Meta: 20%" cor="border-green-500/20" />
+            <StatCard label="Taxa Perda"     value={`${d.txPerda||0}%`}     icon="💔" sub={`${d.perdidos||0} perdidos`} cor="border-red-500/20" />
+            <StatCard label="Ciclo Médio"    value={`${d.cicloMedio||0}d`}  icon="⏱️" sub="Até conversão" />
+            <StatCard label="Score Médio"    value={d.scoreMedio||0}        icon="⚡" sub="De 0 a 100" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
+              <h4 className="text-sm font-bold text-white mb-4">Evolução de Conversões</h4>
+              <div className="h-[240px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <AreaChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:-20}}>
+                    <defs>
+                      <linearGradient id="gConv" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#10B981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                    <XAxis dataKey="dia" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="vendidos" name="Convertidos" stroke="#10B981" fill="url(#gConv)" strokeWidth={2} dot={false} />
+                    <Area type="monotone" dataKey="leads"    name="Total"       stroke="#3b82f6" fill="none"         strokeWidth={1.5} dot={false} strokeDasharray="4 4" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
+              <h4 className="text-sm font-bold text-white mb-4">Leads × Convertidos por Dia</h4>
+              <div className="h-[240px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <BarChart data={d.temporal||[]} margin={{top:5,right:5,bottom:5,left:-10}}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                    <XAxis dataKey="dia" stroke="#374151" fontSize={8} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
+                    <ChartTooltip content={<CustomTooltip />} />
+                    <Bar dataKey="leads"    name="Total"       fill="#3b82f6" radius={[4,4,0,0]} barSize={12} />
+                    <Bar dataKey="vendidos" name="Convertidos" fill="#10b981" radius={[4,4,0,0]} barSize={12} />
+                    <Legend verticalAlign="top" height={24} formatter={v=><span style={{color:'#9ca3af',fontSize:'10px'}}>{v}</span>} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+          <LeadsGrid leads={convLeads} titulo="Leads Convertidos e Em Negociação" />
+        </div>
+        )
+      }
+
       case 'consultor': return (
         <div className="space-y-6">
           <RankingTable dados={d.porConsultor||[]} colunas={[
@@ -447,6 +589,7 @@ export default function RelatoriosPage() {
               </ResponsiveContainer>
             </div>
           </div>
+          <LeadsGrid leads={d.leads} titulo="Leads do Período" />
         </div>
       )
 
@@ -490,6 +633,7 @@ export default function RelatoriosPage() {
               </div>
             </div>
           </div>
+          <LeadsGrid leads={d.leads} titulo="Leads do Período" />
         </div>
       )
 
@@ -536,6 +680,7 @@ export default function RelatoriosPage() {
               </ResponsiveContainer>
             </div>
           </div>
+          <LeadsGrid leads={d.leads} titulo="Evolução de Leads" />
         </div>
       )
 
@@ -572,6 +717,24 @@ export default function RelatoriosPage() {
               ))}
             </div>
           </div>
+          {/* Gráfico de torre por fonte */}
+          <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-6">
+            <h4 className="text-sm font-bold text-white mb-4">Volume por Fonte</h4>
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                <BarChart data={d.porFonte||[]} margin={{top:5,right:5,bottom:25,left:-10}}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" />
+                  <XAxis dataKey="name" stroke="#374151" fontSize={9} axisLine={false} tickLine={false} angle={-20} textAnchor="end" />
+                  <YAxis stroke="#374151" fontSize={9} axisLine={false} tickLine={false} />
+                  <ChartTooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Leads" radius={[8,8,0,0]} barSize={36}>
+                    {(d.porFonte||[]).map((_,i)=><Cell key={i} fill={COLORS[i%COLORS.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <LeadsGrid leads={d.leads} titulo="Leads por Fonte" />
         </div>
       )
 
@@ -614,6 +777,7 @@ export default function RelatoriosPage() {
               {!(d.motivosPerda||[]).length && <p className="text-xs text-gray-600 text-center py-8">Nenhuma perda registrada 🎉</p>}
             </div>
           </div>
+          <LeadsGrid leads={(d.leads||[]).filter(l=>(l.status_comercial?.slug||'').toLowerCase()==='perdido')} titulo="Leads Perdidos" />
         </div>
       )
 
@@ -652,6 +816,7 @@ export default function RelatoriosPage() {
               ))}
             </div>
           </div>
+          <LeadsGrid leads={d.leads} titulo="Leads por Região" />
         </div>
       )
 
@@ -680,6 +845,7 @@ export default function RelatoriosPage() {
               </ResponsiveContainer>
             </div>
           </div>
+          <LeadsGrid leads={[...(d.leads||[])].sort((a,b)=>(b.score||0)-(a.score||0))} titulo="Leads por Score" />
         </div>
       )
 
@@ -734,6 +900,7 @@ export default function RelatoriosPage() {
               </div>
             </div>
           </div>
+          <LeadsGrid leads={[...(d.leads||[])].sort((a,b)=>(b.capital_disponivel||0)-(a.capital_disponivel||0))} titulo="Leads por Capital" />
         </div>
       )
 

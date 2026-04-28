@@ -58,6 +58,10 @@ router.get('/status', async (_req, res) => {
         notification_email:   process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com',
         provedor:             resendOk ? 'Resend' : smtpOk ? 'Gmail SMTP' : 'Não configurado',
       },
+      agente: {
+        enabled: !!(process.env.ANTHROPIC_API_KEY && process.env.AGENTE_TENANT_ID),
+        nome:    process.env.AGENTE_NOME || 'Agente Z',
+      },
     },
   })
 })

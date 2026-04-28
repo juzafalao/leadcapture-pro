@@ -114,7 +114,7 @@ router.post('/', validateLead, async (req, res) => {
       } catch { return true }
     }
 
-    async function comRetry(fn, tipo, maxTentativas = 3) {
+    async function comRetry(fn, tipo, destinatario = null, maxTentativas = 3) {
       for (let t = 1; t <= maxTentativas; t++) {
         try {
           await fn()
@@ -123,6 +123,7 @@ router.post('/', validateLead, async (req, res) => {
             tenant_id: lead.tenant_id,
             tipo,
             status: 'sucesso',
+            destinatario,
             tentativas: t,
           }]).catch(() => {})
           return true
@@ -134,6 +135,7 @@ router.post('/', validateLead, async (req, res) => {
               tenant_id: lead.tenant_id,
               tipo,
               status: 'erro',
+              destinatario,
               erro: err.message,
               tentativas: maxTentativas,
             }]).catch(() => {})
@@ -157,17 +159,18 @@ router.post('/', validateLead, async (req, res) => {
 
       if (lead.email?.includes('@') && ativoBoasVindas) {
         notifPromises.push(
-          comRetry(() => enviarBoasVindasLead(lead, marcaFallback), 'email-boas-vindas-lead')
+          comRetry(() => enviarBoasVindasLead(lead, marcaFallback), 'email-boas-vindas-lead', lead.email)
         )
       }
 
+      const destNotif = emailsNotif.join(', ') || null
       notifPromises.push(
-        comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna')
+        comRetry(() => notificarNovoLead(lead, marcaFallback, emailsNotif), 'email-notificacao-interna', destNotif)
       )
 
       if (lead.score >= 65 && ativoLeadQuente) {
         notifPromises.push(
-          comRetry(() => notificarLeadQuente(lead, marcaFallback, emailsNotif), 'email-lead-quente')
+          comRetry(() => notificarLeadQuente(lead, marcaFallback, emailsNotif), 'email-lead-quente', destNotif)
         )
       }
 
