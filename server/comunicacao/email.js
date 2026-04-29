@@ -44,9 +44,12 @@ async function enviarViaResend(to, subject, html) {
 
   console.log(`[Email/Resend] Enviando para: ${to} | from: ${from}`)
 
+  // Resend aceita array de emails; normaliza string única para array
+  const toArray = Array.isArray(to) ? to : [to]
+
   const { data, error } = await resend.emails.send({
     from,
-    to,
+    to: toArray,
     subject,
     html,
   })
@@ -177,7 +180,7 @@ export async function notificarNovoLead(lead, marca, emailsExtras = []) {
   const emoji   = lead.categoria === 'hot' ? '🔥' : lead.categoria === 'warm' ? '🌤' : '❄️'
   const subject = `${emoji} Novo Lead: ${lead.nome} — ${marca.nome}`
   try {
-    await enviar(todos.join(','), subject, templateNovoLead(lead, marca))
+    await enviar(todos, subject, templateNovoLead(lead, marca))
     console.log('[Email] Novo lead enviado para:', todos.join(', '))
     return { success: true }
   } catch (err) {
@@ -192,7 +195,7 @@ export async function notificarLeadQuente(lead, marca, emailsDiretores = []) {
   const todos   = [...new Set([notif, ...extras])]
   const subject = `🔥 LEAD QUENTE! ${lead.nome} — Score ${lead.score} — ${marca.nome}`
   try {
-    await enviar(todos.join(','), subject, templateLeadQuente(lead, marca))
+    await enviar(todos, subject, templateLeadQuente(lead, marca))
     console.log('[Email] Lead quente enviado para:', todos.join(', '))
     return { success: true }
   } catch (err) {
