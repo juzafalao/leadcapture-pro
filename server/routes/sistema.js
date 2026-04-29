@@ -212,4 +212,41 @@ router.put('/scoring-config', async (req, res) => {
   res.json({ success: true, message: 'Configuração de scoring salva', config })
 })
 
+// ─────────────────────────────────────────────
+// GET /api/sistema/notification-logs
+// Retorna logs de notificação do tenant do usuário
+// ─────────────────────────────────────────────
+router.get('/notification-logs', async (req, res) => {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) return res.status(401).json({ success: false, error: 'Token obrigatório' })
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  if (authError || !user) return res.status(401).json({ success: false, error: 'Token inválido' })
+
+  const { data: usuario } = await supabase
+    .from('usuarios')
+    .select('tenant_id')
+    .eq('auth_id', user.id)
+    .maybeSingle()
+
+  if (!usuario?.tenant_id) return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
+
+  const status = req.query.status
+  const limit  = Math.min(parseInt(req.query.limit) || 100, 200)
+
+  let q = supabase
+    .from('notification_logs')
+    .select('id, lead_id, tenant_id, tipo, status, destinatario, erro, tentativas, created_at')
+    .eq('tenant_id', usuario.tenant_id)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (status && status !== 'todos') q = q.eq('status', status)
+
+  const { data, error } = await q
+  if (error) return res.status(500).json({ success: false, error: error.message })
+
+  res.json({ success: true, logs: data || [] })
+})
+
 export default router
