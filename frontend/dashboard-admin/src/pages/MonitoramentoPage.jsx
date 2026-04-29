@@ -51,14 +51,15 @@ export default function MonitoramentoPage() {
     try {
       let q = supabase
         .from('notification_logs')
-        .select('*, lead:lead_id(nome, email, score, categoria)')
+        .select('id, lead_id, tenant_id, tipo, status, destinatario, erro, tentativas, created_at')
         .order('created_at', { ascending: false })
         .limit(100)
       if (tenantId) q = q.eq('tenant_id', tenantId)
       if (filtro !== 'todos') q = q.eq('status', filtro)
-      const { data } = await q
+      const { data, error } = await q
+      if (error) console.error('[Monitoramento] query error:', error.message)
       setLogs(data || [])
-    } catch { setLogs([]) }
+    } catch (e) { console.error('[Monitoramento] catch:', e.message); setLogs([]) }
     setLoading(false)
   }
 
