@@ -314,7 +314,7 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model:      'claude-3-5-sonnet-20241022',
+        model:      'claude-sonnet-4-6',
         max_tokens: 600,
         system:     buildSystemPrompt(config),
         tools:      AGENTE_TOOLS,
@@ -440,7 +440,7 @@ async function _gerarResumoEstruturado(historico, config) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 600,
         messages: [{ role: 'user', content: SUMMARY_PROMPT + '\n\n' + conversa }],
       }),
