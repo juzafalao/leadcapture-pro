@@ -49,12 +49,12 @@ export default function MonitoramentoPage() {
   async function carregarLogs() {
     setLoading(true)
     try {
-      const { data, error } = await supabase.rpc('get_notification_logs', {
-        p_status: filtro !== 'todos' ? filtro : null,
-        p_limit:  100,
-      })
-      if (error) console.error('[Monitoramento] rpc error:', error.message)
-      setLogs(data || [])
+      const authH = await getAuthHeader()
+      const params = new URLSearchParams({ limit: '100' })
+      if (filtro !== 'todos') params.set('status', filtro)
+      const r = await fetch(`${API_URL}/api/sistema/notification-logs?${params}`, { headers: authH })
+      const d = await r.json()
+      setLogs(d.logs || [])
     } catch (e) { console.error('[Monitoramento] catch:', e.message); setLogs([]) }
     setLoading(false)
   }
