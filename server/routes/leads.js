@@ -118,31 +118,32 @@ router.post('/', validateLead, async (req, res) => {
       } catch { return true }
     }
 
+    async function logNotif(campos) {
+      const { error } = await supabase.from('notification_logs').insert([campos])
+      if (error) console.error('[Leads] notification_logs insert error:', error.message)
+    }
+
     async function comRetry(fn, tipo, destinatario = null, maxTentativas = 3) {
       for (let t = 1; t <= maxTentativas; t++) {
         try {
-          await fn()
-          supabase.from('notification_logs').insert([{
-            lead_id: lead.id,
-            tenant_id: lead.tenant_id,
-            tipo,
-            status: 'sucesso',
-            destinatario,
-            tentativas: t,
-          }]).catch(() => {})
+          const resultado = await fn()
+          // Funções de email retornam { success: false } em vez de throw — tratar aqui
+          if (resultado && resultado.success === false) {
+            throw new Error(resultado.error || resultado.motivo || 'Falha no envio')
+          }
+          await logNotif({
+            lead_id: lead.id, tenant_id: lead.tenant_id,
+            tipo, status: 'sucesso', destinatario, tentativas: t,
+          })
           return true
         } catch (err) {
           console.warn(`[Leads] ${tipo} tentativa ${t}/${maxTentativas}: ${err.message}`)
           if (t === maxTentativas) {
-            supabase.from('notification_logs').insert([{
-              lead_id: lead.id,
-              tenant_id: lead.tenant_id,
-              tipo,
-              status: 'erro',
-              destinatario,
-              erro: err.message,
-              tentativas: maxTentativas,
-            }]).catch(() => {})
+            await logNotif({
+              lead_id: lead.id, tenant_id: lead.tenant_id,
+              tipo, status: 'erro', destinatario,
+              erro: err.message, tentativas: maxTentativas,
+            })
           } else {
             await new Promise(r => setTimeout(r, 1000 * t))
           }
