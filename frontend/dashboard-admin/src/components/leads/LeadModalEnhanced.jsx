@@ -25,7 +25,7 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
   const queryClient = useQueryClient()
   const { alertModal, showAlert } = useAlertModal()
   const isGestor = ROLES_GESTOR.includes(usuario?.role)
-  const podeAtribuir = ROLES_PODE_ATRIBUIR.includes(usuario?.role) || usuario?.is_super_admin
+  const podeAtribuir = ROLES_PODE_ATRIBUIR.includes(usuario?.role) || usuario?.is_super_admin || ['Administrador','admin'].includes(usuario?.role)
 
   const isNovo = !lead?.id
   const [abaAtiva, setAbaAtiva] = useState('visao-geral')

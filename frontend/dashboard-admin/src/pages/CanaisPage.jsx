@@ -249,7 +249,7 @@ export default function CanaisPage() {
   const [leads,   setLeads]   = useState([])
   const [loading, setLoading] = useState(true)
 
-  const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
+  const tenantId = ['Administrador', 'admin'].includes(usuario?.role) || usuario?.is_super_admin ? null : usuario?.tenant_id
 
   useEffect(() => {
     async function load() {

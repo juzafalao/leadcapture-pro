@@ -221,10 +221,10 @@ function LeadRow({ lead, operadores, podeAtribuir, usuario, onOpenModal, onReloa
 
 // ─── Dashboard principal ──────────────────────────────────
 export default function DashboardPage() {
-  const { usuario } = useAuth()
-  const tenantId    = usuario?.is_super_admin ? null : usuario?.tenant_id
+  const { usuario, isPlatformAdmin } = useAuth()
+  const tenantId    = isPlatformAdmin() ? null : usuario?.tenant_id
   const role        = usuario?.role
-  const isAdmin     = ['Administrador', 'admin'].includes(role) || usuario?.is_super_admin
+  const isAdmin     = isPlatformAdmin() || usuario?.is_super_admin
   const isDiretor   = role === 'Diretor' || isAdmin
   const isGestor    = role === 'Gestor'  || isDiretor
   const podeAtribuir = isGestor

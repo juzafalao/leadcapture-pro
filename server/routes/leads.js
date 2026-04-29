@@ -409,8 +409,10 @@ router.put('/:id/assign-consultant', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Lead não encontrado' })
     }
 
-    const tenantOk = usuarioLogado.is_super_admin || usuarioLogado.is_platform
-      || lead.tenant_id === usuarioLogado.tenant_id
+    const isAdminUser = usuarioLogado.is_super_admin || usuarioLogado.is_platform
+      || ['Administrador', 'admin'].includes(usuarioLogado.role)
+
+    const tenantOk = isAdminUser || lead.tenant_id === usuarioLogado.tenant_id
 
     if (!tenantOk) {
       return res.status(403).json({ success: false, error: 'Lead pertence a outro tenant' })
@@ -426,7 +428,7 @@ router.put('/:id/assign-consultant', async (req, res) => {
       return res.status(404).json({ success: false, error: 'Consultor não encontrado' })
     }
 
-    if (!usuarioLogado.is_super_admin && !usuarioLogado.is_platform) {
+    if (!isAdminUser) {
       if (consultor.tenant_id !== lead.tenant_id) {
         return res.status(403).json({ success: false, error: 'Consultor não pertence ao mesmo tenant do lead' })
       }

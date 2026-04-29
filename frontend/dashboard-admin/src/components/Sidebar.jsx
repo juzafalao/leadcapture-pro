@@ -383,14 +383,14 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const getVisibleItems = useCallback((items) => {
     return items.filter(item => {
       if (!item.roles) return true
-      if (item.superAdmin && (auth.usuario?.is_super_admin || auth.usuario?.is_platform)) return true
+      if (item.superAdmin && (auth.usuario?.is_super_admin || auth.usuario?.is_platform || ['Administrador','admin'].includes(auth.usuario?.role))) return true
       return item.roles.includes(auth.usuario?.role)
     })
   }, [auth.usuario])
 
   const isSectionVisible = useCallback((section) => {
     if (!section.roles) return true
-    if (auth.usuario?.is_super_admin || auth.usuario?.is_platform) return true
+    if (auth.usuario?.is_super_admin || auth.usuario?.is_platform || ['Administrador','admin'].includes(auth.usuario?.role)) return true
     return section.roles.includes(auth.usuario?.role)
   }, [auth.usuario])
 

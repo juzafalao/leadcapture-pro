@@ -231,7 +231,7 @@ router.get('/notification-logs', async (req, res) => {
 
   if (!usuario) return res.status(403).json({ success: false, error: 'Usuário não encontrado' })
 
-  const isSuperAdmin = usuario.is_super_admin || usuario.role === 'admin'
+  const isSuperAdmin = usuario.is_super_admin || ['admin', 'Administrador'].includes(usuario.role)
   if (!isSuperAdmin && !usuario.tenant_id) {
     return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
   }
