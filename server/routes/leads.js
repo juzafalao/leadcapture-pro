@@ -152,15 +152,15 @@ router.post('/', validateLead, async (req, res) => {
       return false
     }
 
-    res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
-
-    setImmediate(async () => {
-      const notifPromises = []
-
+    // Notificações rodam ANTES de res.json() para garantir execução em serverless
+    // (em Vercel/Lambda o processo é congelado imediatamente após a resposta)
+    const runNotificacoes = async () => {
       const [ativoBoasVindas, ativoLeadQuente] = await Promise.all([
         isEmailAtivo(lead.tenant_id, 'boas-vindas'),
         isEmailAtivo(lead.tenant_id, 'lead-quente'),
       ])
+
+      const notifPromises = []
 
       if (lead.email?.includes('@') && ativoBoasVindas) {
         notifPromises.push(
@@ -196,22 +196,20 @@ router.post('/', validateLead, async (req, res) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            leadId: lead.id,
-            nome: lead.nome,
-            email: lead.email,
-            telefone: lead.telefone,
-            score: lead.score,
-            categoria: lead.categoria,
-            capital: lead.capital_disponivel,
-            regiao: lead.regiao_interesse,
-            marca: marcaFallback.nome,
-            tenant_id: lead.tenant_id,
-            fonte: lead.fonte,
-            timestamp: new Date().toISOString(),
+            leadId: lead.id, nome: lead.nome, email: lead.email,
+            telefone: lead.telefone, score: lead.score, categoria: lead.categoria,
+            capital: lead.capital_disponivel, regiao: lead.regiao_interesse,
+            marca: marcaFallback.nome, tenant_id: lead.tenant_id,
+            fonte: lead.fonte, timestamp: new Date().toISOString(),
           }),
         }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
       }
-    })
+    }
+
+    // Roda notificações antes de responder — garante execução em serverless
+    await runNotificacoes().catch(err => console.error('[Leads] Notificações:', err.message))
+
+    res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
   } catch (err) {
     console.error('[Leads] Erro:', err.message)
     res.status(500).json({ success: false, error: 'Erro interno ao processar lead', detalhe: err.message })
