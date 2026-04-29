@@ -236,7 +236,7 @@ export default function KanbanPage() {
   const dragRef = useRef(null)
 
   const { data: colunas = COLUNAS_PADRAO } = useStatusColunas(tenantId)
-  const { data: kanban = {}, isLoading }   = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
+  const { data: kanban = {}, isLoading, isError, refetch } = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
   const { mutateAsync: mover }             = useMoverLead()
 
   const allLeads   = useMemo(() => Object.values(kanban).flat(), [kanban])
@@ -284,6 +284,20 @@ export default function KanbanPage() {
     return (
       <div className="min-h-screen bg-[#0B1220] flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-[#0B1220] flex items-center justify-center flex-col gap-4">
+        <p className="text-gray-400 text-sm font-bold">Erro ao carregar o funil</p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 rounded-xl bg-[#10B981]/10 text-[#10B981] text-xs font-bold hover:bg-[#10B981]/20 transition-colors"
+        >
+          Tentar novamente
+        </button>
       </div>
     )
   }

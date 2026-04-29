@@ -36,6 +36,10 @@ router.post('/', validateLead, async (req, res) => {
     if (!valido) {
       return res.status(400).json({ success: false, error: `Campo obrigatório: ${campoFaltando}` })
     }
+    const marcaId = dados.id_marca || dados.marca_id
+    if (!marcaId) {
+      return res.status(400).json({ success: false, error: 'Campo obrigatório: marca_id' })
+    }
     if (sanitizarTexto(dados.nome).length < 3) {
       return res.status(400).json({ success: false, error: 'Nome deve ter pelo menos 3 caracteres' })
     }

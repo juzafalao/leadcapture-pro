@@ -111,7 +111,7 @@ export function useKanbanLeads({ tenantId, colunas = [], dataInicio = null }) {
         `)
         .is('deleted_at', null)
         .order('score', { ascending: false })
-        .limit(500)
+        .limit(200)
 
       if (tenantId) query = query.eq('tenant_id', tenantId)
       if (dataInicio) query = query.gte('created_at', dataInicio)
