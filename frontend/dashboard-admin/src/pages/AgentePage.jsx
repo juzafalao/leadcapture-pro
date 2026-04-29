@@ -1,10 +1,12 @@
 // AgentePage.jsx — Gestão do Agente Z de captação via WhatsApp
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Bot, MessageCircle, UserCheck, Clock, ChevronRight, X, ExternalLink, RefreshCw, Flame, Thermometer, Snowflake, User, DollarSign, MapPin, Calendar, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react'
+import { Bot, MessageCircle, UserCheck, ChevronRight, X, ExternalLink, RefreshCw, Flame, Thermometer, Snowflake, User, DollarSign, MapPin, Calendar, AlertTriangle, CheckCircle, ArrowRight, Settings, Save, ToggleLeft, ToggleRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../components/AuthContext'
 import { useNavigate } from 'react-router-dom'
+
+const API_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
 
 const STATUS_CONFIG = {
   ativa:     { label: 'Ativa',      color: '#10B981', bg: 'rgba(16,185,129,0.1)'  },
@@ -231,6 +233,188 @@ function DetailPanel({ conversa, onClose }) {
   )
 }
 
+// ── Config Panel ─────────────────────────────────────────────
+function ConfigPanel({ tenantId }) {
+  const [cfg, setCfg]         = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving]   = useState(false)
+  const [feedback, setFeedback] = useState(null)
+
+  const getToken = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    return session?.access_token
+  }
+
+  const load = useCallback(async () => {
+    if (!tenantId) return
+    setLoading(true)
+    try {
+      const tok = await getToken()
+      const r = await fetch(`${API_URL}/api/agente/config`, {
+        headers: { Authorization: `Bearer ${tok}` },
+      })
+      if (r.ok) {
+        const d = await r.json()
+        setCfg(d.config || {
+          habilitado: false, nome_agente: 'Lia', segmento: 'franquias',
+          pitch_principal: '', capital_minimo: 80000, max_turns: 14, prompt_extra: '',
+        })
+      }
+    } catch { /* silent */ } finally { setLoading(false) }
+  }, [tenantId])
+
+  useEffect(() => { load() }, [load])
+
+  const save = async () => {
+    if (!cfg) return
+    setSaving(true)
+    setFeedback(null)
+    try {
+      const tok = await getToken()
+      const r = await fetch(`${API_URL}/api/agente/config`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${tok}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg),
+      })
+      if (r.ok) {
+        setFeedback({ type: 'ok', msg: 'Configuração salva!' })
+      } else {
+        const d = await r.json()
+        setFeedback({ type: 'err', msg: d.error || 'Erro ao salvar' })
+      }
+    } catch (e) {
+      setFeedback({ type: 'err', msg: e.message })
+    } finally {
+      setSaving(false)
+      setTimeout(() => setFeedback(null), 4000)
+    }
+  }
+
+  const set = (k, v) => setCfg(prev => ({ ...prev, [k]: v }))
+
+  const inputCls = 'w-full bg-[#0B1220] border border-white/[0.07] rounded-xl px-4 py-2.5 text-[13px] text-white placeholder:text-gray-700 focus:outline-none focus:border-[#8B5CF6]/50 focus:ring-1 focus:ring-[#8B5CF6]/20 transition-all'
+  const labelCls = 'block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5'
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="w-6 h-6 border-2 border-[#8B5CF6] border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  return (
+    <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
+
+      {/* Toggle habilitado */}
+      <div className="bg-[#0F172A] border border-white/[0.06] rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div>
+          <p className="text-[13px] font-bold text-white">Agente IA ativado</p>
+          <p className="text-[11px] text-gray-500 mt-0.5">Responde automaticamente no WhatsApp</p>
+        </div>
+        <button
+          onClick={() => set('habilitado', !cfg.habilitado)}
+          className="flex-shrink-0 transition-opacity hover:opacity-80"
+        >
+          {cfg.habilitado
+            ? <ToggleRight className="w-9 h-9 text-[#10B981]" />
+            : <ToggleLeft  className="w-9 h-9 text-gray-600"  />
+          }
+        </button>
+      </div>
+
+      {/* Campos */}
+      <div className="bg-[#0F172A] border border-white/[0.06] rounded-2xl px-5 py-5 space-y-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Identidade</p>
+
+        <div>
+          <label className={labelCls}>Nome da consultora</label>
+          <input className={inputCls} value={cfg.nome_agente || ''} onChange={e => set('nome_agente', e.target.value)} placeholder="Lia" />
+        </div>
+
+        <div>
+          <label className={labelCls}>Segmento</label>
+          <input className={inputCls} value={cfg.segmento || ''} onChange={e => set('segmento', e.target.value)} placeholder="franquias" />
+        </div>
+
+        <div>
+          <label className={labelCls}>Pitch principal (diferenciais)</label>
+          <textarea
+            className={`${inputCls} resize-none`}
+            rows={3}
+            value={cfg.pitch_principal || ''}
+            onChange={e => set('pitch_principal', e.target.value)}
+            placeholder="Descreva os diferenciais do negócio..."
+          />
+        </div>
+      </div>
+
+      <div className="bg-[#0F172A] border border-white/[0.06] rounded-2xl px-5 py-5 space-y-4">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Qualificação</p>
+
+        <div>
+          <label className={labelCls}>Capital mínimo (R$)</label>
+          <input
+            type="number"
+            className={inputCls}
+            value={cfg.capital_minimo ?? 80000}
+            onChange={e => set('capital_minimo', parseInt(e.target.value) || 0)}
+            placeholder="80000"
+          />
+        </div>
+
+        <div>
+          <label className={labelCls}>Máximo de turnos de conversa</label>
+          <input
+            type="number"
+            className={inputCls}
+            value={cfg.max_turns ?? 14}
+            onChange={e => set('max_turns', parseInt(e.target.value) || 14)}
+            min={4} max={30}
+          />
+        </div>
+      </div>
+
+      <div className="bg-[#0F172A] border border-white/[0.06] rounded-2xl px-5 py-5">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-4">Instruções extras</p>
+        <textarea
+          className={`${inputCls} resize-none`}
+          rows={4}
+          value={cfg.prompt_extra || ''}
+          onChange={e => set('prompt_extra', e.target.value)}
+          placeholder="Instruções adicionais para o system prompt (opcional)..."
+        />
+      </div>
+
+      {/* Feedback */}
+      <AnimatePresence>
+        {feedback && (
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className={`text-[12px] px-4 py-2.5 rounded-xl font-medium text-center ${
+              feedback.type === 'ok'
+                ? 'bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/20'
+                : 'bg-red-500/15 text-red-400 border border-red-500/20'
+            }`}
+          >
+            {feedback.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Save */}
+      <button
+        onClick={save}
+        disabled={saving}
+        className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-[#8B5CF6] text-white font-bold text-[13px] hover:bg-[#7C3AED] disabled:opacity-50 transition-colors"
+      >
+        <Save className="w-4 h-4" />
+        {saving ? 'Salvando…' : 'Salvar configuração'}
+      </button>
+    </div>
+  )
+}
+
 // ── Main Page ────────────────────────────────────────────────
 export default function AgentePage() {
   const { usuario }  = useAuth()
@@ -240,8 +424,9 @@ export default function AgentePage() {
   const [filtro,     setFiltro]     = useState('todas')
   const [selected,   setSelected]   = useState(null)
   const [lastUpdate, setLastUpdate] = useState(null)
+  const [pageTab,    setPageTab]    = useState('conversas')
 
-  const agentNome = 'Agente Z' // exibição — em prod pode vir de config
+  const agentNome = 'Agente Z'
 
   const load = useCallback(async () => {
     if (!tenantId) return
@@ -296,13 +481,34 @@ export default function AgentePage() {
               <p className="text-[11px] text-gray-500 mt-0.5">Conversas de captação via WhatsApp</p>
             </div>
           </div>
-          <button onClick={load} className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            {lastUpdate ? `Atualizado ${fmtDate(lastUpdate)}` : 'Atualizar'}
-          </button>
+          <div className="flex items-center gap-2">
+            {pageTab === 'conversas' && (
+              <button onClick={load} className="flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 transition-colors px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]">
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                {lastUpdate ? `Atualizado ${fmtDate(lastUpdate)}` : 'Atualizar'}
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* Stats */}
+        {/* Page tabs */}
+        <div className="flex gap-1 mt-4">
+          {[['conversas', MessageCircle, 'Conversas'], ['config', Settings, 'Configuração']].map(([k, Icon, l]) => (
+            <button
+              key={k}
+              onClick={() => setPageTab(k)}
+              className={`flex items-center gap-1.5 text-[12px] font-semibold px-4 py-2 rounded-xl transition-colors ${
+                pageTab === k ? 'bg-[#8B5CF6]/20 text-[#8B5CF6]' : 'text-gray-600 hover:text-gray-400'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {l}
+            </button>
+          ))}
+        </div>
+
+        {/* Stats — apenas na aba conversas */}
+        {pageTab === 'conversas' && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-5">
           {[
             { label: 'Ativas',   val: stats.ativas,  color: '#10B981', icon: MessageCircle },
@@ -326,9 +532,18 @@ export default function AgentePage() {
             )
           })}
         </div>
+        )}
       </div>
 
-      {/* Body */}
+      {/* Aba Configuração */}
+      {pageTab === 'config' && (
+        <div className="flex-1 overflow-y-auto">
+          <ConfigPanel tenantId={tenantId} />
+        </div>
+      )}
+
+      {/* Body — aba Conversas */}
+      {pageTab === 'conversas' && (
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* List */}
@@ -459,6 +674,7 @@ export default function AgentePage() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
