@@ -59,8 +59,8 @@ router.get('/status', async (_req, res) => {
         provedor:             resendOk ? 'Resend' : smtpOk ? 'Gmail SMTP' : 'Não configurado',
       },
       agente: {
-        enabled: !!(process.env.ANTHROPIC_API_KEY && process.env.AGENTE_TENANT_ID),
-        nome:    process.env.AGENTE_NOME || 'Agente Z',
+        multiTenant: true,
+        anthropicConfigurado: !!process.env.ANTHROPIC_API_KEY,
       },
     },
   })
