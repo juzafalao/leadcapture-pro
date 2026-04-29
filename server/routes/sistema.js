@@ -4,12 +4,43 @@
 // ============================================================
 
 import { Router } from 'express'
-import supabase from '../core/database.js'
+import { createClient } from '@supabase/supabase-js'
 import { verificarConexao } from '../comunicacao/whatsapp.js'
 import { getScoringTable, getScoringTableFromConfig, DEFAULT_SCORING_CONFIG } from '../core/scoring.js'
 import { getScoringConfig, invalidateScoringCache } from '../core/scoringConfig.js'
 
 const router = Router()
+
+// Service role client com trim() — elimina espaços/newlines das env vars
+function sb() {
+  const url = (process.env.SUPABASE_URL || '').trim()
+  const key = (process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim()
+  if (!url || !key) throw new Error('SUPABASE_URL ou SERVICE_KEY não configurados')
+  return createClient(url, key, { auth: { persistSession: false } })
+}
+
+// Decodifica JWT localmente sem query ao banco
+function decodeJWT(token) {
+  try {
+    let b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+    while (b64.length % 4) b64 += '='
+    return JSON.parse(Buffer.from(b64, 'base64').toString('utf8'))
+  } catch { return null }
+}
+
+// Extrai token, decodifica JWT e busca usuário na tabela usuarios via service role
+async function getUsuario(req) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) return { token: null, usuario: null }
+  const jwt = decodeJWT(token)
+  if (!jwt?.sub) return { token, usuario: null }
+  const { data } = await sb()
+    .from('usuarios')
+    .select('id, tenant_id, role, is_super_admin')
+    .eq('auth_id', jwt.sub)
+    .maybeSingle()
+  return { token, usuario: data || null }
+}
 
 // ─────────────────────────────────────────────
 // GET /health
@@ -30,7 +61,7 @@ router.get('/health', (_req, res) => {
 // ─────────────────────────────────────────────
 router.get('/status', async (_req, res) => {
   const checks = await Promise.allSettled([
-    supabase.from('tenants').select('id', { count: 'exact', head: true }),
+    sb().from('tenants').select('id', { count: 'exact', head: true }),
     verificarConexao(),
   ])
 
@@ -71,16 +102,12 @@ router.get('/status', async (_req, res) => {
 // Envia email de teste — requer token Supabase
 // ─────────────────────────────────────────────
 router.post('/test-email', async (req, res) => {
-  // Verifica token de autenticação
-  const authHeader = req.headers.authorization || ''
-  const token = authHeader.replace('Bearer ', '').trim()
-  if (!token) {
-    return res.status(401).json({ success: false, error: 'Token de autenticação obrigatório' })
-  }
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) {
-    return res.status(401).json({ success: false, error: 'Token inválido ou expirado' })
-  }
+  const { token } = await getUsuario(req)
+  if (!token) return res.status(401).json({ success: false, error: 'Token de autenticação obrigatório' })
+
+  const jwt = decodeJWT(token)
+  if (!jwt?.sub) return res.status(401).json({ success: false, error: 'Token inválido ou expirado' })
+
   const { email } = req.body
   if (!email || !email.includes('@')) {
     return res.status(400).json({ success: false, error: 'E-mail inválido' })
@@ -130,19 +157,9 @@ router.get('/scoring', (_req, res) => {
 // Retorna config de scoring do tenant do usuário logado
 // ─────────────────────────────────────────────
 router.get('/scoring-config', async (req, res) => {
-  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
-  if (!token) return res.status(401).json({ success: false, error: 'Token obrigatório' })
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) return res.status(401).json({ success: false, error: 'Token inválido' })
-
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .maybeSingle()
-
-  if (!usuario?.tenant_id) return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
+  const { usuario } = await getUsuario(req)
+  if (!usuario) return res.status(401).json({ success: false, error: 'Token inválido ou usuário não encontrado' })
+  if (!usuario.tenant_id) return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
 
   const config = await getScoringConfig(usuario.tenant_id)
   res.json({
@@ -158,19 +175,8 @@ router.get('/scoring-config', async (req, res) => {
 // Salva config de scoring personalizada para o tenant
 // ─────────────────────────────────────────────
 router.put('/scoring-config', async (req, res) => {
-  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
-  if (!token) return res.status(401).json({ success: false, error: 'Token obrigatório' })
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) return res.status(401).json({ success: false, error: 'Token inválido' })
-
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('tenant_id, role, is_super_admin')
-    .eq('auth_id', user.id)
-    .maybeSingle()
-
-  if (!usuario) return res.status(403).json({ success: false, error: 'Usuário não encontrado' })
+  const { usuario } = await getUsuario(req)
+  if (!usuario) return res.status(401).json({ success: false, error: 'Token inválido ou usuário não encontrado' })
 
   const podeEditar = ['Gestor', 'Diretor', 'Administrador', 'admin'].includes(usuario.role) || usuario.is_super_admin
   if (!podeEditar) return res.status(403).json({ success: false, error: 'Sem permissão para editar scoring' })
@@ -178,7 +184,7 @@ router.put('/scoring-config', async (req, res) => {
   const { tiers, thresholds, reset } = req.body
 
   if (reset) {
-    await supabase.from('configuracoes')
+    await sb().from('configuracoes')
       .delete()
       .eq('tenant_id', usuario.tenant_id)
       .eq('chave', 'scoring_config_v1')
@@ -202,7 +208,7 @@ router.put('/scoring-config', async (req, res) => {
     },
   }
 
-  const { error } = await supabase.from('configuracoes').upsert(
+  const { error } = await sb().from('configuracoes').upsert(
     { tenant_id: usuario.tenant_id, chave: 'scoring_config_v1', valor: JSON.stringify(config) },
     { onConflict: 'tenant_id,chave' }
   )
@@ -214,22 +220,11 @@ router.put('/scoring-config', async (req, res) => {
 
 // ─────────────────────────────────────────────
 // GET /api/sistema/notification-logs
-// Retorna logs de notificação do tenant do usuário
+// Retorna logs de notificação — admin vê tudo, outros veem seu tenant
 // ─────────────────────────────────────────────
 router.get('/notification-logs', async (req, res) => {
-  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
-  if (!token) return res.status(401).json({ success: false, error: 'Token obrigatório' })
-
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-  if (authError || !user) return res.status(401).json({ success: false, error: 'Token inválido' })
-
-  const { data: usuario } = await supabase
-    .from('usuarios')
-    .select('tenant_id, is_super_admin, role')
-    .eq('auth_id', user.id)
-    .maybeSingle()
-
-  if (!usuario) return res.status(403).json({ success: false, error: 'Usuário não encontrado' })
+  const { usuario } = await getUsuario(req)
+  if (!usuario) return res.status(401).json({ success: false, error: 'Token inválido ou usuário não encontrado' })
 
   const isSuperAdmin = usuario.is_super_admin || ['admin', 'Administrador'].includes(usuario.role)
   if (!isSuperAdmin && !usuario.tenant_id) {
@@ -239,7 +234,7 @@ router.get('/notification-logs', async (req, res) => {
   const status = req.query.status
   const limit  = Math.min(parseInt(req.query.limit) || 100, 200)
 
-  let q = supabase
+  let q = sb()
     .from('notification_logs')
     .select('id, lead_id, tenant_id, tipo, status, destinatario, erro, tentativas, created_at')
     .order('created_at', { ascending: false })
