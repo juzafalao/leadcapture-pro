@@ -225,11 +225,16 @@ router.get('/notification-logs', async (req, res) => {
 
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('tenant_id')
+    .select('tenant_id, is_super_admin, role')
     .eq('auth_id', user.id)
     .maybeSingle()
 
-  if (!usuario?.tenant_id) return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
+  if (!usuario) return res.status(403).json({ success: false, error: 'Usuário não encontrado' })
+
+  const isSuperAdmin = usuario.is_super_admin || usuario.role === 'admin'
+  if (!isSuperAdmin && !usuario.tenant_id) {
+    return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
+  }
 
   const status = req.query.status
   const limit  = Math.min(parseInt(req.query.limit) || 100, 200)
@@ -237,16 +242,16 @@ router.get('/notification-logs', async (req, res) => {
   let q = supabase
     .from('notification_logs')
     .select('id, lead_id, tenant_id, tipo, status, destinatario, erro, tentativas, created_at')
-    .eq('tenant_id', usuario.tenant_id)
     .order('created_at', { ascending: false })
     .limit(limit)
 
+  if (!isSuperAdmin) q = q.eq('tenant_id', usuario.tenant_id)
   if (status && status !== 'todos') q = q.eq('status', status)
 
   const { data, error } = await q
   if (error) return res.status(500).json({ success: false, error: error.message })
 
-  res.json({ success: true, logs: data || [] })
+  res.json({ success: true, logs: data || [], isSuperAdmin })
 })
 
 export default router
