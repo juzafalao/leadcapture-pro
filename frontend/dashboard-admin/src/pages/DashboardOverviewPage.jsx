@@ -134,7 +134,7 @@ export default function DashboardOverviewPage() {
       const dias7ago  = new Date(hoje.getTime() -  7 * 24 * 60 * 60 * 1000).toISOString()
 
       // ── Monta as 4 queries e executa em paralelo ──────────
-      let qSt = supabase.from('status_comercial').select('id, label, slug, cor').order('ordem')
+      let qSt = supabase.from('status_comercial').select('id, label, slug, cor').order('label')
       if (tenantId) qSt = qSt.eq('tenant_id', tenantId)
 
       let qM = supabase.from('leads')
