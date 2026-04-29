@@ -35,6 +35,8 @@ export default function MonitoramentoPage() {
   const [testando, setTestando]   = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [erroLogs, setErroLogs]   = useState(null)
+  const [debugInfo, setDebugInfo] = useState(null)
 
   const tenantId = isPlatformAdmin?.() ? null : usuario?.tenant_id
 
@@ -48,14 +50,28 @@ export default function MonitoramentoPage() {
 
   async function carregarLogs() {
     setLoading(true)
+    setErroLogs(null)
+    setDebugInfo(null)
     try {
       const authH = await getAuthHeader()
       const params = new URLSearchParams({ limit: '100' })
       if (filtro !== 'todos') params.set('status', filtro)
-      const r = await fetch(`${API_URL}/api/sistema/notification-logs?${params}`, { headers: authH })
-      const d = await r.json()
-      setLogs(d.logs || [])
-    } catch (e) { console.error('[Monitoramento] catch:', e.message); setLogs([]) }
+      const url = `${API_URL}/api/sistema/notification-logs?${params}`
+      const r = await fetch(url, { headers: authH })
+      let d
+      try { d = await r.json() } catch { d = null }
+      setDebugInfo({ url, httpStatus: r.status, hasToken: !!authH?.Authorization, body: d })
+      if (!r.ok || !d?.success) {
+        setErroLogs(d?.error || `HTTP ${r.status}`)
+        setLogs([])
+      } else {
+        setLogs(d.logs || [])
+      }
+    } catch (e) {
+      setErroLogs(e.message)
+      setDebugInfo(prev => ({ ...prev, fetchError: e.message }))
+      setLogs([])
+    }
     setLoading(false)
   }
 
@@ -208,6 +224,30 @@ export default function MonitoramentoPage() {
                 <div className="animate-spin text-3xl mb-3">⏳</div>
                 <p className="text-gray-600 text-sm">Carregando logs...</p>
               </div>
+            ) : erroLogs ? (
+              <div className="p-6">
+                <p className="text-[#EF4444] text-sm font-bold mb-3">✗ Erro ao carregar logs</p>
+                <div className="bg-[#EF4444]/10 border border-[#EF4444]/20 rounded-xl p-3 text-xs text-[#EF4444] font-mono mb-3">
+                  {erroLogs}
+                </div>
+                {debugInfo && (
+                  <div className="bg-black/40 rounded-xl p-3 text-[10px] text-gray-500 font-mono space-y-1">
+                    <p><span className="text-gray-400">URL:</span> {debugInfo.url}</p>
+                    <p><span className="text-gray-400">HTTP:</span> {debugInfo.httpStatus}</p>
+                    <p><span className="text-gray-400">Token:</span> {debugInfo.hasToken ? 'presente' : 'AUSENTE'}</p>
+                    {debugInfo.body && (
+                      <p><span className="text-gray-400">Body:</span> {JSON.stringify(debugInfo.body)}</p>
+                    )}
+                    {debugInfo.fetchError && (
+                      <p><span className="text-gray-400">Fetch error:</span> {debugInfo.fetchError}</p>
+                    )}
+                  </div>
+                )}
+                <button onClick={carregarLogs}
+                  className="mt-3 px-4 py-2 rounded-xl text-xs font-bold bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all border border-white/5">
+                  Tentar novamente
+                </button>
+              </div>
             ) : logs.length === 0 ? (
               <div className="p-10 text-center">
                 <p className="text-4xl mb-3">📭</p>
@@ -215,9 +255,12 @@ export default function MonitoramentoPage() {
                 <p className="text-gray-700 text-xs max-w-xs mx-auto">
                   Os logs aparecem aqui após a criação de leads. Crie um lead via landing page para ver os logs aparecerem em tempo real.
                 </p>
-                <p className="text-gray-700 text-xs mt-2">
-                  Certifique-se que a tabela <code className="text-[#10B981]">notification_logs</code> foi criada no Supabase.
-                </p>
+                {debugInfo && (
+                  <div className="mt-3 bg-black/40 rounded-xl p-3 text-[10px] text-gray-600 font-mono text-left max-w-sm mx-auto">
+                    <p>URL: {debugInfo.url}</p>
+                    <p>HTTP: {debugInfo.httpStatus} · Token: {debugInfo.hasToken ? 'ok' : 'ausente'}</p>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="divide-y divide-white/5 max-h-[500px] overflow-y-auto">
