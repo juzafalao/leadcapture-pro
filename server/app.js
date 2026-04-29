@@ -82,6 +82,11 @@ const allowedOrigins = [
   ...(process.env.CORS_ORIGINS?.split(',').map(s => s.trim()) || []),
 ]
 
+const allowedPatterns = [
+  /^https:\/\/leadcapture-proprod(-[a-z0-9]+-juliana-zafalaos-projects\.vercel\.app)$/,
+  /^https:\/\/leadcapture-pro(-[a-z0-9]+-juliana-zafalaos-projects\.vercel\.app)$/,
+]
+
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:5173')
   allowedOrigins.push('http://localhost:4000')
@@ -92,6 +97,7 @@ app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true)
     if (allowedOrigins.includes(origin)) return callback(null, true)
+    if (allowedPatterns.some(p => p.test(origin))) return callback(null, true)
     callback(new Error(`Origem não permitida pelo CORS: ${origin}`))
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

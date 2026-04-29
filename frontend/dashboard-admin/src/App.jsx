@@ -122,7 +122,8 @@ function PrivateRoute({ children, allowedRoles = ROLES_CONSULTOR }) {
   const { usuario, loading, isAuthenticated } = useAuth();
   if (loading) return <PageFallback />;
   if (!isAuthenticated || !usuario) return <Navigate to="/login" replace />;
-  const isSuperAdmin = usuario.is_super_admin === true || usuario.is_platform === true;
+  const isSuperAdmin = usuario.is_super_admin === true || usuario.is_platform === true
+    || ['Administrador', 'admin'].includes(usuario.role);
   if (isSuperAdmin) return children;
   if (!allowedRoles.includes(usuario.role || '')) return <Navigate to="/dashboard" replace />;
   return children;

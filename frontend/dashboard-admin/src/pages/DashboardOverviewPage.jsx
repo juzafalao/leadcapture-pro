@@ -107,11 +107,11 @@ function CustomTooltip({ active, payload, label }) {
 // PÁGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════
 export default function DashboardOverviewPage() {
-  const { usuario } = useAuth()
+  const { usuario, isPlatformAdmin } = useAuth()
   const navigate    = useNavigate()
-  const tenantId    = usuario?.is_super_admin ? null : usuario?.tenant_id
+  const tenantId    = isPlatformAdmin() ? null : usuario?.tenant_id
   const role        = usuario?.role
-  const isAdmin     = ['Administrador', 'admin'].includes(role) || usuario?.is_super_admin
+  const isAdmin     = isPlatformAdmin() || usuario?.is_super_admin
   const isDiretor   = role === 'Diretor' || isAdmin
   const isGestor    = role === 'Gestor'  || isDiretor
   const isConsultor   = !isGestor

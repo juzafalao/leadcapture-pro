@@ -226,8 +226,8 @@ function getDataInicio(filtro) {
 
 // ── Página principal ──────────────────────────────────────
 export default function KanbanPage() {
-  const { usuario } = useAuth()
-  const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
+  const { usuario, isPlatformAdmin } = useAuth()
+  const tenantId = isPlatformAdmin() ? null : usuario?.tenant_id
 
   const [filtro,     setFiltro]     = useState('geral')
   const [dragOver,   setDragOver]   = useState(null)

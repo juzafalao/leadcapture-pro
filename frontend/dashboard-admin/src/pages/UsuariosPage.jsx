@@ -137,8 +137,8 @@ function UsuarioModal({ usuario, onClose, tenantId, onSaved }) {
 }
 
 export default function UsuariosPage() {
-  const { usuario } = useAuth()
-  const tenantId = usuario?.is_super_admin ? null : usuario?.tenant_id
+  const { usuario, isPlatformAdmin } = useAuth()
+  const tenantId = isPlatformAdmin() ? null : usuario?.tenant_id
   const qc       = useQueryClient()
 
   const [modal,   setModal]   = useState(null)
