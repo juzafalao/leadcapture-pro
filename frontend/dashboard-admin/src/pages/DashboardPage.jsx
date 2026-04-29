@@ -248,7 +248,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      let q = supabase.from('status_comercial').select('id, label, slug, cor').order('ordem')
+      let q = supabase.from('status_comercial').select('id, label, slug, cor').order('label')
       if (tenantId) q = q.eq('tenant_id', tenantId)
       const { data } = await q
       setStatusOpts(data || [])
