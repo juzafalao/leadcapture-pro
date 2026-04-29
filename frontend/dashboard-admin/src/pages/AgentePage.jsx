@@ -301,6 +301,15 @@ function ConfigPanel({ tenantId }) {
     </div>
   )
 
+  if (!cfg) {
+    const defaultCfg = {
+      habilitado: false, nome_agente: 'Lia', segmento: 'franquias',
+      pitch_principal: '', capital_minimo: 80000, max_turns: 14, prompt_extra: '',
+    }
+    setCfg(defaultCfg)
+    return null
+  }
+
   return (
     <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
 
