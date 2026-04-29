@@ -2,8 +2,9 @@
 // agente.js — Agente Virtual de Captação via WhatsApp
 // LeadCapture Pro · Zafalão Tech
 //
-// Qualifica novos contatos via WhatsApp usando Claude AI.
-// O nome exibido é configurável via env AGENTE_NOME.
+// Agente IA multi-tenant: configuração por tenant no banco.
+// O nome interno do agente no código é 'Agente Z'; o nome
+// exibido ao lead (ex: 'Lia') é configurado por tenant.
 // ============================================================
 
 import supabase from '../core/database.js'
@@ -11,23 +12,58 @@ import { enviarMensagem, normalizarTelefone } from '../comunicacao/whatsapp.js'
 import { processarCapitalFromConfig } from '../core/scoring.js'
 import { getScoringConfig } from '../core/scoringConfig.js'
 
-const ANTHROPIC_API_KEY     = process.env.ANTHROPIC_API_KEY
-const AGENTE_NOME           = process.env.AGENTE_NOME || 'Agente Z'
-const AGENTE_SEGMENTO       = process.env.AGENTE_SEGMENTO || 'franquias'
-const AGENTE_PITCH_PRINCIPAL= process.env.AGENTE_PITCH_PRINCIPAL || ''
-const AGENTE_CAPITAL_MINIMO = parseInt(process.env.AGENTE_CAPITAL_MINIMO || '0', 10)
-const MAX_TURNS             = 14
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
+
+// ── Cache de configurações por tenant (TTL: 5 minutos) ─────
+const _agenteConfigCache = new Map()
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+export async function getAgenteConfig(tenantId) {
+  if (!tenantId) return null
+
+  const cached = _agenteConfigCache.get(tenantId)
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    return cached.config
+  }
+
+  const { data, error } = await supabase
+    .from('agente_configs')
+    .select('*')
+    .eq('tenant_id', tenantId)
+    .maybeSingle()
+
+  if (error) {
+    console.warn('[Agente] Erro ao buscar config:', error.message)
+    return null
+  }
+
+  const config = (data && data.habilitado) ? data : null
+  _agenteConfigCache.set(tenantId, { config, ts: Date.now() })
+  return config
+}
+
+export function invalidarCacheAgente(tenantId) {
+  _agenteConfigCache.delete(tenantId)
+}
 
 // ── System Prompt ──────────────────────────────────────────
-function buildSystemPrompt() {
-  const pitchSection = AGENTE_PITCH_PRINCIPAL
+function buildSystemPrompt(config) {
+  const AGENTE_NOME        = config.nome_agente || 'Agente Z'
+  const AGENTE_SEGMENTO    = config.segmento || 'franquias'
+  const AGENTE_PITCH       = config.pitch_principal || ''
+  const AGENTE_CAP_MINIMO  = config.capital_minimo || 0
+  const PROMPT_EXTRA       = config.prompt_extra || ''
+
+  const pitchSection = AGENTE_PITCH
     ? `\nDIFERENCIAIS DO NEGÓCIO (use com moderação — apenas quando o lead perguntar ou demonstrar dúvida):
-${AGENTE_PITCH_PRINCIPAL}\n`
+${AGENTE_PITCH}\n`
     : ''
 
-  const capitalCriterio = AGENTE_CAPITAL_MINIMO > 0
-    ? `- Capital disponível declarado (referência: a partir de R$${AGENTE_CAPITAL_MINIMO.toLocaleString('pt-BR')})`
+  const capitalCriterio = AGENTE_CAP_MINIMO > 0
+    ? `- Capital disponível declarado (referência: a partir de R$${AGENTE_CAP_MINIMO.toLocaleString('pt-BR')})`
     : `- Tem capital disponível (qualquer valor)`
+
+  const extraSection = PROMPT_EXTRA ? `\nINSTRUÇÕES ADICIONAIS:\n${PROMPT_EXTRA}\n` : ''
 
   return `Você é ${AGENTE_NOME}, consultora da equipe de expansão de uma rede de ${AGENTE_SEGMENTO}.
 
@@ -84,7 +120,8 @@ ${capitalCriterio}
 - Já respondeu sobre quem decide junto
 
 AO FAZER HANDOFF:
-Diga algo como: "Pelo que você me contou, acho que vale demais uma conversa com nosso especialista — ele consegue montar um cenário real, sem enrolação, exatamente pro seu perfil. Posso já conectar vocês?"`
+Diga algo como: "Pelo que você me contou, acho que vale demais uma conversa com nosso especialista — ele consegue montar um cenário real, sem enrolação, exatamente pro seu perfil. Posso já conectar vocês?"
+${extraSection}`
 }
 
 // ── Summary Prompt (used to structure handoff data) ────────
@@ -133,12 +170,68 @@ const AGENTE_TOOLS = [
   },
 ]
 
+// ── Inicia o agente proativamente para um lead recém-criado ─
+export async function iniciarAgenteParaLead(lead, marcaInfo) {
+  if (!ANTHROPIC_API_KEY) return { iniciado: false, motivo: 'ANTHROPIC_API_KEY não configurada' }
+  if (!lead?.telefone)    return { iniciado: false, motivo: 'lead sem telefone' }
+
+  const config = await getAgenteConfig(lead.tenant_id)
+  if (!config) return { iniciado: false, motivo: 'agente não habilitado para tenant' }
+
+  const telefoneNorm = normalizarTelefone(lead.telefone)
+
+  const { data: existente } = await supabase
+    .from('agente_conversas')
+    .select('id')
+    .eq('telefone', telefoneNorm)
+    .eq('tenant_id', lead.tenant_id)
+    .eq('status', 'ativa')
+    .limit(1)
+    .maybeSingle()
+
+  if (existente) return { iniciado: false, motivo: 'conversa já ativa' }
+
+  const { data: conversa, error: convErr } = await supabase
+    .from('agente_conversas')
+    .insert({
+      tenant_id: lead.tenant_id,
+      lead_id:   lead.id || null,
+      telefone:  telefoneNorm,
+      historico: [],
+      status:    'ativa',
+    })
+    .select('id')
+    .single()
+
+  if (convErr) {
+    console.error('[Agente] Erro ao criar conversa inicial:', convErr.message)
+    return { iniciado: false, motivo: convErr.message }
+  }
+
+  const primeiroNome = lead.nome?.split(' ')[0] || 'você'
+  const mensagemInicial =
+    `Olá, ${primeiroNome}! 👋 Sou ${config.nome_agente}, da equipe de expansão.\n\n` +
+    `Recebi seu interesse e queria entender melhor o seu perfil para te conectar com a pessoa certa. Tem 2 minutinhos agora?`
+
+  await enviarMensagem(telefoneNorm, mensagemInicial)
+    .catch(err => console.warn('[Agente] Falha ao enviar mensagem inicial:', err.message))
+
+  return { iniciado: true, conversaId: conversa.id }
+}
+
 // ── Main Entry Point ───────────────────────────────────────
 export async function processarMensagemAgente(telefone, mensagem, tenantId, nomeContato = null) {
   if (!ANTHROPIC_API_KEY) {
     console.warn('[Agente] ANTHROPIC_API_KEY não configurada — agente desabilitado')
     return { handled: false }
   }
+
+  const config = await getAgenteConfig(tenantId)
+  if (!config) {
+    return { handled: false }
+  }
+
+  const MAX_TURNS = config.max_turns || 14
 
   try {
     const { data: conversa } = await supabase
@@ -221,9 +314,9 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model:      'claude-sonnet-4-6',
+        model:      'claude-3-5-sonnet-20241022',
         max_tokens: 600,
-        system:     buildSystemPrompt(),
+        system:     buildSystemPrompt(config),
         tools:      AGENTE_TOOLS,
         messages:   historicoAtualizado,
       }),
@@ -260,7 +353,7 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
 
     if (toolInput) {
       const historicoFinal = [...historicoAtualizado, { role: 'assistant', content: apiData.content }]
-      await _executarHandoff(conversaId, leadId, tenantId, toolInput, historicoFinal)
+      await _executarHandoff(conversaId, leadId, tenantId, toolInput, historicoFinal, config)
     }
 
     return { handled: true }
@@ -288,11 +381,11 @@ export async function temConversaAgenteAtiva(telefone, tenantId) {
 }
 
 // ── Handoff para consultor humano ──────────────────────────
-async function _executarHandoff(conversaId, leadId, tenantId, dados, historico) {
+async function _executarHandoff(conversaId, leadId, tenantId, dados, historico, config) {
   const { nome, capital_disponivel, cidade, estado, prazo, temperatura } = dados
 
   // Gera resumo estruturado via Claude usando o histórico completo
-  const resumoRich = await _gerarResumoEstruturado(historico).catch(() => null)
+  const resumoRich = await _gerarResumoEstruturado(historico, config).catch(() => null)
 
   if (leadId) {
     const updates = { status: 'em_negociacao', updated_at: new Date().toISOString() }
@@ -318,15 +411,16 @@ async function _executarHandoff(conversaId, leadId, tenantId, dados, historico) 
     .eq('id', conversaId)
 
   const dadosCompletos = { ...dados, resumoRich }
-  await _notificarGestores(tenantId, dadosCompletos)
+  await _notificarGestores(tenantId, dadosCompletos, config)
     .catch(err => console.warn('[Agente] Falha ao notificar gestores:', err.message))
 
   console.log(`[Agente] Handoff concluído — lead ${leadId}, temperatura: ${temperatura || resumoRich?.temperatura || '?'}`)
 }
 
 // ── Gera resumo estruturado em JSON usando o histórico ─────
-async function _gerarResumoEstruturado(historico) {
+async function _gerarResumoEstruturado(historico, config) {
   if (!ANTHROPIC_API_KEY || !historico?.length) return null
+  const nomeAgente = config?.nome_agente || 'Agente Z'
   try {
     const conversa = historico
       .filter(h => h.role === 'user' || h.role === 'assistant')
@@ -334,7 +428,7 @@ async function _gerarResumoEstruturado(historico) {
         const texto = typeof h.content === 'string'
           ? h.content
           : (h.content || []).find(b => b.type === 'text')?.text || ''
-        return `${h.role === 'assistant' ? AGENTE_NOME : 'Lead'}: ${texto}`
+        return `${h.role === 'assistant' ? nomeAgente : 'Lead'}: ${texto}`
       })
       .join('\n')
 
@@ -346,7 +440,7 @@ async function _gerarResumoEstruturado(historico) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001', // haiku é suficiente para extração de dados
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 600,
         messages: [{ role: 'user', content: SUMMARY_PROMPT + '\n\n' + conversa }],
       }),
@@ -360,7 +454,8 @@ async function _gerarResumoEstruturado(historico) {
   }
 }
 
-async function _notificarGestores(tenantId, dados) {
+async function _notificarGestores(tenantId, dados, config) {
+  const nomeAgente = config?.nome_agente || 'Agente Z'
   const { nome, capital_disponivel, cidade, estado, prazo, resumo_consultor, resumoRich } = dados
 
   const { data: gestores } = await supabase
@@ -387,7 +482,7 @@ async function _notificarGestores(tenantId, dados) {
   const temp      = resumoRich?.temperatura || '—'
 
   let msg =
-    `${tempEmoji} *${AGENTE_NOME} — Lead ${temp}*\n\n` +
+    `${tempEmoji} *${nomeAgente} — Lead ${temp}*\n\n` +
     `*Nome:* ${resumoRich?.nome || nome || 'não informado'}\n` +
     `*Capital:* ${capitalFmt}\n` +
     `*Localização:* ${[cidade, estado].filter(Boolean).join('/') || 'não informado'}\n` +

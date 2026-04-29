@@ -45,6 +45,7 @@ import sistemaRouter from './routes/sistema.js'
 import chatRouter from './routes/chat.js'
 import whatsappRouter from './routes/whatsapp.js'
 import rankingRouter from './routes/ranking.js'
+import agenteRouter from './routes/agente.js'
 
 // Validação
 import { validarSlug } from './core/validation.js'
@@ -123,6 +124,7 @@ app.use(express.static(path.join(__dirname, 'public')))
 // ─── Rotas da API ─────────────────────────────────────────────────
 app.use('/api/leads', webhookLimiter, leadsRouter)
 app.use('/api/marcas', marcasRouter)
+app.use('/api/agente', agenteRouter)
 app.get('/health', statusLimiter, (_req, res) => res.json({
   status: 'ok',
   service: 'LeadCapture Pro',

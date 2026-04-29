@@ -19,6 +19,7 @@ import {
 import { notificarNovoLead, notificarLeadQuente, enviarBoasVindasLead } from '../comunicacao/email.js'
 import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
+import { iniciarAgenteParaLead } from '../services/agente.js'
 
 const router = Router()
 
@@ -190,6 +191,11 @@ router.post('/', validateLead, async (req, res) => {
           .catch(err => console.warn('[Leads] WhatsApp boas-vindas:', err.message))
       }
 
+      // Inicia agente IA se habilitado para o tenant (independente de EVOLUTION_API_KEY env)
+      iniciarAgenteParaLead(lead, marcaFallback)
+        .then(r => console.log(`[Leads] Agente: ${r.iniciado ? 'iniciado' : r.motivo}`))
+        .catch(err => console.warn('[Leads] Agente erro:', err.message))
+
       const n8nUrl = process.env.N8N_WEBHOOK_URL
       if (n8nUrl) {
         fetch(n8nUrl, {
@@ -291,6 +297,18 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads/GoogleForms] Salvo: ${lead.id} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
+    // Busca marca para o agente
+    const { data: marcaInfo } = await supabase
+      .from('marcas')
+      .select('nome, emoji')
+      .eq('id', leadData.id_marca)
+      .maybeSingle()
+
+    iniciarAgenteParaLead(
+      { ...lead, tenant_id: leadData.tenant_id, telefone: leadData.telefone, nome: leadData.nome },
+      marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
+    ).catch(err => console.warn('[GoogleForms] Agente erro:', err.message))
+
     res.json({
       success: true,
       message: 'Lead do Google Forms recebido!',
@@ -350,6 +368,11 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
     notificarNovoLead(lead, { nome: 'LeadCapture Pro', emoji: '🚀' }).catch(err =>
       console.warn('[Leads/Sistema] E-mail não enviado:', err.message)
     )
+
+    iniciarAgenteParaLead(
+      { ...lead, tenant_id: lead.tenant_id, telefone: normalizarTelefone(req.body.telefone) },
+      { nome: 'LeadCapture Pro', emoji: '🚀' }
+    ).catch(err => console.warn('[Sistema] Agente erro:', err.message))
 
     res.json({ success: true, message: 'Recebemos seu contato! Em breve nossa equipe entrará em contato.', leadId: lead.id })
   } catch (err) {
