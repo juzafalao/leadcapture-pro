@@ -49,15 +49,11 @@ export default function MonitoramentoPage() {
   async function carregarLogs() {
     setLoading(true)
     try {
-      let q = supabase
-        .from('notification_logs')
-        .select('id, lead_id, tenant_id, tipo, status, destinatario, erro, tentativas, created_at')
-        .order('created_at', { ascending: false })
-        .limit(100)
-      if (tenantId) q = q.eq('tenant_id', tenantId)
-      if (filtro !== 'todos') q = q.eq('status', filtro)
-      const { data, error } = await q
-      if (error) console.error('[Monitoramento] query error:', error.message)
+      const { data, error } = await supabase.rpc('get_notification_logs', {
+        p_status: filtro !== 'todos' ? filtro : null,
+        p_limit:  100,
+      })
+      if (error) console.error('[Monitoramento] rpc error:', error.message)
       setLogs(data || [])
     } catch (e) { console.error('[Monitoramento] catch:', e.message); setLogs([]) }
     setLoading(false)
