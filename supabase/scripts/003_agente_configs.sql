@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS agente_configs (
 ALTER TABLE agente_configs ENABLE ROW LEVEL SECURITY;
 
 -- Apenas service role pode ler/escrever (backend usa service key)
+DROP POLICY IF EXISTS "service_role_all" ON agente_configs;
 CREATE POLICY "service_role_all" ON agente_configs
   USING (true) WITH CHECK (true);
 
