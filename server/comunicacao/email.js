@@ -11,6 +11,20 @@ import nodemailer from 'nodemailer'
 
 let transporter = null
 
+// Resend modo teste: domínio não verificado só permite envio para o owner email
+const RESEND_TEST_MODE = !process.env.RESEND_DOMAIN_VERIFIED && !!process.env.RESEND_OWNER_EMAIL
+
+function filtrarDestinatariosResend(emails) {
+  if (!RESEND_TEST_MODE) return Array.isArray(emails) ? emails : [emails]
+  const owner = process.env.RESEND_OWNER_EMAIL
+  const lista = Array.isArray(emails) ? emails : [emails]
+  const filtrados = lista.filter(e => e === owner)
+  if (filtrados.length === 0) {
+    console.warn('[Email] Resend modo teste — destinatários não autorizados filtrados. Configure RESEND_DOMAIN_VERIFIED=true após verificar domínio.')
+  }
+  return filtrados
+}
+
 export function inicializarEmail() {
   if (process.env.RESEND_API_KEY) {
     console.log('[Email] Resend configurado')
@@ -42,10 +56,14 @@ async function enviarViaResend(to, subject, html) {
   // Para usar domínio próprio: verificar em resend.com/domains
   const from = process.env.RESEND_FROM || 'onboarding@resend.dev'
 
-  console.log(`[Email/Resend] Enviando para: ${to} | from: ${from}`)
+  // Filtra destinatários em modo teste (domínio não verificado)
+  const toArray = filtrarDestinatariosResend(to)
 
-  // Resend aceita array de emails; normaliza string única para array
-  const toArray = Array.isArray(to) ? to : [to]
+  if (toArray.length === 0) {
+    return { success: true, skipped: true }
+  }
+
+  console.log(`[Email/Resend] Enviando para: ${toArray.join(', ')} | from: ${from}`)
 
   const { data, error } = await resend.emails.send({
     from,
