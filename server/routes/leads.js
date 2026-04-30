@@ -87,6 +87,7 @@ router.post('/', validateLead, async (req, res) => {
 
     const { data, error } = await supabase.from('leads').insert([leadData]).select()
     if (error) throw error
+    if (!data?.length) throw new Error('Insert retornou sem dados')
 
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)

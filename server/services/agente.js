@@ -449,7 +449,8 @@ async function _gerarResumoEstruturado(historico, config) {
     const data = await res.json()
     const raw  = data.content?.[0]?.text?.replace(/```json|```/g, '').trim()
     return raw ? JSON.parse(raw) : null
-  } catch {
+  } catch (err) {
+    console.warn('[Agente] Falha ao gerar resumo estruturado:', err?.message)
     return null
   }
 }
