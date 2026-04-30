@@ -29,18 +29,21 @@ function decodeJWT(token) {
   } catch { return null }
 }
 
-// Valida token via Supabase auth API e busca usuário na tabela usuarios
+// Decodifica JWT localmente e busca usuário via service role client
+// (evita chamada HTTP externa ao Supabase Auth que pode falhar em serverless)
 async function getUsuario(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
   if (!token) return { token: null, usuario: null }
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-  if (authError || !user) return { token, usuario: null }
-  const { data } = await supabaseAdmin
-    .from('usuarios')
-    .select('id, tenant_id, role, is_super_admin, is_platform')
-    .eq('auth_id', user.id)
-    .maybeSingle()
-  return { token, usuario: data || null }
+  const jwt = decodeJWT(token)
+  if (!jwt?.sub) return { token, usuario: null }
+  try {
+    const { data } = await sb()
+      .from('usuarios')
+      .select('id, tenant_id, role, is_super_admin, is_platform')
+      .eq('auth_id', jwt.sub)
+      .maybeSingle()
+    return { token, usuario: data || null }
+  } catch { return { token, usuario: null } }
 }
 
 // ─────────────────────────────────────────────
