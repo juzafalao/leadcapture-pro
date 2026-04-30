@@ -5,6 +5,7 @@
 
 import { Router } from 'express'
 import { createClient } from '@supabase/supabase-js'
+import supabaseAdmin from '../core/database.js'
 import { verificarConexao } from '../comunicacao/whatsapp.js'
 import { getScoringTable, getScoringTableFromConfig, DEFAULT_SCORING_CONFIG } from '../core/scoring.js'
 import { getScoringConfig, invalidateScoringCache } from '../core/scoringConfig.js'
@@ -28,16 +29,16 @@ function decodeJWT(token) {
   } catch { return null }
 }
 
-// Extrai token, decodifica JWT e busca usuário na tabela usuarios via service role
+// Valida token via Supabase auth API e busca usuário na tabela usuarios
 async function getUsuario(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
   if (!token) return { token: null, usuario: null }
-  const jwt = decodeJWT(token)
-  if (!jwt?.sub) return { token, usuario: null }
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !user) return { token, usuario: null }
   const { data } = await sb()
     .from('usuarios')
     .select('id, tenant_id, role, is_super_admin, is_platform')
-    .eq('auth_id', jwt.sub)
+    .eq('auth_id', user.id)
     .maybeSingle()
   return { token, usuario: data || null }
 }
