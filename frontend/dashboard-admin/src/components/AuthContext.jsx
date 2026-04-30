@@ -166,8 +166,12 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!usuario
 
   const isPlatformAdmin = useCallback(() => {
-    return ['Administrador', 'admin'].includes(usuario?.role)
-  }, [usuario?.role])
+    return !!(
+      usuario?.is_super_admin ||
+      usuario?.is_platform ||
+      ['Administrador', 'admin'].includes(usuario?.role)
+    )
+  }, [usuario])
 
   const hasMinLevel = useCallback((minLevel) => {
     if (!usuario) return false

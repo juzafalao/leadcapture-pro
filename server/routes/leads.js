@@ -426,9 +426,11 @@ router.put('/:id/assign-consultant', async (req, res) => {
       return res.status(403).json({ success: false, error: 'Usuário não encontrado' })
     }
 
+    const ADMIN_TENANT_ID = process.env.ADMIN_TENANT_ID || 'ac8a8add-3044-4051-a5e6-274b20da5633'
     const podeAtribuir = ['Gestor', 'Diretor', 'Administrador', 'admin'].includes(usuarioLogado.role)
       || usuarioLogado.is_super_admin
       || usuarioLogado.is_platform
+      || usuarioLogado.tenant_id === ADMIN_TENANT_ID
 
     if (!podeAtribuir) {
       return res.status(403).json({ success: false, error: 'Sem permissão para atribuir consultores' })
@@ -449,6 +451,7 @@ router.put('/:id/assign-consultant', async (req, res) => {
     }
 
     const isAdminUser = usuarioLogado.is_super_admin || usuarioLogado.is_platform
+      || usuarioLogado.tenant_id === ADMIN_TENANT_ID
       || ['Administrador', 'admin'].includes(usuarioLogado.role)
 
     const tenantOk = isAdminUser || lead.tenant_id === usuarioLogado.tenant_id
