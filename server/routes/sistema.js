@@ -5,6 +5,7 @@
 
 import { Router } from 'express'
 import { createClient } from '@supabase/supabase-js'
+import supabaseAdmin from '../core/database.js'
 import { verificarConexao } from '../comunicacao/whatsapp.js'
 import { getScoringTable, getScoringTableFromConfig, DEFAULT_SCORING_CONFIG } from '../core/scoring.js'
 import { getScoringConfig, invalidateScoringCache } from '../core/scoringConfig.js'
