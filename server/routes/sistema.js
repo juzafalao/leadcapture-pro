@@ -36,7 +36,7 @@ async function getUsuario(req) {
   if (!jwt?.sub) return { token, usuario: null }
   const { data } = await sb()
     .from('usuarios')
-    .select('id, tenant_id, role, is_super_admin, is_platform')
+    .select('id, tenant_id, role, is_super_admin')
     .eq('auth_id', jwt.sub)
     .maybeSingle()
   return { token, usuario: data || null }
