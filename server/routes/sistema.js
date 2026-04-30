@@ -37,7 +37,7 @@ async function getUsuario(req) {
   if (authError || !user) return { token, usuario: null }
   const { data } = await sb()
     .from('usuarios')
-    .select('id, tenant_id, role, is_super_admin')
+    .select('id, tenant_id, role, is_super_admin, is_platform')
     .eq('auth_id', user.id)
     .maybeSingle()
   return { token, usuario: data || null }

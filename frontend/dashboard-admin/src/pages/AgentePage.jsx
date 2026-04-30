@@ -234,6 +234,11 @@ function DetailPanel({ conversa, onClose }) {
 }
 
 // ── Config Panel ─────────────────────────────────────────────
+const DEFAULT_CONFIG = {
+  habilitado: false, nome_agente: 'Lia', segmento: 'franquias',
+  pitch_principal: '', capital_minimo: 80000, max_turns: 14, prompt_extra: '',
+}
+
 function ConfigPanel({ tenantId }) {
   const [cfg, setCfg]         = useState(null)
   const [loading, setLoading] = useState(true)
@@ -246,7 +251,7 @@ function ConfigPanel({ tenantId }) {
   }
 
   const load = useCallback(async () => {
-    if (!tenantId) return
+    if (!tenantId) { setLoading(false); return }
     setLoading(true)
     try {
       const tok = await getToken()
@@ -255,12 +260,14 @@ function ConfigPanel({ tenantId }) {
       })
       if (r.ok) {
         const d = await r.json()
-        setCfg(d.config || {
-          habilitado: false, nome_agente: 'Lia', segmento: 'franquias',
-          pitch_principal: '', capital_minimo: 80000, max_turns: 14, prompt_extra: '',
-        })
+        setCfg(d.config || DEFAULT_CONFIG)
+      } else {
+        setCfg(DEFAULT_CONFIG)
       }
-    } catch { /* silent */ } finally { setLoading(false) }
+    } catch (err) {
+      console.warn('[ConfigPanel] load error:', err.message)
+      setCfg(DEFAULT_CONFIG)
+    } finally { setLoading(false) }
   }, [tenantId])
 
   useEffect(() => { load() }, [load])
@@ -301,14 +308,7 @@ function ConfigPanel({ tenantId }) {
     </div>
   )
 
-  if (!cfg) {
-    const defaultCfg = {
-      habilitado: false, nome_agente: 'Lia', segmento: 'franquias',
-      pitch_principal: '', capital_minimo: 80000, max_turns: 14, prompt_extra: '',
-    }
-    setCfg(defaultCfg)
-    return null
-  }
+  if (!cfg) return null
 
   return (
     <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
