@@ -206,7 +206,7 @@ function ScoringConfigSection({ tenantId }) {
             {(tiers || []).map((tier, i) => {
               const cat = categoriaFromScore(tier.score, thresholds)
               return (
-                <tr key={i} className="border-b border-white/5 last:border-0 hover:bg-white/2">
+                <tr key={`tier-${tier.min}-${i}`} className="border-b border-white/5 last:border-0 hover:bg-white/2">
                   <td className="px-3 py-2">
                     <input type="number" min={0} value={tier.min} onChange={e => updateTier(i, 'min', e.target.value)} className={cellInput} />
                   </td>

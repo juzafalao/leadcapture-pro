@@ -183,7 +183,18 @@ router.post('/', validateLead, async (req, res) => {
 
       await Promise.allSettled(notifPromises)
 
-      if (process.env.EVOLUTION_API_KEY) {
+      // Inicia agente IA se habilitado para o tenant (await garante execução em serverless)
+      let agenteIniciado = false
+      try {
+        const resultAgente = await iniciarAgenteParaLead(lead, marcaFallback)
+        agenteIniciado = resultAgente.iniciado
+        console.log(`[Leads] Agente: ${resultAgente.iniciado ? 'iniciado' : resultAgente.motivo}`)
+      } catch (err) {
+        console.warn('[Leads] Agente erro:', err.message)
+      }
+
+      // Só envia boas-vindas WhatsApp se o agente NÃO foi iniciado (evita mensagem dupla)
+      if (!agenteIniciado && process.env.EVOLUTION_API_KEY) {
         enviarBoasVindas(lead, marcaFallback)
           .then(r => r.simulated
             ? console.log('[Leads] WhatsApp simulado (sem API key)')
@@ -191,11 +202,6 @@ router.post('/', validateLead, async (req, res) => {
           )
           .catch(err => console.warn('[Leads] WhatsApp boas-vindas:', err.message))
       }
-
-      // Inicia agente IA se habilitado para o tenant (independente de EVOLUTION_API_KEY env)
-      iniciarAgenteParaLead(lead, marcaFallback)
-        .then(r => console.log(`[Leads] Agente: ${r.iniciado ? 'iniciado' : r.motivo}`))
-        .catch(err => console.warn('[Leads] Agente erro:', err.message))
 
       const n8nUrl = process.env.N8N_WEBHOOK_URL
       if (n8nUrl) {
@@ -305,10 +311,15 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
       .eq('id', leadData.id_marca)
       .maybeSingle()
 
-    iniciarAgenteParaLead(
-      { ...lead, tenant_id: leadData.tenant_id, telefone: leadData.telefone, nome: leadData.nome },
-      marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
-    ).catch(err => console.warn('[GoogleForms] Agente erro:', err.message))
+    try {
+      const resultAgente = await iniciarAgenteParaLead(
+        { ...lead, tenant_id: leadData.tenant_id, telefone: leadData.telefone, nome: leadData.nome },
+        marcaInfo || { nome: 'LeadCapture Pro', emoji: '🚀' }
+      )
+      console.log(`[GoogleForms] Agente: ${resultAgente.iniciado ? 'iniciado' : resultAgente.motivo}`)
+    } catch (err) {
+      console.warn('[GoogleForms] Agente erro:', err.message)
+    }
 
     res.json({
       success: true,
@@ -370,10 +381,15 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
       console.warn('[Leads/Sistema] E-mail não enviado:', err.message)
     )
 
-    iniciarAgenteParaLead(
-      { ...lead, tenant_id: lead.tenant_id, telefone: normalizarTelefone(req.body.telefone) },
-      { nome: 'LeadCapture Pro', emoji: '🚀' }
-    ).catch(err => console.warn('[Sistema] Agente erro:', err.message))
+    try {
+      const resultAgente = await iniciarAgenteParaLead(
+        { ...lead, tenant_id: lead.tenant_id, telefone: normalizarTelefone(req.body.telefone) },
+        { nome: 'LeadCapture Pro', emoji: '🚀' }
+      )
+      console.log(`[Sistema] Agente: ${resultAgente.iniciado ? 'iniciado' : resultAgente.motivo}`)
+    } catch (err) {
+      console.warn('[Sistema] Agente erro:', err.message)
+    }
 
     res.json({ success: true, message: 'Recebemos seu contato! Em breve nossa equipe entrará em contato.', leadId: lead.id })
   } catch (err) {
