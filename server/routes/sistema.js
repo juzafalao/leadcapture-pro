@@ -36,7 +36,7 @@ async function getUsuario(req) {
   if (!jwt?.sub) return { token, usuario: null }
   const { data } = await sb()
     .from('usuarios')
-    .select('id, tenant_id, role, is_super_admin')
+    .select('id, tenant_id, role, is_super_admin, is_platform')
     .eq('auth_id', jwt.sub)
     .maybeSingle()
   return { token, usuario: data || null }
@@ -226,7 +226,13 @@ router.get('/notification-logs', async (req, res) => {
   const { usuario } = await getUsuario(req)
   if (!usuario) return res.status(401).json({ success: false, error: 'Token inválido ou usuário não encontrado' })
 
-  const isSuperAdmin = usuario.is_super_admin || ['admin', 'Administrador'].includes(usuario.role)
+  const ADMIN_TENANT_ID = process.env.ADMIN_TENANT_ID || 'ac8a8add-3044-4051-a5e6-274b20da5633'
+  const isSuperAdmin = !!(
+    usuario.is_super_admin ||
+    usuario.is_platform ||
+    usuario.tenant_id === ADMIN_TENANT_ID ||
+    ['admin', 'Administrador'].includes(usuario.role)
+  )
   if (!isSuperAdmin && !usuario.tenant_id) {
     return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
   }

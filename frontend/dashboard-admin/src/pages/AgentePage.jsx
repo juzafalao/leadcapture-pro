@@ -425,9 +425,20 @@ function ConfigPanel({ tenantId }) {
 }
 
 // ── Main Page ────────────────────────────────────────────────
+const ADMIN_TENANT_ID = 'ac8a8add-3044-4051-a5e6-274b20da5633'
+
+function isSuperAdmin(usuario) {
+  return !!(
+    usuario?.is_super_admin ||
+    usuario?.is_platform ||
+    usuario?.tenant_id === ADMIN_TENANT_ID
+  )
+}
+
 export default function AgentePage() {
   const { usuario }  = useAuth()
-  const tenantId     = usuario?.tenant_id || usuario?.tenant?.id
+  const superAdmin   = isSuperAdmin(usuario)
+  const tenantId     = superAdmin ? null : (usuario?.tenant_id || usuario?.tenant?.id)
   const [conversas,  setConversas]  = useState([])
   const [loading,    setLoading]    = useState(true)
   const [filtro,     setFiltro]     = useState('todas')
@@ -438,30 +449,32 @@ export default function AgentePage() {
   const agentNome = 'Agente Z'
 
   const load = useCallback(async () => {
-    if (!tenantId) return
+    if (!superAdmin && !tenantId) return
     setLoading(true)
-    const { data } = await supabase
+    let q = supabase
       .from('agente_conversas')
-      .select('id, telefone, status, criado_em, atualizado_em, lead_id, historico, resumo')
-      .eq('tenant_id', tenantId)
+      .select('id, telefone, status, criado_em, atualizado_em, lead_id, historico, resumo, tenant_id')
       .order('atualizado_em', { ascending: false })
-      .limit(100)
+      .limit(200)
+    if (tenantId) q = q.eq('tenant_id', tenantId)
+    const { data } = await q
     setConversas(data || [])
     setLastUpdate(new Date())
     setLoading(false)
-  }, [tenantId])
+  }, [superAdmin, tenantId])
 
   useEffect(() => { load() }, [load])
 
-  // Realtime
+  // Realtime — admin ouve tudo, demais filtram por tenant
   useEffect(() => {
-    if (!tenantId) return
-    const ch = supabase
-      .channel(`agente-page-${tenantId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agente_conversas', filter: `tenant_id=eq.${tenantId}` }, load)
-      .subscribe()
+    if (!superAdmin && !tenantId) return
+    const channelName = superAdmin ? 'agente-page-admin' : `agente-page-${tenantId}`
+    const opts = superAdmin
+      ? { event: '*', schema: 'public', table: 'agente_conversas' }
+      : { event: '*', schema: 'public', table: 'agente_conversas', filter: `tenant_id=eq.${tenantId}` }
+    const ch = supabase.channel(channelName).on('postgres_changes', opts, load).subscribe()
     return () => supabase.removeChannel(ch)
-  }, [tenantId, load])
+  }, [superAdmin, tenantId, load])
 
   // Métricas
   const stats = {
