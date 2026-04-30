@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -40,13 +40,13 @@ export default function MonitoramentoPage() {
 
   const tenantId = isPlatformAdmin?.() ? null : usuario?.tenant_id
 
-  async function carregarStatus() {
+  const carregarStatus = useCallback(async () => {
     try {
       const r = await fetch(`${API_URL}/api/sistema/status`)
       const d = await r.json()
       setStatus(d)
     } catch { setStatus(null) }
-  }
+  }, [])
 
   async function carregarLogs() {
     setLoading(true)
@@ -75,7 +75,7 @@ export default function MonitoramentoPage() {
     setLoading(false)
   }
 
-  useEffect(() => { carregarStatus() }, [])
+  useEffect(() => { carregarStatus() }, [carregarStatus])
 
   useEffect(() => {
     carregarLogs()

@@ -267,6 +267,7 @@ export default function ImportarLeadsPage() {
       const telefoneRaw = getVal(row, iTel)
       const emailVal = (iEmail >= 0 && getVal(row, iEmail)) ||
         `tel.${telefoneRaw.replace(/\D/g, '')}@noemail.leadcapture.local`
+      const capRaw = iCap >= 0 ? getVal(row, iCap) : null
       const capNum = capRaw ? (parseFloat(capRaw.replace(/[^\d.,]/g, '').replace(',', '.')) || null) : null
 
       // Resolve marca: coluna da planilha > seletor da UI
