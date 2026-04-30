@@ -258,7 +258,8 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
 
     const capitalRaw = form.capital || form['Capital disponível'] || form.capital_disponivel || '0'
     const scoringConfig = await getScoringConfig(tenant_id)
-    const { capital, score, categoria } = processarCapitalFromConfig(capitalRaw, scoringConfig)
+    const capitalNumerico = resolverCapital(capitalRaw) ?? 0
+    const { capital, score, categoria } = processarCapitalFromConfig(capitalNumerico, scoringConfig)
 
     const mensagem = form.mensagem || form['Mensagem'] || form.message || ''
 
