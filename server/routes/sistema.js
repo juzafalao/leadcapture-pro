@@ -35,7 +35,7 @@ async function getUsuario(req) {
   if (!token) return { token: null, usuario: null }
   const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
   if (authError || !user) return { token, usuario: null }
-  const { data } = await sb()
+  const { data } = await supabaseAdmin
     .from('usuarios')
     .select('id, tenant_id, role, is_super_admin, is_platform')
     .eq('auth_id', user.id)
