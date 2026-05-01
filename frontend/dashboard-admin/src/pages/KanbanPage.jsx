@@ -6,6 +6,10 @@ import {
   useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO,
 } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
+import VendaModal from '../components/vendas/VendaModal'
+import { useRegistrarVenda } from '../hooks/useVendas'
+
+const SLUGS_FECHADO = ['convertido', 'vendido']
 
 // ── Helpers ──────────────────────────────────────────────
 function fmtCapital(v) {
@@ -229,15 +233,17 @@ export default function KanbanPage() {
   const { usuario, isPlatformAdmin } = useAuth()
   const tenantId = isPlatformAdmin() ? null : usuario?.tenant_id
 
-  const [filtro,     setFiltro]     = useState('geral')
-  const [dragOver,   setDragOver]   = useState(null)
-  const [dragLeadId, setDragLeadId] = useState(null)
-  const [lead,       setLead]       = useState(null)
+  const [filtro,        setFiltro]        = useState('geral')
+  const [dragOver,      setDragOver]      = useState(null)
+  const [dragLeadId,    setDragLeadId]    = useState(null)
+  const [lead,          setLead]          = useState(null)
+  const [vendaPendente, setVendaPendente] = useState(null) // { lead, slugDestino, colId }
   const dragRef = useRef(null)
 
   const { data: colunas = COLUNAS_PADRAO } = useStatusColunas(tenantId)
   const { data: kanban = {}, isLoading, isError, refetch } = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
   const { mutateAsync: mover }             = useMoverLead()
+  const registrarVenda                     = useRegistrarVenda()
 
   const allLeads   = useMemo(() => Object.values(kanban).flat(), [kanban])
   const totalLeads = allLeads.length
@@ -274,8 +280,18 @@ export default function KanbanPage() {
     if (slugAtual === slug) { dragRef.current = null; setDragLeadId(null); return }
     const col    = colunas.find(c => c.slug === slug)
     const isUUID = typeof col?.id === 'string' && col.id.length === 36 && col.id.includes('-')
+    const colId  = isUUID ? col.id : null
+
+    // Colunas de fechamento exigem valor de venda antes de mover
+    if (SLUGS_FECHADO.includes(slug)) {
+      setVendaPendente({ lead: l, slugDestino: slug, colId })
+      dragRef.current = null
+      setDragLeadId(null)
+      return
+    }
+
     try {
-      await mover({ leadId: l.id, novoStatusSlug: slug, novoStatusId: isUUID ? col.id : null, tenantId })
+      await mover({ leadId: l.id, novoStatusSlug: slug, novoStatusId: colId, tenantId })
     } catch (err) { console.error('[Kanban]', err.message) }
     finally { dragRef.current = null; setDragLeadId(null) }
   }, [colunas, dragOver, mover, tenantId])
@@ -372,6 +388,31 @@ export default function KanbanPage() {
       </div>
 
       {lead && <LeadModal lead={lead} onClose={() => setLead(null)} />}
+
+      {/* Modal obrigatório ao mover para convertido/vendido */}
+      {vendaPendente && (
+        <VendaModal
+          lead={vendaPendente.lead}
+          vendaExistente={null}
+          isSaving={registrarVenda.isPending}
+          onClose={() => setVendaPendente(null)}
+          onSave={async (payload) => {
+            try {
+              await mover({
+                leadId:         vendaPendente.lead.id,
+                novoStatusSlug: vendaPendente.slugDestino,
+                novoStatusId:   vendaPendente.colId,
+                tenantId,
+              })
+              await registrarVenda.mutateAsync(payload)
+            } catch (err) {
+              console.error('[Kanban] Erro ao fechar venda:', err.message)
+            } finally {
+              setVendaPendente(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
