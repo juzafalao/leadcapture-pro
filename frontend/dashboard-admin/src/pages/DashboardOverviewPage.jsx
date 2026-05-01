@@ -118,7 +118,7 @@ export default function DashboardOverviewPage() {
   const debounceRef   = useRef(null)
 
   const [loading,     setLoading]     = useState(true)
-  const [metrics,     setMetrics]     = useState({ total: 0, hot: 0, warm: 0, cold: 0, capital: 0, convertidos: 0, semana: 0, sem_dono: 0 })
+  const [metrics,     setMetrics]     = useState({ total: 0, hot: 0, warm: 0, cold: 0, capital: 0, convertidos: 0, semana: 0, sem_dono: 0, receita: 0, ticket_medio: 0 })
   const [chartData,   setChartData]   = useState([])
   const [channelData, setChannelData] = useState([])
   const [funnelData,  setFunnelData]  = useState([])
@@ -158,8 +158,14 @@ export default function DashboardOverviewPage() {
         .limit(8)
       if (tenantId) qR = qR.eq('tenant_id', tenantId)
 
-      const [{ data: statuses }, { data: ml }, { data: cl }, { data: rl }] =
-        await Promise.all([qSt, qM, qC, qR])
+      let qV = supabase.from('vendas')
+        .select('taxa_franquia_negociada')
+        .eq('status', 'confirmada')
+        .gte('created_at', mesInicio)
+      if (tenantId) qV = qV.eq('tenant_id', tenantId)
+
+      const [{ data: statuses }, { data: ml }, { data: cl }, { data: rl }, { data: vl }] =
+        await Promise.all([qSt, qM, qC, qR, qV])
 
       // Resolve slug preferindo status_comercial join, com fallback para campo texto
       const getSlug = l => l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
@@ -172,7 +178,9 @@ export default function DashboardOverviewPage() {
       const convertidos = (ml || []).filter(l => ['vendido','convertido'].includes(getSlug(l))).length
       const semana     = (ml || []).filter(l => l.created_at >= dias7ago).length
       const sem_dono   = (ml || []).filter(l => !l.id_operador_responsavel).length
-      setMetrics({ total, hot, warm, cold, capital, convertidos, semana, sem_dono })
+      const receita    = (vl || []).reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0)
+      const ticket_medio = (vl || []).length > 0 ? receita / vl.length : 0
+      setMetrics({ total, hot, warm, cold, capital, convertidos, semana, sem_dono, receita, ticket_medio })
 
       // ── Canal breakdown ──
       const canalMap = {}
@@ -311,9 +319,9 @@ export default function DashboardOverviewPage() {
         />
         {isGestor && (
           <KPICard
-            label="Capital declarado"
-            value={fmtCapital(metrics.capital)}
-            sub="Potencial total do mês"
+            label="Receita Real"
+            value={fmtCapital(metrics.receita)}
+            sub={metrics.ticket_medio > 0 ? `Ticket médio ${fmtCapital(metrics.ticket_medio)}` : 'Nenhuma venda no mês'}
             Icon={DollarSign}
             color="#10B981"
             delay={0.14}

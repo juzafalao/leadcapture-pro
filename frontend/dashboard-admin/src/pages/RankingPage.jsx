@@ -68,7 +68,7 @@ function PodioSlot({ pos, consultor }) {
         <div className="text-center">
           <p className="text-white text-[11px] font-black">{consultor.nome?.split(' ')[0]}</p>
           <p className="text-[10px] font-bold" style={{ color: cfg.cor }}>{consultor.total_leads} leads</p>
-          <p className="text-[9px] text-gray-600">{fmtR$(consultor.capital_total)}</p>
+          <p className="text-[9px] text-gray-600">{fmtR$(consultor.receita_total || 0)}</p>
           {consultor.bateu_meta && (
             <span className="text-[8px] bg-[#10B981]/20 text-[#10B981] px-1.5 py-0.5 rounded-full font-black">META</span>
           )}
@@ -123,8 +123,8 @@ function RankRow({ consultor, pos, onClick }) {
       </div>
       {/* Capital */}
       <div className="text-right shrink-0 w-20 hidden sm:block">
-        <p className="text-[#10B981] text-[11px] font-bold">{fmtR$(consultor.capital_total)}</p>
-        <p className="text-[8px] text-gray-600">capital</p>
+        <p className="text-[#10B981] text-[11px] font-bold">{fmtR$(consultor.receita_total || 0)}</p>
+        <p className="text-[8px] text-gray-600">receita</p>
       </div>
       {/* Ganhos estimados */}
       <div className="text-right shrink-0 w-20 hidden md:block">
@@ -177,7 +177,7 @@ function ConsultorDrawer({ consultor, meta, onClose }) {
               { label: 'HOT',           value: consultor.leads_hot,               cor: '#EF4444' },
               { label: 'Convertidos',   value: consultor.convertidos,             cor: '#10B981' },
               { label: 'Tx Conversao',  value: `${tx}%`,                          cor: '#10B981' },
-              { label: 'Capital',       value: fmtR$(consultor.capital_total),    cor: '#10B981' },
+              { label: 'Receita',       value: fmtR$(consultor.receita_total || 0), cor: '#10B981' },
               { label: 'Comissao',      value: fmtR$(consultor.comissao_valor),   cor: '#EE7B4D' },
               { label: 'Bonus Faixa',   value: fmtR$(consultor.bonus_faixa),      cor: '#F59E0B' },
               { label: 'Total Ganhos',  value: fmtR$(consultor.total_ganhos),     cor: '#EE7B4D' },
@@ -302,10 +302,27 @@ export default function RankingPage() {
 
       if (!users.length) { setConsultores([]); setLoading(false); return }
 
-      function calcCom(capital, fxs) {
-        if (!fxs.length || !capital) return { pct: 0, valor: 0, bonus: 0 }
-        const f = [...fxs].reverse().find(f => capital >= f.de)
-        return f ? { pct: f.pct, valor: (capital * f.pct) / 100, bonus: f.bonus || 0 }
+      // Busca vendas do período para calcular comissão real
+      const mesIni = `${periodo.ano}-${String(periodo.mes).padStart(2,'0')}-01`
+      const mesFim = new Date(periodo.ano, periodo.mes, 1).toISOString().slice(0,10)
+      const { data: vendasPeriodo } = await supabase
+        .from('vendas')
+        .select('lead_id, consultor_id, taxa_franquia_negociada')
+        .eq('tenant_id', tenantId)
+        .eq('status', 'confirmada')
+        .gte('data_venda', mesIni)
+        .lt('data_venda', mesFim)
+
+      // Mapa lead_id -> taxa negociada (para lookup rápido)
+      const vendaMap = {}
+      for (const v of (vendasPeriodo || [])) {
+        vendaMap[v.lead_id] = parseFloat(v.taxa_franquia_negociada || 0)
+      }
+
+      function calcCom(receita, fxs) {
+        if (!fxs.length || !receita) return { pct: 0, valor: 0, bonus: 0 }
+        const f = [...fxs].reverse().find(f => receita >= f.de)
+        return f ? { pct: f.pct, valor: (receita * f.pct) / 100, bonus: f.bonus || 0 }
                  : { pct: 0, valor: 0, bonus: 0 }
       }
 
@@ -313,10 +330,14 @@ export default function RankingPage() {
       for (const l of leads) {
         const uid = l.id_operador_responsavel
         if (!uid) continue
-        if (!mapa[uid]) mapa[uid] = { total: 0, hot: 0, conv: 0, capital: 0 }
+        if (!mapa[uid]) mapa[uid] = { total: 0, hot: 0, conv: 0, capital: 0, receita: 0 }
         mapa[uid].total++
         if (l.categoria === 'hot') mapa[uid].hot++
-        if (l.status === 'convertido' || (l.status||'').includes('fecha')) mapa[uid].conv++
+        const slug = l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || ''
+        if (['convertido','vendido'].includes(slug) || (l.status||'').includes('fecha')) {
+          mapa[uid].conv++
+          mapa[uid].receita += vendaMap[l.id] || 0
+        }
         mapa[uid].capital += parseFloat(l.capital_disponivel || 0)
       }
 
@@ -326,14 +347,15 @@ export default function RankingPage() {
         ? Math.round((totalEq / (metaLeadsGlobal * users.length)) * 100) : 0
 
       const calc = users.map(u => {
-        const d = mapa[u.id] || { total: 0, hot: 0, conv: 0, capital: 0 }
+        const d = mapa[u.id] || { total: 0, hot: 0, conv: 0, capital: 0, receita: 0 }
         const pctMeta = metaLeadsGlobal > 0 ? Math.min(Math.round((d.total / metaLeadsGlobal) * 100), 100) : 0
-        const com = calcCom(d.capital, faixas)
+        const com = calcCom(d.receita, faixas)
         const bateuMeta   = pctMeta >= 100
         const bateuEquipe = pctEq   >= 80
         return {
           id: u.id, nome: u.nome, role: u.role, role_emoji: null, role_color: null,
-          total_leads: d.total, leads_hot: d.hot, convertidos: d.conv, capital_total: d.capital,
+          total_leads: d.total, leads_hot: d.hot, convertidos: d.conv,
+          capital_total: d.capital, receita_total: d.receita,
           pct_meta: pctMeta, meta_leads: metaLeadsGlobal,
           comissao_pct: com.pct, comissao_valor: Math.round(com.valor), bonus_faixa: com.bonus,
           bonus_individual: bateuMeta   ? (meta.bonus_individual || 0) : 0,
@@ -343,7 +365,7 @@ export default function RankingPage() {
             + (bateuEquipe ? (meta.bonus_equipe     || 0) : 0),
           bateu_meta: bateuMeta,
         }
-      }).sort((a, b) => b.total_leads - a.total_leads || b.capital_total - a.capital_total)
+      }).sort((a, b) => b.total_leads - a.total_leads || b.receita_total - a.receita_total)
 
       setConsultores(calc)
       setMetaConfig(meta)
@@ -359,18 +381,19 @@ export default function RankingPage() {
   useEffect(() => { carregar() }, [carregar])
 
   // KPIs gerais
-  const totalLeads    = consultores.reduce((a, c) => a + c.total_leads,  0)
-  const totalCapital  = consultores.reduce((a, c) => a + c.capital_total, 0)
-  const totalGanhos   = consultores.reduce((a, c) => a + c.total_ganhos,  0)
+  const totalLeads    = consultores.reduce((a, c) => a + c.total_leads,    0)
+  const totalCapital  = consultores.reduce((a, c) => a + c.capital_total,  0)
+  const totalReceita  = consultores.reduce((a, c) => a + (c.receita_total || 0), 0)
+  const totalGanhos   = consultores.reduce((a, c) => a + c.total_ganhos,   0)
   const metaBatida    = consultores.filter(c => c.bateu_meta).length
   const top3          = consultores.slice(0, 3)
 
   // Exporta CSV
   function exportCSV() {
-    const h = 'Pos,Nome,Role,Leads,HOT,Convertidos,Tx Conv,Capital,Comissao %,Comissao R$,Bonus,Total Ganhos,% Meta\n'
+    const h = 'Pos,Nome,Role,Leads,HOT,Convertidos,Tx Conv,Receita,Comissao %,Comissao R$,Bonus,Total Ganhos,% Meta\n'
     const r = consultores.map((c, i) => {
       const tx = c.total_leads > 0 ? Math.round((c.convertidos / c.total_leads) * 100) : 0
-      return `${i+1},"${c.nome}",${c.role},${c.total_leads},${c.leads_hot},${c.convertidos},${tx}%,${c.capital_total},${c.comissao_pct}%,${c.comissao_valor},${c.bonus_faixa + c.bonus_individual + c.bonus_equipe},${c.total_ganhos},${c.pct_meta}%`
+      return `${i+1},"${c.nome}",${c.role},${c.total_leads},${c.leads_hot},${c.convertidos},${tx}%,${c.receita_total || 0},${c.comissao_pct}%,${c.comissao_valor},${c.bonus_faixa + c.bonus_individual + c.bonus_equipe},${c.total_ganhos},${c.pct_meta}%`
     }).join('\n')
     const blob = new Blob([h + r], { type: 'text/csv;charset=utf-8;' })
     const url  = URL.createObjectURL(blob)
@@ -432,10 +455,10 @@ export default function RankingPage() {
         {/* KPIs rapidos */}
         <div className="flex flex-wrap gap-3 mt-5">
           {[
-            { label: 'Consultores', value: consultores.length, cor: 'text-white' },
-            { label: 'Total Leads', value: totalLeads,         cor: 'text-white' },
-            { label: 'Capital',     value: fmtR$(totalCapital),cor: 'text-[#10B981]' },
-            { label: 'Comissoes',   value: fmtR$(totalGanhos), cor: 'text-[#EE7B4D]' },
+            { label: 'Consultores', value: consultores.length,   cor: 'text-white' },
+            { label: 'Total Leads', value: totalLeads,           cor: 'text-white' },
+            { label: 'Receita',     value: fmtR$(totalReceita),  cor: 'text-[#10B981]' },
+            { label: 'Comissoes',   value: fmtR$(totalGanhos),   cor: 'text-[#EE7B4D]' },
             { label: 'Metas Batidas',value: `${metaBatida}/${consultores.length}`, cor: 'text-[#F59E0B]' },
             { label: 'Equipe',      value: fmtPct(pctEquipe),  cor: pctEquipe >= 80 ? 'text-[#10B981]' : 'text-gray-400' },
           ].map(k => (

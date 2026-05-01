@@ -48,6 +48,7 @@ import rankingRouter from './routes/ranking.js'
 import agenteRouter from './routes/agente.js'
 import tasksRouter from './routes/tasks.js'
 import webhooksRouter from './routes/webhooks.js'
+import vendasRouter from './routes/vendas.js'
 
 // Validação
 import { validarSlug } from './core/validation.js'
@@ -139,6 +140,7 @@ app.use('/api/chat', chatRouter)
 app.use('/api/whatsapp', whatsappRouter)
 app.use('/api/tasks', tasksRouter)
 app.use('/api/webhooks', webhooksRouter)
+app.use('/api/vendas', vendasRouter)
 
 // ─── Dashboard (SPA React) ────────────────────────────────────────
 app.use('/dashboard', express.static(join(__dirname, '../dashboard-build')))

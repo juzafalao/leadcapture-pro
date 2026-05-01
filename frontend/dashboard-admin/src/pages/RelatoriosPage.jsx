@@ -119,6 +119,7 @@ function CustomTooltip({ active, payload, label }) {
 const TIPOS = [
   { id:'funil',     icon:'🔽', label:'Funil de Vendas',   desc:'Visualize cada etapa do pipeline',       cor:'from-purple-500/20 to-purple-500/5',   border:'border-purple-500/30'  },
   { id:'conversao', icon:'🎯', label:'Conversão',         desc:'Taxa de fechamento e performance',        cor:'from-green-500/20 to-green-500/5',     border:'border-green-500/30'   },
+  { id:'receita',   icon:'💵', label:'Receita de Vendas', desc:'Receita real de franquias negociadas',    cor:'from-emerald-500/20 to-emerald-500/5', border:'border-emerald-500/30' },
   { id:'consultor', icon:'👤', label:'Por Consultor',     desc:'Ranking e performance do time',           cor:'from-blue-500/20 to-blue-500/5',       border:'border-blue-500/30'    },
   { id:'marca',     icon:'🏢', label:'Por Marca',         desc:'Leads e conversões por marca',            cor:'from-orange-500/20 to-orange-500/5',   border:'border-orange-500/30'  },
   { id:'temporal',  icon:'📅', label:'Análise Temporal',  desc:'Evolução de leads ao longo do tempo',     cor:'from-cyan-500/20 to-cyan-500/5',       border:'border-cyan-500/30'    },
@@ -126,7 +127,7 @@ const TIPOS = [
   { id:'perda',     icon:'💔', label:'Análise de Perdas', desc:'Motivos e padrões de desistência',        cor:'from-red-500/20 to-red-500/5',         border:'border-red-500/30'     },
   { id:'regiao',    icon:'🗺️', label:'Por Região',        desc:'Distribuição geográfica dos leads',       cor:'from-yellow-500/20 to-yellow-500/5',   border:'border-yellow-500/30'  },
   { id:'score',     icon:'⚡', label:'Score de Leads',    desc:'Distribuição de qualidade dos leads',     cor:'from-indigo-500/20 to-indigo-500/5',   border:'border-indigo-500/30'  },
-  { id:'capital',   icon:'💰', label:'Análise de Capital',desc:'Pipeline financeiro e oportunidades',     cor:'from-emerald-500/20 to-emerald-500/5', border:'border-emerald-500/30' },
+  { id:'capital',   icon:'💰', label:'Análise de Capital',desc:'Pipeline financeiro e oportunidades',     cor:'from-teal-500/20 to-teal-500/5',       border:'border-teal-500/30'    },
 ]
 
 const PERIODOS = [
@@ -368,6 +369,148 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
   )
 }
 
+function RelatorioReceita({ tenantId, dias = 30 }) {
+  const [vendas, setVendas] = React.useState([])
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    if (!tenantId) return
+    const desde = new Date(Date.now() - Number(dias) * 24 * 60 * 60 * 1000).toISOString().slice(0,10)
+    setLoading(true)
+    supabase
+      .from('vendas')
+      .select(`
+        taxa_franquia_negociada, taxa_franquia_tabela, data_venda, status,
+        lead:lead_id(nome),
+        marca:marca_id(id, nome, emoji),
+        consultor:consultor_id(id, nome)
+      `)
+      .eq('tenant_id', tenantId)
+      .eq('status', 'confirmada')
+      .gte('data_venda', desde)
+      .order('data_venda', { ascending: false })
+      .then(({ data }) => { setVendas(data || []); setLoading(false) })
+  }, [tenantId, dias])
+
+  if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" /></div>
+
+  const receita = vendas.reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0)
+  const ticket  = vendas.length ? receita / vendas.length : 0
+
+  // Por marca
+  const porMarca = {}
+  vendas.forEach(v => {
+    const k = v.marca?.id || 'sem-marca'
+    if (!porMarca[k]) porMarca[k] = { nome: v.marca?.nome || 'Sem marca', emoji: v.marca?.emoji || '🏢', total: 0, qtd: 0 }
+    porMarca[k].total += parseFloat(v.taxa_franquia_negociada || 0)
+    porMarca[k].qtd++
+  })
+
+  // Por consultor
+  const porConsultor = {}
+  vendas.forEach(v => {
+    const k = v.consultor?.id || 'sem-consultor'
+    if (!porConsultor[k]) porConsultor[k] = { nome: v.consultor?.nome || 'Sem consultor', total: 0, qtd: 0 }
+    porConsultor[k].total += parseFloat(v.taxa_franquia_negociada || 0)
+    porConsultor[k].qtd++
+  })
+
+  const marcaArr      = Object.values(porMarca).sort((a,b) => b.total - a.total)
+  const consultorArr  = Object.values(porConsultor).sort((a,b) => b.total - a.total)
+
+  return (
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <StatCard label="Receita Total"  value={fmtFull(receita)}      icon="💵" cor="border-emerald-500/20" />
+        <StatCard label="Vendas"         value={vendas.length}          icon="🤝" />
+        <StatCard label="Ticket Médio"   value={fmtFull(ticket)}        icon="📊" cor="border-blue-500/20" />
+      </div>
+
+      {/* Por Marca */}
+      {marcaArr.length > 0 && (
+        <div className="bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5">
+            <p className="text-xs font-black text-white uppercase tracking-wider">Receita por Marca</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {marcaArr.map((m, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] rounded-xl">
+                <span className="text-lg">{m.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{m.nome}</p>
+                  <p className="text-[10px] text-gray-500">{m.qtd} venda{m.qtd !== 1 ? 's' : ''}</p>
+                </div>
+                <p className="text-[#10B981] font-black text-sm">{fmtFull(m.total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Por Consultor */}
+      {consultorArr.length > 0 && (
+        <div className="bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5">
+            <p className="text-xs font-black text-white uppercase tracking-wider">Receita por Consultor</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {consultorArr.map((c, i) => (
+              <div key={i} className="flex items-center gap-3 px-3 py-2.5 bg-white/[0.03] rounded-xl">
+                <div className="w-8 h-8 rounded-full bg-[#10B981]/10 border border-[#10B981]/20 flex items-center justify-center text-xs font-black text-[#10B981]">
+                  {c.nome?.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-white truncate">{c.nome}</p>
+                  <p className="text-[10px] text-gray-500">{c.qtd} venda{c.qtd !== 1 ? 's' : ''}</p>
+                </div>
+                <p className="text-[#EE7B4D] font-black text-sm">{fmtFull(c.total)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lista de vendas */}
+      {vendas.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-4xl mb-2">💵</p>
+          <p className="text-gray-500 text-sm">Nenhuma venda registrada no período</p>
+        </div>
+      ) : (
+        <div className="bg-[#0F172A] border border-white/5 rounded-2xl overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-white/5 flex items-center gap-2">
+            <p className="text-xs font-black text-white uppercase tracking-wider">Vendas do Período</p>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-500">{vendas.length}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-white/5 bg-[#0B1220]">
+                  {['Lead', 'Marca', 'Consultor', 'Valor Negociado', 'Data'].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-left text-[9px] font-black uppercase tracking-wider text-gray-600 whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {vendas.map((v, i) => (
+                  <tr key={i} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-2.5 font-semibold text-white">{v.lead?.nome || '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-400">{v.marca?.emoji} {v.marca?.nome || '—'}</td>
+                    <td className="px-4 py-2.5 text-gray-400">{v.consultor?.nome || '—'}</td>
+                    <td className="px-4 py-2.5 font-black text-[#10B981]">{fmtFull(v.taxa_franquia_negociada)}</td>
+                    <td className="px-4 py-2.5 text-gray-500">{v.data_venda ? new Date(v.data_venda + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const ROLES_DIRETOR = ['Diretor', 'Administrador', 'admin']
 
 export default function RelatoriosPage() {
@@ -410,6 +553,14 @@ export default function RelatoriosPage() {
   // ════════════════════════════════════════════
   const renderRelatorio = () => {
     switch(tipoAtivo) {
+
+      // ── RECEITA ────────────────────────────
+      case 'receita': return (
+        <RelatorioReceita
+          tenantId={isPlatformAdmin() ? null : usuario?.tenant_id}
+          dias={Number(filtros.periodo || 30)}
+        />
+      )
 
       // ── FUNIL ──────────────────────────────
       case 'funil': return (

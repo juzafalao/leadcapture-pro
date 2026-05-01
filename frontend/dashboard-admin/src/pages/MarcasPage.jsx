@@ -98,6 +98,8 @@ export default function MarcasPage() {
         id_segmento: marcaData.segmento_id || null,
         invest_min: marcaData.investimento_minimo || 0,
         invest_max: marcaData.investimento_maximo || 0,
+        taxa_franquia_padrao: marcaData.taxa_franquia_padrao ?? null,
+        taxa_franquia_minima:  marcaData.taxa_franquia_minima  ?? null,
         ativo: true
       };
       if (marcaData.id) {
