@@ -21,11 +21,12 @@ export function isEmailValido(email) {
 }
 
 /**
- * Valida um número de telefone
+ * Valida um número de telefone.
+ * Aceita formato local (8-11 dígitos) ou internacional com DDI (10-16 dígitos).
  */
 export function isTelefoneValido(telefone) {
   const soDigitos = String(telefone ?? '').replace(/\D/g, '')
-  return soDigitos.length >= 10 && soDigitos.length <= 13
+  return soDigitos.length >= 8 && soDigitos.length <= 16
 }
 
 /**
@@ -136,10 +137,28 @@ export function sanitizarTexto(valor, maxLen = 255) {
 }
 
 /**
- * Normaliza telefone
+ * Normaliza telefone para o formato DDI+DDD+NÚMERO exigido pela API do WhatsApp.
+ *
+ * - Números com 12+ dígitos são tratados como já portando DDI (qualquer país) → mantém.
+ * - Números com 10-11 dígitos são tratados como formato local brasileiro → adiciona DDI 55.
+ * - Remove zeros iniciais e caracteres não-numéricos.
+ *
+ * A landing page sempre envia o número já com o DDI selecionado pelo usuário,
+ * portanto não haverá sobrescrita indevida do DDI de outros países.
  */
 export function normalizarTelefone(telefone) {
-  return String(telefone ?? '').replace(/\D/g, '')
+  if (!telefone) return ''
+  const digitos = String(telefone).replace(/\D/g, '')
+  if (!digitos) return ''
+
+  // Remove zero inicial (ex: 011999998888 → 11999998888)
+  const semZero = digitos.startsWith('0') ? digitos.slice(1) : digitos
+
+  // 12+ dígitos → já contém DDI (qualquer país), mantém como está
+  if (semZero.length >= 12) return semZero
+
+  // 10-11 dígitos → formato local brasileiro, adiciona DDI 55
+  return `55${semZero}`
 }
 
 /**

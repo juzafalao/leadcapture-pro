@@ -6,6 +6,47 @@ const API_URL = (
   (typeof window !== 'undefined' ? window.location.origin : 'https://leadcapture-proprod.vercel.app')
 ).replace(/\/$/, '')
 
+const PAISES_DDI = [
+  { ddi: '55',  pais: 'Brasil',           bandeira: '🇧🇷' },
+  { ddi: '54',  pais: 'Argentina',        bandeira: '🇦🇷' },
+  { ddi: '591', pais: 'Bolívia',          bandeira: '🇧🇴' },
+  { ddi: '56',  pais: 'Chile',            bandeira: '🇨🇱' },
+  { ddi: '57',  pais: 'Colômbia',         bandeira: '🇨🇴' },
+  { ddi: '506', pais: 'Costa Rica',       bandeira: '🇨🇷' },
+  { ddi: '53',  pais: 'Cuba',             bandeira: '🇨🇺' },
+  { ddi: '593', pais: 'Equador',          bandeira: '🇪🇨' },
+  { ddi: '503', pais: 'El Salvador',      bandeira: '🇸🇻' },
+  { ddi: '502', pais: 'Guatemala',        bandeira: '🇬🇹' },
+  { ddi: '504', pais: 'Honduras',         bandeira: '🇭🇳' },
+  { ddi: '52',  pais: 'México',           bandeira: '🇲🇽' },
+  { ddi: '505', pais: 'Nicarágua',        bandeira: '🇳🇮' },
+  { ddi: '507', pais: 'Panamá',           bandeira: '🇵🇦' },
+  { ddi: '595', pais: 'Paraguai',         bandeira: '🇵🇾' },
+  { ddi: '51',  pais: 'Peru',             bandeira: '🇵🇪' },
+  { ddi: '598', pais: 'Uruguai',          bandeira: '🇺🇾' },
+  { ddi: '58',  pais: 'Venezuela',        bandeira: '🇻🇪' },
+  { ddi: '1',   pais: 'EUA / Canadá',     bandeira: '🇺🇸' },
+  { ddi: '351', pais: 'Portugal',         bandeira: '🇵🇹' },
+  { ddi: '34',  pais: 'Espanha',          bandeira: '🇪🇸' },
+  { ddi: '44',  pais: 'Reino Unido',      bandeira: '🇬🇧' },
+  { ddi: '33',  pais: 'França',           bandeira: '🇫🇷' },
+  { ddi: '49',  pais: 'Alemanha',         bandeira: '🇩🇪' },
+  { ddi: '39',  pais: 'Itália',           bandeira: '🇮🇹' },
+  { ddi: '41',  pais: 'Suíça',            bandeira: '🇨🇭' },
+  { ddi: '31',  pais: 'Holanda',          bandeira: '🇳🇱' },
+  { ddi: '32',  pais: 'Bélgica',          bandeira: '🇧🇪' },
+  { ddi: '7',   pais: 'Rússia',           bandeira: '🇷🇺' },
+  { ddi: '81',  pais: 'Japão',            bandeira: '🇯🇵' },
+  { ddi: '86',  pais: 'China',            bandeira: '🇨🇳' },
+  { ddi: '91',  pais: 'Índia',            bandeira: '🇮🇳' },
+  { ddi: '82',  pais: 'Coreia do Sul',    bandeira: '🇰🇷' },
+  { ddi: '61',  pais: 'Austrália',        bandeira: '🇦🇺' },
+  { ddi: '64',  pais: 'Nova Zelândia',    bandeira: '🇳🇿' },
+  { ddi: '27',  pais: 'África do Sul',    bandeira: '🇿🇦' },
+  { ddi: '971', pais: 'Emirados Árabes',  bandeira: '🇦🇪' },
+  { ddi: '972', pais: 'Israel',           bandeira: '🇮🇱' },
+]
+
 function Bubble({ style }) {
   return <div className="bubble" style={style} />
 }
@@ -19,6 +60,7 @@ export default function LandingPage() {
   const [fbclid, setFbclid] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [ddi, setDdi] = useState('55')
   const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', capital_disponivel: '', regiao: '' })
   const [focused, setFocused] = useState(null)
   const heroRef = useRef(null)
@@ -79,6 +121,8 @@ export default function LandingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          telefone: formData.telefone.replace(/\D/g, ''),
+          ddi,
           marca_id: marca.id,
           tenant_id: marca.tenant_id,
           fonte: 'landing-page-react',
@@ -92,6 +136,7 @@ export default function LandingPage() {
         if (marca?.meta_pixel_id && window.fbq)
           window.fbq('track', 'Lead')
         setSuccess(true)
+        setDdi('55')
         setFormData({ nome: '', email: '', telefone: '', capital_disponivel: '', regiao: '' })
       } else { alert('Erro ao enviar. Tente novamente.') }
     } catch { alert('Erro ao enviar. Tente novamente.') }
@@ -213,6 +258,11 @@ export default function LandingPage() {
 
         .form-trust { display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 16px; font-size: 12px; color: rgba(255,255,255,0.25); }
 
+        .phone-row { display: flex; gap: 8px; }
+        .ddi-select { flex: 0 0 auto; width: 148px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 2px; padding: 14px 10px; color: #fff; font-family: 'Barlow', sans-serif; font-size: 14px; outline: none; transition: all 0.2s; appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23f97316' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+        .ddi-select:focus, .ddi-select.active { border-color: #f97316; background-color: rgba(249,115,22,0.06); box-shadow: 0 0 0 3px rgba(249,115,22,0.1); }
+        .ddi-select option { background: #1a1a1a; color: #fff; }
+
         .success-overlay { text-align: center; padding: 48px 36px; }
         .success-icon { font-size: 64px; margin-bottom: 16px; display: block; animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
@@ -319,7 +369,6 @@ export default function LandingPage() {
                     {[
                       { key: 'nome', label: 'Nome completo', type: 'text', placeholder: 'Seu nome' },
                       { key: 'email', label: 'E-mail', type: 'email', placeholder: 'seu@email.com' },
-                      { key: 'telefone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999' },
                     ].map(f => (
                       <div key={f.key} className="field-group">
                         <label className="field-label">{f.label}</label>
@@ -329,6 +378,34 @@ export default function LandingPage() {
                           onChange={e => setFormData({ ...formData, [f.key]: e.target.value })} />
                       </div>
                     ))}
+                    <div className="field-group">
+                      <label className="field-label">WhatsApp</label>
+                      <div className="phone-row">
+                        <select
+                          value={ddi}
+                          className={`ddi-select${focused === 'ddi' ? ' active' : ''}`}
+                          onFocus={() => setFocused('ddi')}
+                          onBlur={() => setFocused(null)}
+                          onChange={e => setDdi(e.target.value)}
+                        >
+                          {PAISES_DDI.map(p => (
+                            <option key={p.ddi + p.pais} value={p.ddi}>
+                              {p.bandeira} +{p.ddi} {p.pais}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="tel"
+                          required
+                          placeholder="(11) 99999-9999"
+                          value={formData.telefone}
+                          className={`field-input${focused === 'telefone' ? ' active' : ''}`}
+                          onFocus={() => setFocused('telefone')}
+                          onBlur={() => setFocused(null)}
+                          onChange={e => setFormData({ ...formData, telefone: e.target.value })}
+                        />
+                      </div>
+                    </div>
                     <div className="field-group">
                       <label className="field-label">Capital disponível</label>
                       <select required value={formData.capital_disponivel}

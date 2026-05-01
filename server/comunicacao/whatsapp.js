@@ -11,6 +11,7 @@
 // ============================================================
 
 import { retryWithBackoff } from '../core/retry.js'
+import { normalizarTelefone } from '../core/validation.js'
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080'
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || ''
@@ -23,17 +24,7 @@ let connectionCache = {
   cache: null
 }
 
-/**
- * Normaliza telefone para formato internacional (Brasil)
- * @param {string} telefone
- * @returns {string} ex: "5511999998888"
- */
-export function normalizarTelefone(telefone) {
-  if (!telefone) return ''
-  const digitos = String(telefone).replace(/\D/g, '')
-  const limpo = digitos.replace(/^(55|\+55)/, '')
-  return limpo ? `55${limpo}` : ''
-}
+export { normalizarTelefone }
 
 /**
  * Extrai telefone do formato JID do WhatsApp
