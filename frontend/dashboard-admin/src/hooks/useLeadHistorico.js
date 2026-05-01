@@ -7,12 +7,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 const TIPO_CONFIG = {
-  captura:      { cor: '#10B981', label: 'Entrada'     },
-  atribuicao:   { cor: '#F59E0B', label: 'Atribuição'  },
-  status_mudou: { cor: '#6366F1', label: 'Status'      },
-  observacao:   { cor: '#3B82F6', label: 'Observação'  },
-  manual:       { cor: '#8B5CF6', label: 'Manual'      },
-  reaberto:     { cor: '#EC4899', label: 'Reaberto'    },
+  captura:          { cor: '#10B981', label: 'Entrada'    },
+  atribuicao:       { cor: '#F59E0B', label: 'Atribuição' },
+  status_mudou:     { cor: '#6366F1', label: 'Status'     },
+  observacao:       { cor: '#3B82F6', label: 'Observação' },
+  manual:           { cor: '#8B5CF6', label: 'Manual'     },
+  reaberto:         { cor: '#EC4899', label: 'Reaberto'   },
+  // Sprint CRM v1
+  tarefa_criada:    { cor: '#06B6D4', label: 'Tarefa'     },
+  tarefa_concluida: { cor: '#10B981', label: 'Concluído'  },
+  interacao_manual: { cor: '#A855F7', label: 'Interação'  },
 }
 
 export function getTipoConfig(tipo) {

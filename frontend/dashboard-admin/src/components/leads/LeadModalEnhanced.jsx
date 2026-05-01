@@ -16,6 +16,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../AuthContext'
 import { useAlertModal } from '../../hooks/useAlertModal'
+import LeadTimeline from './LeadTimeline'
+import TaskList from '../crm/TaskList'
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor']
 const ROLES_PODE_ATRIBUIR = ['Administrador', 'admin', 'Diretor', 'Gestor']
@@ -278,8 +280,9 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
             <div className="flex border-b border-white/5 px-6 flex-shrink-0 overflow-x-auto">
               {[
                 { id: 'visao-geral', label: '👁️ Visão Geral' },
-                { id: 'dados', label: '📋 Dados' },
-                { id: 'historico', label: '📜 Histórico' },
+                { id: 'dados',       label: '📋 Dados'        },
+                { id: 'tarefas',     label: '✅ Tarefas'      },
+                { id: 'historico',   label: '📜 Histórico'    },
               ].map(aba => (
                 <button
                   key={aba.id}
@@ -497,27 +500,14 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
               </form>
             )}
 
-            {/* ABA: HISTÓRICO */}
+            {/* ABA: TAREFAS (Sprint CRM Dias 3, 5, 7) */}
+            {abaAtiva === 'tarefas' && !isNovo && (
+              <TaskList lead={lead} />
+            )}
+
+            {/* ABA: HISTÓRICO — LeadTimeline real (substitui stub) */}
             {abaAtiva === 'historico' && !isNovo && (
-              <div className="space-y-4">
-                <p className="text-[10px] text-gray-600 uppercase tracking-wider font-bold">Últimas Atividades</p>
-                <div className="space-y-3">
-                  {[
-                    { tipo: 'criado', descricao: 'Lead criado', data: lead?.created_at },
-                    { tipo: 'status', descricao: `Status alterado para ${statusAtual?.label || 'Novo'}`, data: lead?.updated_at },
-                  ].map((atividade, i) => (
-                    <div key={i} className="flex gap-3 pb-3 border-b border-white/5 last:border-0">
-                      <div className="w-2 h-2 rounded-full bg-[#10B981] mt-2 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm text-white font-bold">{atividade.descricao}</p>
-                        <p className="text-[10px] text-gray-600">
-                          {atividade.data ? new Date(atividade.data).toLocaleDateString('pt-BR') : 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <LeadTimeline lead={lead} />
             )}
           </div>
         </motion.div>

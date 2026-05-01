@@ -191,7 +191,7 @@ function AppRoutes() {
         {/* Legado — redireciona */}
         <Route path="/analytics"     element={<Navigate to="/dashboard" replace />} />
         <Route path="/leads"         element={<Navigate to="/pipeline"  replace />} />
-        <Route path="/crm"           element={W(CRMPage, ROLES_DIRETOR)} />
+        <Route path="/crm"           element={W(CRMPage, ROLES_GESTOR)} />
 
         <Route path="*"              element={<Navigate to="/dashboard" replace />} />
       </Routes>
