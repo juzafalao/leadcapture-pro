@@ -81,7 +81,15 @@ router.post('/', validateLead, async (req, res) => {
       }
     }
 
-    leadData.telefone = normalizarTelefone(dados.telefone)
+    // Se DDI vier explícito (landing page com seletor de país), combina diretamente
+    // evitando que a heurística de normalização sobrescreva DDI de outros países
+    if (dados.ddi) {
+      const localDigits = String(dados.telefone || '').replace(/\D/g, '')
+      leadData.telefone = `${dados.ddi}${localDigits}`
+      delete leadData.ddi
+    } else {
+      leadData.telefone = normalizarTelefone(dados.telefone)
+    }
     leadData.fonte = dados.fonte || 'landing-page'
     leadData.status = dados.status || 'novo'
 

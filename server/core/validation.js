@@ -21,12 +21,12 @@ export function isEmailValido(email) {
 }
 
 /**
- * Valida um número de telefone (aceita com ou sem DDI)
+ * Valida um número de telefone.
+ * Aceita formato local (8-11 dígitos) ou internacional com DDI (10-16 dígitos).
  */
 export function isTelefoneValido(telefone) {
   const soDigitos = String(telefone ?? '').replace(/\D/g, '')
-  // Aceita input sem DDI (10-11 dígitos) ou já com DDI (12-13 dígitos)
-  return soDigitos.length >= 10 && soDigitos.length <= 13
+  return soDigitos.length >= 8 && soDigitos.length <= 16
 }
 
 /**
@@ -138,22 +138,26 @@ export function sanitizarTexto(valor, maxLen = 255) {
 
 /**
  * Normaliza telefone para o formato DDI+DDD+NÚMERO exigido pela API do WhatsApp.
- * Sempre retorna string no formato 55XXXXXXXXXXX (ex: 5514996011482).
- * Aceita qualquer formato de entrada: (14) 9960-1482, 14996011482, +55 14 99601-1482, etc.
+ *
+ * - Números com 12+ dígitos são tratados como já portando DDI (qualquer país) → mantém.
+ * - Números com 10-11 dígitos são tratados como formato local brasileiro → adiciona DDI 55.
+ * - Remove zeros iniciais e caracteres não-numéricos.
+ *
+ * A landing page sempre envia o número já com o DDI selecionado pelo usuário,
+ * portanto não haverá sobrescrita indevida do DDI de outros países.
  */
 export function normalizarTelefone(telefone) {
   if (!telefone) return ''
   const digitos = String(telefone).replace(/\D/g, '')
   if (!digitos) return ''
 
-  // Remove prefixo 55 se já presente para re-adicionar de forma controlada
-  const semDDI = digitos.startsWith('55') && digitos.length >= 12
-    ? digitos.slice(2)
-    : digitos
-
   // Remove zero inicial (ex: 011999998888 → 11999998888)
-  const semZero = semDDI.startsWith('0') ? semDDI.slice(1) : semDDI
+  const semZero = digitos.startsWith('0') ? digitos.slice(1) : digitos
 
+  // 12+ dígitos → já contém DDI (qualquer país), mantém como está
+  if (semZero.length >= 12) return semZero
+
+  // 10-11 dígitos → formato local brasileiro, adiciona DDI 55
   return `55${semZero}`
 }
 

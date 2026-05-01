@@ -30,6 +30,7 @@ const leadSchema = z.object({
   marca_id:           z.string().uuid('marca_id deve ser UUID válido').optional().nullable(),
   gclid:              z.string().max(500).trim().optional().or(z.literal('')),
   fbclid:             z.string().max(500).trim().optional().or(z.literal('')),
+  ddi:                z.string().max(5).trim().optional().or(z.literal('')),
 }).strip()
 
 // Schema para leads_sistema (prospects do SaaS)
