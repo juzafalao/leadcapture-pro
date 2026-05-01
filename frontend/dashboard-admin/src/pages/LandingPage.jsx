@@ -51,6 +51,17 @@ function Bubble({ style }) {
   return <div className="bubble" style={style} />
 }
 
+function formatarMoedaBR(valor) {
+  const digits = valor.replace(/\D/g, '')
+  if (!digits) return ''
+  const num = parseInt(digits, 10)
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+}
+
+function parseMoedaBR(valorFormatado) {
+  return valorFormatado.replace(/\D/g, '')
+}
+
 export default function LandingPage() {
   const { slug } = useParams()
   const [marca, setMarca] = useState(null)
@@ -61,7 +72,7 @@ export default function LandingPage() {
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [ddi, setDdi] = useState('55')
-  const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', capital_disponivel: '', regiao: '' })
+  const [formData, setFormData] = useState({ nome: '', email: '', telefone: '', capital_disponivel: '', estado: '', cidade: '' })
   const [focused, setFocused] = useState(null)
   const heroRef = useRef(null)
 
@@ -137,7 +148,7 @@ export default function LandingPage() {
           window.fbq('track', 'Lead')
         setSuccess(true)
         setDdi('55')
-        setFormData({ nome: '', email: '', telefone: '', capital_disponivel: '', regiao: '' })
+        setFormData({ nome: '', email: '', telefone: '', capital_disponivel: '', estado: '', cidade: '' })
       } else { alert('Erro ao enviar. Tente novamente.') }
     } catch { alert('Erro ao enviar. Tente novamente.') }
     finally { setSubmitting(false) }
@@ -407,53 +418,82 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label className="field-label">Capital disponível</label>
-                      <select required value={formData.capital_disponivel}
+                      <label className="field-label">Capital disponível para investir *</label>
+                      <input
+                        type="text"
+                        required
+                        inputMode="numeric"
+                        placeholder="R$ 0"
+                        value={formData.capital_disponivel}
                         className={`field-input${focused === 'capital' ? ' active' : ''}`}
-                        onFocus={() => setFocused('capital')} onBlur={() => setFocused(null)}
-                        onChange={e => setFormData({ ...formData, capital_disponivel: e.target.value })}>
-                        <option value="">Selecione...</option>
-                        <option value="ate-100k">Até R$ 100 mil</option>
-                        <option value="100k-300k">R$ 100 mil — R$ 300 mil</option>
-                        <option value="300k-500k">R$ 300 mil — R$ 500 mil</option>
-                        <option value="acima-500k">Acima de R$ 500 mil</option>
-                      </select>
+                        onFocus={() => setFocused('capital')}
+                        onBlur={() => setFocused(null)}
+                        onChange={e => {
+                          const formatado = formatarMoedaBR(e.target.value)
+                          setFormData({ ...formData, capital_disponivel: formatado })
+                        }}
+                      />
+                      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: 1 }}>
+                        Digite o valor que pretende investir
+                      </p>
                     </div>
-                    <div className="field-group">
-                      <label className="field-label">Estado de interesse</label>
-                      <select required value={formData.regiao}
-                        className={`field-input${focused === 'regiao' ? ' active' : ''}`}
-                        onFocus={() => setFocused('regiao')} onBlur={() => setFocused(null)}
-                        onChange={e => setFormData({ ...formData, regiao: e.target.value })}>
-                        <option value="">Selecione...</option>
-<option value="AC">Acre</option>
-<option value="AL">Alagoas</option>
-<option value="AP">Amapá</option>
-<option value="AM">Amazonas</option>
-<option value="BA">Bahia</option>
-<option value="CE">Ceará</option>
-<option value="DF">Distrito Federal</option>
-<option value="ES">Espírito Santo</option>
-<option value="GO">Goiás</option>
-<option value="MA">Maranhão</option>
-<option value="MT">Mato Grosso</option>
-<option value="MS">Mato Grosso do Sul</option>
-<option value="MG">Minas Gerais</option>
-<option value="PA">Pará</option>
-<option value="PB">Paraíba</option>
-<option value="PR">Paraná</option>
-<option value="PE">Pernambuco</option>
-<option value="PI">Piauí</option>
-<option value="RJ">Rio de Janeiro</option>
-<option value="RN">Rio Grande do Norte</option>
-<option value="RS">Rio Grande do Sul</option>
-<option value="RO">Rondônia</option>
-<option value="RR">Roraima</option>
-<option value="SC">Santa Catarina</option>
-<option value="SP">São Paulo</option>
-<option value="SE">Sergipe</option>
-<option value="TO">Tocantins</option>
-                      </select>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="field-group">
+                      {/* Estado */}
+                      <div>
+                        <label className="field-label">Estado *</label>
+                        <select
+                          required
+                          value={formData.estado}
+                          className={`field-input${focused === 'estado' ? ' active' : ''}`}
+                          onFocus={() => setFocused('estado')}
+                          onBlur={() => setFocused(null)}
+                          onChange={e => setFormData({ ...formData, estado: e.target.value })}
+                        >
+                          <option value="">UF...</option>
+                          <option value="AC">AC</option>
+                          <option value="AL">AL</option>
+                          <option value="AP">AP</option>
+                          <option value="AM">AM</option>
+                          <option value="BA">BA</option>
+                          <option value="CE">CE</option>
+                          <option value="DF">DF</option>
+                          <option value="ES">ES</option>
+                          <option value="GO">GO</option>
+                          <option value="MA">MA</option>
+                          <option value="MT">MT</option>
+                          <option value="MS">MS</option>
+                          <option value="MG">MG</option>
+                          <option value="PA">PA</option>
+                          <option value="PB">PB</option>
+                          <option value="PR">PR</option>
+                          <option value="PE">PE</option>
+                          <option value="PI">PI</option>
+                          <option value="RJ">RJ</option>
+                          <option value="RN">RN</option>
+                          <option value="RS">RS</option>
+                          <option value="RO">RO</option>
+                          <option value="RR">RR</option>
+                          <option value="SC">SC</option>
+                          <option value="SP">SP</option>
+                          <option value="SE">SE</option>
+                          <option value="TO">TO</option>
+                        </select>
+                      </div>
+
+                      {/* Cidade */}
+                      <div>
+                        <label className="field-label">Cidade *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Sua cidade"
+                          value={formData.cidade}
+                          className={`field-input${focused === 'cidade' ? ' active' : ''}`}
+                          onFocus={() => setFocused('cidade')}
+                          onBlur={() => setFocused(null)}
+                          onChange={e => setFormData({ ...formData, cidade: e.target.value })}
+                        />
+                      </div>
                     </div>
                     <button type="submit" className="submit-btn" disabled={submitting}>
                       {submitting ? 'Enviando...' : 'Quero ser franqueado →'}

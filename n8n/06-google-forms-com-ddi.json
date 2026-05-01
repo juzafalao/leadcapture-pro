@@ -1,0 +1,130 @@
+{
+  "name": "LeadCapture - Google Forms com DDI (v1)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "google-forms-lead",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-gforms",
+      "name": "Webhook Google Forms",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "notes": "Configure o Apps Script do Google Forms para enviar POST para esta URL. Ver arquivo google-apps-script/google-forms-webhook.js"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// Mapeia campos do Google Forms → payload da API LeadCapture\n// Compatível com perguntas em PT-BR e EN\n// ============================================================\nconst body = $input.first().json.body || $input.first().json;\n\n// ── Campos principais ──────────────────────────────────────\nconst nome = (\n  body.nome ||\n  body['Nome completo'] ||\n  body['Full Name'] ||\n  body.name || ''\n).trim();\n\nconst email = (\n  body.email ||\n  body['E-mail'] ||\n  body['Email'] ||\n  body['E-mail address'] || ''\n).trim().toLowerCase();\n\n// Número local SEM DDI (o DDI vem separado)\nconst telefone = String(\n  body.telefone ||\n  body['WhatsApp'] ||\n  body['Telefone'] ||\n  body['Número'] ||\n  body['Phone'] || ''\n).replace(/\\D/g, '');\n\n// ── DDI — vem da pergunta dropdown/lista do formulário ──────\n// Aceita: \"55\", \"+55\", \"🇧🇷 +55 Brasil\", \"Brasil (+55)\"\nconst ddiRaw = String(\n  body.ddi ||\n  body['DDI'] ||\n  body['DDI País'] ||\n  body['Código do País'] ||\n  body['country_code'] || ''\n);\nconst ddiMatch = ddiRaw.match(/\\+?(\\d{1,4})/);\nconst ddi = ddiMatch ? ddiMatch[1] : '55'; // Padrão Brasil\n\n// ── Capital disponível ──────────────────────────────────────\nconst capital = (\n  body.capital ||\n  body['Capital disponível'] ||\n  body['Capital Disponivel'] ||\n  body['Investimento disponível'] || '0'\n);\n\n// ── Localização ─────────────────────────────────────────────\nconst cidade = (body.cidade || body['Cidade'] || body['City'] || '').trim();\nconst estado = (body.estado || body['Estado'] || body['State'] || '').trim();\nconst regiao = (body.regiao_interesse || body['Região de interesse'] || '').trim();\n\n// ── IDs obrigatórios (configurar no webhook do n8n) ─────────\nconst tenant_id = body.tenant_id || $vars.TENANT_ID || '';\nconst marca_id  = body.marca_id  || $vars.MARCA_ID  || '';\n\nif (!tenant_id || !marca_id) {\n  throw new Error('tenant_id e marca_id são obrigatórios. Configure as variáveis no n8n ou envie no payload.');\n}\n\nif (!nome || nome.length < 3) throw new Error('Nome inválido: ' + nome);\nif (!email.includes('@'))     throw new Error('E-mail inválido: ' + email);\nif (!telefone || telefone.length < 8) throw new Error('Telefone inválido: ' + telefone);\n\nreturn [{\n  json: {\n    tenant_id,\n    marca_id,\n    nome,\n    email,\n    telefone,\n    ddi,\n    capital,\n    cidade,\n    estado,\n    regiao_interesse: regiao,\n    fonte: 'google-forms',\n    _debug: { ddiRaw, ddi, telefone, telefoneFinal: ddi + telefone }\n  }\n}];"
+      },
+      "id": "mapear-campos",
+      "name": "Mapear Campos + DDI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.LEADCAPTURE_API_URL || 'https://leadcapture-proprod.vercel.app' }}/api/leads/google-forms",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "tenant_id",        "value": "={{ $json.tenant_id }}" },
+            { "name": "marca_id",         "value": "={{ $json.marca_id }}" },
+            { "name": "nome",             "value": "={{ $json.nome }}" },
+            { "name": "email",            "value": "={{ $json.email }}" },
+            { "name": "telefone",         "value": "={{ $json.telefone }}" },
+            { "name": "ddi",              "value": "={{ $json.ddi }}" },
+            { "name": "capital",          "value": "={{ $json.capital }}" },
+            { "name": "cidade",           "value": "={{ $json.cidade }}" },
+            { "name": "estado",           "value": "={{ $json.estado }}" },
+            { "name": "regiao_interesse", "value": "={{ $json.regiao_interesse }}" },
+            { "name": "fonte",            "value": "google-forms" }
+          ]
+        },
+        "options": {
+          "timeout": 15000,
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "id": "enviar-api",
+      "name": "Enviar para API LeadCapture",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "checar-resultado",
+      "name": "Lead Salvo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json;\nconsole.log(`[GoogleForms] ✅ Lead salvo: ${lead.leadId} | score ${lead.score} | ${(lead.categoria || '').toUpperCase()}`);\nreturn [{ json: { sucesso: true, leadId: lead.leadId, score: lead.score, categoria: lead.categoria } }];"
+      },
+      "id": "log-sucesso",
+      "name": "Log Sucesso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const resposta = $input.first().json;\nconst erro = resposta.error || JSON.stringify(resposta);\nconsole.error(`[GoogleForms] ❌ Erro ao salvar lead: ${erro}`);\n// Re-lança para ativar notificação de erro do n8n\nthrow new Error(`LeadCapture API erro: ${erro}`);"
+      },
+      "id": "log-erro",
+      "name": "Log Erro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Google Forms":        { "main": [[{ "node": "Mapear Campos + DDI",          "type": "main", "index": 0 }]] },
+    "Mapear Campos + DDI":         { "main": [[{ "node": "Enviar para API LeadCapture",  "type": "main", "index": 0 }]] },
+    "Enviar para API LeadCapture": { "main": [[{ "node": "Lead Salvo?",                  "type": "main", "index": 0 }]] },
+    "Lead Salvo?": {
+      "main": [
+        [{ "node": "Log Sucesso", "type": "main", "index": 0 }],
+        [{ "node": "Log Erro",    "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": "",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "tags": [{ "name": "leadcapture" }, { "name": "google-forms" }],
+  "variables": {
+    "LEADCAPTURE_API_URL": "https://leadcapture-proprod.vercel.app",
+    "TENANT_ID": "SUBSTITUIR_PELO_SEU_TENANT_ID",
+    "MARCA_ID":  "SUBSTITUIR_PELO_ID_DA_MARCA"
+  }
+}
