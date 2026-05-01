@@ -86,6 +86,12 @@ const Icons = {
       <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 7L2 7" />
     </svg>
   ),
+  CRM: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+    </svg>
+  ),
   Backoffice: () => (
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
       <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
@@ -168,10 +174,11 @@ const SECTIONS = [
     label: 'Automação',
     roles: ['Gestor','Diretor','Administrador','admin'],
     items: [
-      { path: '/captura',          icon: <Icons.Captura />,       label: 'Captura de Leads', badge: 'Beta' },
-      { path: '/whatsapp',         icon: <Icons.WhatsApp />,      label: 'WhatsApp',         badge: 'Beta' },
-      { path: '/automacao',        icon: <Icons.Automacao />,     label: 'Automação' },
-      { path: '/email-marketing',  icon: <Icons.EmailMarketing />,label: 'Email Marketing' },
+      { path: '/captura',          icon: <Icons.Captura />,        label: 'Captura de Leads', badge: 'Beta' },
+      { path: '/whatsapp',         icon: <Icons.WhatsApp />,       label: 'WhatsApp',         badge: 'Beta' },
+      { path: '/automacao',        icon: <Icons.Automacao />,      label: 'Automação' },
+      { path: '/email-marketing',  icon: <Icons.EmailMarketing />, label: 'Email Marketing' },
+      { path: '/crm',              icon: <Icons.CRM />,            label: 'CRM & Integrações' },
     ],
   },
   {
