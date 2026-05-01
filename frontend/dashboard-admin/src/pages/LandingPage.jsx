@@ -319,7 +319,7 @@ export default function LandingPage() {
                     {[
                       { key: 'nome', label: 'Nome completo', type: 'text', placeholder: 'Seu nome' },
                       { key: 'email', label: 'E-mail', type: 'email', placeholder: 'seu@email.com' },
-                      { key: 'telefone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999' },
+                      { key: 'telefone', label: 'WhatsApp', type: 'tel', placeholder: '(11) 99999-9999 — com DDD' },
                     ].map(f => (
                       <div key={f.key} className="field-group">
                         <label className="field-label">{f.label}</label>

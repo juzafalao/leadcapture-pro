@@ -21,10 +21,11 @@ export function isEmailValido(email) {
 }
 
 /**
- * Valida um número de telefone
+ * Valida um número de telefone (aceita com ou sem DDI)
  */
 export function isTelefoneValido(telefone) {
   const soDigitos = String(telefone ?? '').replace(/\D/g, '')
+  // Aceita input sem DDI (10-11 dígitos) ou já com DDI (12-13 dígitos)
   return soDigitos.length >= 10 && soDigitos.length <= 13
 }
 
@@ -136,10 +137,24 @@ export function sanitizarTexto(valor, maxLen = 255) {
 }
 
 /**
- * Normaliza telefone
+ * Normaliza telefone para o formato DDI+DDD+NÚMERO exigido pela API do WhatsApp.
+ * Sempre retorna string no formato 55XXXXXXXXXXX (ex: 5514996011482).
+ * Aceita qualquer formato de entrada: (14) 9960-1482, 14996011482, +55 14 99601-1482, etc.
  */
 export function normalizarTelefone(telefone) {
-  return String(telefone ?? '').replace(/\D/g, '')
+  if (!telefone) return ''
+  const digitos = String(telefone).replace(/\D/g, '')
+  if (!digitos) return ''
+
+  // Remove prefixo 55 se já presente para re-adicionar de forma controlada
+  const semDDI = digitos.startsWith('55') && digitos.length >= 12
+    ? digitos.slice(2)
+    : digitos
+
+  // Remove zero inicial (ex: 011999998888 → 11999998888)
+  const semZero = semDDI.startsWith('0') ? semDDI.slice(1) : semDDI
+
+  return `55${semZero}`
 }
 
 /**
