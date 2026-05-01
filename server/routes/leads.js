@@ -17,7 +17,6 @@ import {
   sanitizarTexto,
 } from '../core/validation.js'
 import { notificarNovoLead, notificarLeadQuente, enviarBoasVindasLead } from '../comunicacao/email.js'
-import { enviarBoasVindas } from '../comunicacao/whatsapp.js'
 import { validateLead, validateLeadSistema, validateGoogleForms } from '../middleware/validateLead.js'
 import { iniciarAgenteParaLead } from '../services/agente.js'
 
@@ -199,16 +198,6 @@ router.post('/', validateLead, async (req, res) => {
         console.log(`[Leads] Agente: ${resultAgente.iniciado ? 'iniciado' : resultAgente.motivo}`)
       } catch (err) {
         console.warn('[Leads] Agente erro:', err.message)
-      }
-
-      // Só envia boas-vindas WhatsApp se o agente NÃO foi iniciado (evita mensagem dupla)
-      if (!agenteIniciado && process.env.EVOLUTION_API_KEY) {
-        enviarBoasVindas(lead, marcaFallback)
-          .then(r => r.simulated
-            ? console.log('[Leads] WhatsApp simulado (sem API key)')
-            : console.log(`[Leads] WhatsApp enviado para ${lead.telefone}`)
-          )
-          .catch(err => console.warn('[Leads] WhatsApp boas-vindas:', err.message))
       }
 
       const n8nUrl = process.env.N8N_WEBHOOK_URL
