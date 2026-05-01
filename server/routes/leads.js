@@ -240,6 +240,47 @@ router.post('/', validateLead, async (req, res) => {
 // ============================================================
 // POST /api/leads/google-forms
 // ============================================================
+
+/**
+ * Extrai apenas os dígitos de um valor DDI que pode vir em vários formatos:
+ * "55" | "+55" | "🇧🇷 +55 Brasil" | "Brasil (+55)" | "55 - Brasil"
+ */
+function extrairDdiDigitos(valor) {
+  if (!valor) return ''
+  // Tenta capturar sequência numérica após um "+" ou no início
+  const match = String(valor).match(/\+?(\d{1,4})/)
+  return match ? match[1] : ''
+}
+
+/**
+ * Resolve o telefone final para o canal Google Forms.
+ * Prioridade: DDI explícito na submissão > ddi_padrao > normalização padrão (DDI 55).
+ */
+function resolverTelefoneGoogleForms(form) {
+  const telefoneBruto = (
+    form.telefone || form['WhatsApp'] || form.whatsapp ||
+    form['Número'] || form['Telefone'] || form.phone || ''
+  )
+  const localDigits = String(telefoneBruto).replace(/\D/g, '')
+
+  // Extrai DDI de qualquer nome de campo enviado pelo webhook
+  const ddiRaw = (
+    form.ddi || form.DDI ||
+    form['DDI'] || form['DDI País'] || form['Código do País'] ||
+    form['Codigo do Pais'] || form['codigo_pais'] ||
+    form['country_code'] || form['Country Code'] ||
+    form['pais_ddi'] || ''
+  )
+  const ddiExplicito = extrairDdiDigitos(ddiRaw)
+
+  // ddi_padrao permite configurar DDI padrão no webhook (ex: para forms de Portugal)
+  const ddiPadrao = extrairDdiDigitos(form.ddi_padrao || '')
+
+  if (ddiExplicito) return `${ddiExplicito}${localDigits}`
+  if (ddiPadrao)    return `${ddiPadrao}${localDigits}`
+  return normalizarTelefone(telefoneBruto) // fallback: heurística com DDI 55 padrão
+}
+
 router.post('/google-forms', validateGoogleForms, async (req, res) => {
   try {
     console.log('[Leads/GoogleForms] Lead recebido')
@@ -247,7 +288,7 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
 
     const nome = form.nome || form['Nome completo'] || form.name || ''
     const email = form.email || form['E-mail'] || form['E-mail address'] || ''
-    const telefone = normalizarTelefone(form.telefone || form['WhatsApp'] || form.whatsapp || '')
+    const telefone = resolverTelefoneGoogleForms(form)
     const marca_id = form.marca_id
     const tenant_id = form.tenant_id || process.env.DEFAULT_TENANT_ID || ''
 
@@ -345,6 +386,54 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
 
 router.get('/google-forms/health', (_req, res) => {
   res.json({ status: 'ok', service: 'Google Forms Integration', timestamp: new Date().toISOString() })
+})
+
+router.get('/google-forms/config', (_req, res) => {
+  res.json({
+    descricao: 'Configuração do webhook para integração Google Forms → LeadCapture Pro',
+    endpoint: 'POST /api/leads/google-forms',
+    campos_obrigatorios: {
+      tenant_id: 'UUID do tenant (fixo no webhook)',
+      marca_id:  'UUID da marca (fixo no webhook)',
+      nome:      'Nome completo do lead',
+      email:     'E-mail do lead',
+      telefone:  'Número local SEM DDI (ex: 11999998888)',
+    },
+    campos_ddi: {
+      descricao: 'Envie um destes campos para definir o DDI do país do lead',
+      opcoes: ['ddi', 'DDI', 'DDI País', 'Código do País', 'country_code'],
+      formatos_aceitos: ['+55', '55', '🇧🇷 +55 Brasil', 'Brasil (+55)'],
+      ddi_padrao: 'Use ddi_padrao no payload do webhook para definir DDI padrão de todo o form (ex: ddi_padrao="351" para formulário de Portugal)',
+    },
+    campos_opcionais: {
+      capital:            'Capital disponível (ex: "100k-300k", "R$ 200.000")',
+      'Capital disponível': 'Alias aceito para o campo capital',
+      cidade:             'Cidade do lead',
+      estado:             'Estado do lead',
+      mensagem:           'Mensagem ou observação livre',
+      regiao_interesse:   'Região de interesse',
+    },
+    exemplo_payload: {
+      tenant_id:  'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      marca_id:   'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy',
+      nome:       'João Silva',
+      email:      'joao@email.com',
+      telefone:   '11999998888',
+      ddi:        '55',
+      capital:    '100k-300k',
+      cidade:     'São Paulo',
+      estado:     'SP',
+    },
+    exemplo_payload_internacional: {
+      tenant_id:  'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+      marca_id:   'yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy',
+      nome:       'Maria Santos',
+      email:      'maria@email.pt',
+      telefone:   '912345678',
+      ddi:        '351',
+      capital:    '100k-300k',
+    },
+  })
 })
 
 // ============================================================
