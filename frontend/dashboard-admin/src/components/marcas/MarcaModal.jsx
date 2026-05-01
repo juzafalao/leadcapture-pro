@@ -12,6 +12,8 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
     segmento_id: '',
     investimento_minimo: '',
     investimento_maximo: '',
+    taxa_franquia_padrao: '',
+    taxa_franquia_minima: '',
     descricao: ''
   });
 
@@ -21,9 +23,11 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
         nome: marca.nome || '',
         emoji: marca.emoji || '🏢',
         cor: marca.cor || '#60a5fa',
-        segmento_id: marca.segmento_id || '',
-        investimento_minimo: marca.investimento_minimo?.toString() || '',
-        investimento_maximo: marca.investimento_maximo?.toString() || '',
+        segmento_id: marca.segmento_id || marca.id_segmento || '',
+        investimento_minimo: (marca.investimento_minimo ?? marca.invest_min)?.toString() || '',
+        investimento_maximo: (marca.investimento_maximo ?? marca.invest_max)?.toString() || '',
+        taxa_franquia_padrao: marca.taxa_franquia_padrao?.toString() || '',
+        taxa_franquia_minima: marca.taxa_franquia_minima?.toString()  || '',
         descricao: marca.descricao || ''
       });
     }
@@ -44,6 +48,8 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
       segmento_id: formData.segmento_id || null,
       investimento_minimo: parseFloat(formData.investimento_minimo) || 0,
       investimento_maximo: parseFloat(formData.investimento_maximo) || 0,
+      taxa_franquia_padrao: formData.taxa_franquia_padrao ? parseFloat(formData.taxa_franquia_padrao) : null,
+      taxa_franquia_minima:  formData.taxa_franquia_minima  ? parseFloat(formData.taxa_franquia_minima)  : null,
       descricao: formData.descricao.trim()
     });
   };
@@ -142,27 +148,57 @@ export default function MarcaModal({ marca, segmentos, onClose, onSave, isSaving
               </div>
             </div>
 
-            {/* Investimentos */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Invest. Mínimo</label>
-                <input
-                  type="number"
-                  value={formData.investimento_minimo}
-                  onChange={(e) => setFormData({ ...formData, investimento_minimo: e.target.value })}
-                  placeholder="100000"
-                  className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
-                />
+            {/* Investimentos (scoring) */}
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-[#4a4a4f] mb-2">Investimento para Scoring</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Invest. Mínimo</label>
+                  <input
+                    type="number"
+                    value={formData.investimento_minimo}
+                    onChange={(e) => setFormData({ ...formData, investimento_minimo: e.target.value })}
+                    placeholder="100000"
+                    className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Invest. Máximo</label>
+                  <input
+                    type="number"
+                    value={formData.investimento_maximo}
+                    onChange={(e) => setFormData({ ...formData, investimento_maximo: e.target.value })}
+                    placeholder="200000"
+                    className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Invest. Máximo</label>
-                <input
-                  type="number"
-                  value={formData.investimento_maximo}
-                  onChange={(e) => setFormData({ ...formData, investimento_maximo: e.target.value })}
-                  placeholder="200000"
-                  className="w-full bg-[#1F2937] border border-[#1E293B] rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
-                />
+            </div>
+
+            {/* Taxa de Franquia (vendas) */}
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-wider text-[#4a4a4f] mb-2">Taxa de Franquia (vendas)</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Valor Padrão (R$)</label>
+                  <input
+                    type="number"
+                    value={formData.taxa_franquia_padrao}
+                    onChange={(e) => setFormData({ ...formData, taxa_franquia_padrao: e.target.value })}
+                    placeholder="25000"
+                    className="w-full bg-[#1F2937] border border-[#10B981]/20 rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#10B981]/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-[#4a4a4f] uppercase tracking-wider mb-2">Valor Mínimo (R$)</label>
+                  <input
+                    type="number"
+                    value={formData.taxa_franquia_minima}
+                    onChange={(e) => setFormData({ ...formData, taxa_franquia_minima: e.target.value })}
+                    placeholder="15000"
+                    className="w-full bg-[#1F2937] border border-[#F59E0B]/20 rounded-xl px-4 py-3 text-white placeholder:text-[#4a4a4f] focus:outline-none focus:border-[#F59E0B]/50"
+                  />
+                </div>
               </div>
             </div>
 

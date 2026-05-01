@@ -18,6 +18,8 @@ import { useAuth } from '../AuthContext'
 import { useAlertModal } from '../../hooks/useAlertModal'
 import LeadTimeline from './LeadTimeline'
 import TaskList from '../crm/TaskList'
+import VendaModal from '../vendas/VendaModal'
+import { useVendaDoLead, useRegistrarVenda, useAtualizarVenda } from '../../hooks/useVendas'
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor']
 const ROLES_PODE_ATRIBUIR = ['Administrador', 'admin', 'Diretor', 'Gestor']
@@ -31,6 +33,15 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
 
   const isNovo = !lead?.id
   const [abaAtiva, setAbaAtiva] = useState('visao-geral')
+  const [vendaModalOpen, setVendaModalOpen] = useState(false)
+
+  // Venda hooks
+  const { data: vendaExistente } = useVendaDoLead(lead?.id)
+  const registrarVenda = useRegistrarVenda()
+  const atualizarVenda = useAtualizarVenda()
+
+  const statusSlug = lead?.status_comercial?.slug?.toLowerCase() || lead?.status?.toLowerCase() || ''
+  const isConvertido = ['convertido', 'vendido'].includes(statusSlug)
 
   // Estados do formulário
   const [formData, setFormData] = useState({
@@ -283,6 +294,7 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
                 { id: 'dados',       label: '📋 Dados'        },
                 { id: 'tarefas',     label: '✅ Tarefas'      },
                 { id: 'historico',   label: '📜 Histórico'    },
+                ...(isConvertido || vendaExistente ? [{ id: 'venda', label: '💰 Venda' }] : []),
               ].map(aba => (
                 <button
                   key={aba.id}
@@ -392,6 +404,34 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
                     🔗 Copiar
                   </button>
                 </div>
+
+                {/* Registrar Venda — aparece quando lead está convertido */}
+                {isConvertido && (
+                  <div className={`rounded-2xl p-4 border ${vendaExistente ? 'bg-[#10B981]/5 border-[#10B981]/20' : 'bg-[#F59E0B]/5 border-[#F59E0B]/20'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-[9px] font-black uppercase tracking-wider text-gray-500 mb-1">Venda</p>
+                        {vendaExistente ? (
+                          <p className="text-lg font-black text-[#10B981]">
+                            R$ {Number(vendaExistente.taxa_franquia_negociada).toLocaleString('pt-BR')}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-500">Venda ainda não registrada</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => setVendaModalOpen(true)}
+                        className={`px-4 py-2 rounded-xl text-[11px] font-black transition-all ${
+                          vendaExistente
+                            ? 'bg-white/5 text-gray-300 hover:bg-white/10'
+                            : 'bg-[#10B981] text-black hover:bg-[#059669]'
+                        }`}
+                      >
+                        {vendaExistente ? 'Editar Venda' : '+ Registrar Venda'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -509,9 +549,79 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
             {abaAtiva === 'historico' && !isNovo && (
               <LeadTimeline lead={lead} />
             )}
+
+            {/* ABA: VENDA */}
+            {abaAtiva === 'venda' && !isNovo && (
+              <div className="space-y-4">
+                {vendaExistente ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { label: 'Valor Negociado', value: `R$ ${Number(vendaExistente.taxa_franquia_negociada).toLocaleString('pt-BR')}`, cor: '#10B981' },
+                        { label: 'Valor Tabela',    value: vendaExistente.taxa_franquia_tabela ? `R$ ${Number(vendaExistente.taxa_franquia_tabela).toLocaleString('pt-BR')}` : '—', cor: '#94A3B8' },
+                        { label: 'Data da Venda',   value: vendaExistente.data_venda ? new Date(vendaExistente.data_venda + 'T12:00:00').toLocaleDateString('pt-BR') : '—', cor: '#F8FAFC' },
+                        { label: 'Status',          value: vendaExistente.status || '—', cor: '#10B981' },
+                      ].map(k => (
+                        <div key={k.label} className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3">
+                          <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-1">{k.label}</p>
+                          <p className="text-base font-black" style={{ color: k.cor }}>{k.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {vendaExistente.observacoes && (
+                      <div className="bg-white/[0.04] border border-white/[0.06] rounded-xl p-3">
+                        <p className="text-[9px] font-black uppercase tracking-wider text-gray-600 mb-1">Observações</p>
+                        <p className="text-sm text-gray-300">{vendaExistente.observacoes}</p>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setVendaModalOpen(true)}
+                      className="w-full py-3 rounded-xl bg-white/5 text-gray-300 text-[11px] font-black hover:bg-white/10 transition-all"
+                    >
+                      Editar Venda
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-4xl mb-3">💰</p>
+                    <p className="text-white font-black mb-1">Nenhuma venda registrada</p>
+                    <p className="text-gray-500 text-sm mb-4">Registre o valor da taxa de franquia negociada</p>
+                    <button
+                      onClick={() => setVendaModalOpen(true)}
+                      className="px-6 py-3 rounded-xl bg-[#10B981] text-black font-black hover:bg-[#059669] transition-all"
+                    >
+                      + Registrar Venda
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>
+
+      {/* Modal de Venda */}
+      {vendaModalOpen && (
+        <VendaModal
+          lead={lead}
+          vendaExistente={vendaExistente}
+          isSaving={registrarVenda.isPending || atualizarVenda.isPending}
+          onClose={() => setVendaModalOpen(false)}
+          onSave={async (payload) => {
+            try {
+              if (payload.id) {
+                await atualizarVenda.mutateAsync(payload)
+              } else {
+                await registrarVenda.mutateAsync(payload)
+              }
+              setVendaModalOpen(false)
+              showAlert({ type: 'success', title: 'Venda registrada!', message: 'Taxa de franquia salva com sucesso.' })
+            } catch (err) {
+              showAlert({ type: 'error', title: 'Erro', message: err.message })
+            }
+          }}
+        />
+      )}
     </AnimatePresence>
   )
 }
