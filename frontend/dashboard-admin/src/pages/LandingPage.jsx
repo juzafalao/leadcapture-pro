@@ -51,6 +51,17 @@ function Bubble({ style }) {
   return <div className="bubble" style={style} />
 }
 
+function formatarMoedaBR(valor) {
+  const digits = valor.replace(/\D/g, '')
+  if (!digits) return ''
+  const num = parseInt(digits, 10)
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })
+}
+
+function parseMoedaBR(valorFormatado) {
+  return valorFormatado.replace(/\D/g, '')
+}
+
 export default function LandingPage() {
   const { slug } = useParams()
   const [marca, setMarca] = useState(null)
@@ -407,17 +418,24 @@ export default function LandingPage() {
                       </div>
                     </div>
                     <div className="field-group">
-                      <label className="field-label">Capital disponível</label>
-                      <select required value={formData.capital_disponivel}
+                      <label className="field-label">Capital disponível para investir *</label>
+                      <input
+                        type="text"
+                        required
+                        inputMode="numeric"
+                        placeholder="R$ 0"
+                        value={formData.capital_disponivel}
                         className={`field-input${focused === 'capital' ? ' active' : ''}`}
-                        onFocus={() => setFocused('capital')} onBlur={() => setFocused(null)}
-                        onChange={e => setFormData({ ...formData, capital_disponivel: e.target.value })}>
-                        <option value="">Selecione...</option>
-                        <option value="ate-100k">Até R$ 100 mil</option>
-                        <option value="100k-300k">R$ 100 mil — R$ 300 mil</option>
-                        <option value="300k-500k">R$ 300 mil — R$ 500 mil</option>
-                        <option value="acima-500k">Acima de R$ 500 mil</option>
-                      </select>
+                        onFocus={() => setFocused('capital')}
+                        onBlur={() => setFocused(null)}
+                        onChange={e => {
+                          const formatado = formatarMoedaBR(e.target.value)
+                          setFormData({ ...formData, capital_disponivel: formatado })
+                        }}
+                      />
+                      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 4, letterSpacing: 1 }}>
+                        Digite o valor que pretende investir
+                      </p>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }} className="field-group">
                       {/* Estado */}
