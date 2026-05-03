@@ -43,24 +43,39 @@ const CANAL_CONFIG = {
 }
 
 // ─── KPI Card ───────────────────────────────────────────
-function KPICard({ label, value, sub, Icon, color, delay = 0, onClick }) {
+function KPICard({ label, value, sub, Icon, color, delay = 0, onClick, tooltip }) {
+  const [hovered, setHovered] = useState(false)
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
       onClick={onClick}
-      className={`bg-[#0F172A] rounded-2xl p-5 border flex flex-col gap-2 ${onClick ? 'cursor-pointer hover:border-white/10 transition-colors' : ''}`}
-      style={{ borderColor: `${color}25` }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className={`relative rounded-2xl p-5 border flex flex-col gap-2 transition-all duration-200 ${onClick ? 'cursor-pointer' : ''}`}
+      style={{
+        borderColor: hovered ? `${color}60` : `${color}25`,
+        background: hovered ? `linear-gradient(135deg, ${color}18, #0F172A)` : '#0F172A',
+      }}
     >
       <div className="flex items-center justify-between">
         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">{label}</p>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}18` }}>
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200"
+          style={{ background: hovered ? `${color}30` : `${color}18` }}>
           <Icon className="w-[18px] h-[18px]" style={{ color }} />
         </div>
       </div>
       <p className="text-2xl font-black text-white tabular-nums">{value}</p>
       {sub && <p className="text-[10px] leading-tight" style={{ color: `${color}99` }}>{sub}</p>}
+      {tooltip && hovered && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none">
+          <div className="bg-[#1E293B] border border-white/10 rounded-xl px-3 py-2 text-[10px] text-gray-300 whitespace-nowrap shadow-xl max-w-[220px] text-center leading-snug">
+            {tooltip}
+          </div>
+          <div className="w-2 h-2 bg-[#1E293B] border-r border-b border-white/10 rotate-45 mx-auto -mt-1" />
+        </div>
+      )}
     </motion.div>
   )
 }
@@ -307,6 +322,7 @@ export default function DashboardOverviewPage() {
           color="#3B82F6"
           delay={0}
           onClick={() => navigate('/pipeline')}
+          tooltip="Total de leads recebidos no mês atual. Clique para ver no pipeline."
         />
         <KPICard
           label="Quentes 🔥"
@@ -316,6 +332,7 @@ export default function DashboardOverviewPage() {
           color="#EF4444"
           delay={0.07}
           onClick={() => navigate('/pipeline')}
+          tooltip="Leads classificados como HOT (alta probabilidade de fechamento). Mornos e frios no subtítulo."
         />
         {isGestor && (
           <KPICard
@@ -325,6 +342,7 @@ export default function DashboardOverviewPage() {
             Icon={DollarSign}
             color="#10B981"
             delay={0.14}
+            tooltip="Soma das taxas de franquia negociadas confirmadas no mês. Ticket médio = receita ÷ vendas."
           />
         )}
         {isGestor && (
@@ -335,6 +353,7 @@ export default function DashboardOverviewPage() {
             Icon={metrics.sem_dono > 0 ? UserX : CheckCircle}
             color={metrics.sem_dono > 0 ? '#F59E0B' : '#10B981'}
             delay={0.21}
+            tooltip="Percentual de leads que chegaram ao status Vendido. Leads sem dono precisam de atribuição."
           />
         )}
         {isConsultor && (
@@ -345,6 +364,7 @@ export default function DashboardOverviewPage() {
             Icon={CheckCircle}
             color="#10B981"
             delay={0.14}
+            tooltip="Leads que você converteu para Vendido no mês atual."
           />
         )}
         {isConsultor && (
@@ -356,6 +376,7 @@ export default function DashboardOverviewPage() {
             color="#F59E0B"
             delay={0.21}
             onClick={() => navigate('/pipeline')}
+            tooltip="Leads ainda sem consultor responsável — disponíveis para você assumir."
           />
         )}
       </div>

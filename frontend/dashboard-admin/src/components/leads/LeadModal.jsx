@@ -1,5 +1,4 @@
 // components/leads/LeadModal.jsx
-// Update: ordena status por ordem, suporte a requer_valor (VendaModal) e reaberto → agendado
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../AuthContext'
