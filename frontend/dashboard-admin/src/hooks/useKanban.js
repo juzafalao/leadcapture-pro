@@ -29,32 +29,43 @@ export const COLUNAS_PADRAO = [
   { id: 'reaberto',       label: 'Reaberto',       slug: 'reaberto',       cor: '#06b6d4', ordem: 6, is_final: false, permite_reabertura: false, requer_valor: false },
 ]
 
+const normalizeStatus = s => ({
+  id: s.id,
+  label: s.label,
+  slug: s.slug?.toLowerCase().trim(),
+  cor: s.cor || '#6366F1',
+  ordem: s.ordem ?? 0,
+  is_final: s.is_final ?? false,
+  permite_reabertura: s.permite_reabertura ?? false,
+  requer_valor: s.requer_valor ?? false,
+})
+
 // ── Status Colunas ─────────────────────────────────────────────────────
+// Tenta buscar status do tenant; se não houver, usa os globais (tenant_id = NULL)
 export function useStatusColunas(tenantId) {
   return useQuery({
     queryKey: ['status-colunas', tenantId],
     staleTime: 1000 * 60 * 10,
     gcTime:    1000 * 60 * 30,
     queryFn: async () => {
-      if (!tenantId) return COLUNAS_PADRAO
+      if (tenantId) {
+        const { data } = await supabase
+          .from('status_comercial')
+          .select('id, label, slug, cor, ordem, is_final, permite_reabertura, requer_valor')
+          .eq('tenant_id', tenantId)
+          .order('ordem', { ascending: true })
+        if (data?.length) return data.map(normalizeStatus)
+      }
+
+      // Fallback: status globais
       const { data, error } = await supabase
         .from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, permite_reabertura, requer_valor')
-        .eq('tenant_id', tenantId)
+        .is('tenant_id', null)
         .order('ordem', { ascending: true })
 
       if (error || !data?.length) return COLUNAS_PADRAO
-
-      return data.map(s => ({
-        id: s.id,
-        label: s.label,
-        slug: s.slug?.toLowerCase().trim(),
-        cor: s.cor || '#6366F1',
-        ordem: s.ordem ?? 0,
-        is_final: s.is_final ?? false,
-        permite_reabertura: s.permite_reabertura ?? false,
-        requer_valor: s.requer_valor ?? false,
-      }))
+      return data.map(normalizeStatus)
     },
   })
 }

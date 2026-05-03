@@ -97,8 +97,10 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   useEffect(() => {
     if (!tenantId) { setLoadingOpts(false); return }
     setLoadingOpts(true)
-    Promise.all([
-      supabase.from('status_comercial')
+
+    async function loadStatus() {
+      // Tenta status do tenant; se não houver, usa globais (tenant_id = NULL)
+      const { data: byTenant } = await supabase.from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, requer_valor')
         .eq('tenant_id', tenantId)
         .order('ordem', { ascending: true }),
@@ -110,8 +112,8 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
       supabase.from('motivos_desistencia')
         .select('id, nome')
         .eq('tenant_id', tenantId),
-    ]).then(([{ data: st }, { data: mr }, { data: mv }]) => {
-      setStatusOpts(st || [])
+    ]).then(([st, { data: mr }, { data: mv }]) => {
+      setStatusOpts(st)
       setMarcasOpts(mr || [])
       setMotivosOpts(mv || [])
       setLoadingOpts(false)
