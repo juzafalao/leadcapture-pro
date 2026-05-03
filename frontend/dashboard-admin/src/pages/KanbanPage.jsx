@@ -1,13 +1,16 @@
 // KanbanPage — Funil de Vendas
-import { useState, useRef, memo, useCallback, useMemo } from 'react'
+import { useState, useRef, memo, useCallback, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../components/AuthContext'
 import {
   useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO, SLUGS_FECHADO,
 } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
 import VendaModal from '../components/vendas/VendaModal'
+import AtribuirOperadorModal from '../components/leads/AtribuirOperadorModal'
 import { useRegistrarVenda } from '../hooks/useVendas'
+import { supabase } from '../lib/supabase'
 
 // Verifica se um id de coluna é um UUID válido
 function isColUUID(col) {
@@ -258,17 +261,37 @@ export default function KanbanPage() {
   const { usuario, isPlatformAdmin } = useAuth()
   const tenantId = isPlatformAdmin() ? null : usuario?.tenant_id
 
-  const [filtro,        setFiltro]        = useState('geral')
-  const [dragOver,      setDragOver]      = useState(null)
-  const [dragLeadId,    setDragLeadId]    = useState(null)
-  const [lead,          setLead]          = useState(null)
-  const [vendaPendente, setVendaPendente] = useState(null) // { lead, slugDestino, colId }
+  const [filtro,              setFiltro]              = useState('geral')
+  const [dragOver,            setDragOver]            = useState(null)
+  const [dragLeadId,          setDragLeadId]          = useState(null)
+  const [lead,                setLead]                = useState(null)
+  const [vendaPendente,       setVendaPendente]       = useState(null)   // { lead, slugDestino, colId }
+  const [agendPendente,       setAgendPendente]       = useState(null)   // { lead, colId } — aguardando atribuição
+  const [perdaPendente,       setPerdaPendente]       = useState(null)   // { lead, colId } — aguardando motivo
+  const [motivosOpts,         setMotivosOpts]         = useState([])
+  const [motivoSelecionado,   setMotivoSelecionado]   = useState('')
+  const [bannerVisible,       setBannerVisible]       = useState(() => {
+    try { return localStorage.getItem('lc-fluxo-banner') !== 'hidden' }
+    catch { return true }
+  })
   const dragRef = useRef(null)
 
   const { data: colunas = COLUNAS_PADRAO } = useStatusColunas(tenantId)
   const { data: kanban = {}, isLoading, isError, refetch } = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
   const { mutateAsync: mover }             = useMoverLead()
   const registrarVenda                     = useRegistrarVenda()
+
+  // Carrega motivos de desistência do tenant
+  useEffect(() => {
+    if (!tenantId) return
+    supabase.from('motivos_desistencia').select('id, nome').eq('tenant_id', tenantId).eq('ativo', true).order('nome')
+      .then(({ data }) => setMotivosOpts(data || []))
+  }, [tenantId])
+
+  function hideBanner() {
+    setBannerVisible(false)
+    try { localStorage.setItem('lc-fluxo-banner', 'hidden') } catch {}
+  }
 
   // Contagem de convertidos: usa metadados requer_valor do banco para ser dinâmico
   const slugsConvertidos = useMemo(
@@ -311,14 +334,28 @@ export default function KanbanPage() {
     if (!l) return
     const slugAtual = l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || 'novo'
     if (slugAtual === slug) { dragRef.current = null; setDragLeadId(null); return }
-    const col    = colunas.find(c => c.slug === slug)
-    const colId  = isColUUID(col) ? col.id : null
+    const col   = colunas.find(c => c.slug === slug)
+    const colId = isColUUID(col) ? col.id : null
 
-    // Colunas que exigem valor de venda (requer_valor=true) ou slugs históricos de fechamento
+    // Exige valor de venda
     if (SLUGS_FECHADO.includes(slug) || col?.requer_valor) {
       setVendaPendente({ lead: l, slugDestino: slug, colId })
-      dragRef.current = null
-      setDragLeadId(null)
+      dragRef.current = null; setDragLeadId(null)
+      return
+    }
+
+    // Agendado exige operador atribuído
+    if (slug === 'agendado' && !l.id_operador_responsavel) {
+      setAgendPendente({ lead: l, colId })
+      dragRef.current = null; setDragLeadId(null)
+      return
+    }
+
+    // Perdido exige motivo de desistência
+    if (slug === 'perdido' && !l.id_motivo_desistencia) {
+      setPerdaPendente({ lead: l, colId })
+      setMotivoSelecionado('')
+      dragRef.current = null; setDragLeadId(null)
       return
     }
 
@@ -328,33 +365,20 @@ export default function KanbanPage() {
     finally { dragRef.current = null; setDragLeadId(null) }
   }, [colunas, dragOver, mover, tenantId])
 
-  // Reabrir lead: move para 'reaberto' e logo depois para 'agendado'
+  // Reabrir lead: move para 'reaberto' sem operador — gestor deve atribuir e mover para agendado
   const onReabrirLead = useCallback(async (l) => {
     const colReaberto = colunas.find(c => c.slug === 'reaberto')
-    const colAgendado = colunas.find(c => c.slug === 'agendado')
-
-    // Destino final: se existir 'reaberto', passa por ele; senão vai direto para 'agendado'
-    if (colReaberto) {
-      try {
-        await mover({
-          leadId: l.id,
-          novoStatusSlug: 'reaberto',
-          novoStatusId: isColUUID(colReaberto) ? colReaberto.id : null,
-          tenantId,
-        })
-      } catch (err) { console.error('[Kanban] Erro ao reabrir lead:', err.message) }
-    }
-
-    if (colAgendado) {
-      try {
-        await mover({
-          leadId: l.id,
-          novoStatusSlug: 'agendado',
-          novoStatusId: isColUUID(colAgendado) ? colAgendado.id : null,
-          tenantId,
-        })
-      } catch (err) { console.error('[Kanban] Erro ao mover lead reaberto para agendado:', err.message) }
-    }
+    if (!colReaberto) return
+    try {
+      // Remove operador e move para reaberto
+      await supabase.from('leads').update({ id_operador_responsavel: null, updated_at: new Date().toISOString() }).eq('id', l.id)
+      await mover({
+        leadId: l.id,
+        novoStatusSlug: 'reaberto',
+        novoStatusId: isColUUID(colReaberto) ? colReaberto.id : null,
+        tenantId,
+      })
+    } catch (err) { console.error('[Kanban] Erro ao reabrir lead:', err.message) }
   }, [colunas, mover, tenantId])
 
   if (isLoading) {
@@ -381,6 +405,36 @@ export default function KanbanPage() {
 
   return (
     <div className="flex flex-col h-full bg-[#0B1220]">
+
+      {/* Banner fluxo de vida */}
+      <AnimatePresence>
+        {bannerVisible && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="shrink-0 overflow-hidden"
+          >
+            <div className="flex items-center justify-between gap-3 px-4 lg:px-8 py-2 bg-[#06b6d4]/[0.08] border-b border-[#06b6d4]/20">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[#06b6d4] text-[11px] shrink-0">◆</span>
+                <p className="text-[10px] text-[#06b6d4]/80 truncate">
+                  Conheça as regras do fluxo de vida do lead — etapas, obrigações e SLA
+                </p>
+                <Link
+                  to="/fluxo-vida-lead"
+                  className="shrink-0 text-[10px] font-black text-[#06b6d4] hover:text-white transition-colors underline underline-offset-2"
+                >
+                  Ver fluxograma
+                </Link>
+              </div>
+              <button onClick={hideBanner} className="shrink-0 text-[#06b6d4]/40 hover:text-[#06b6d4] transition-colors text-xs">✕</button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="px-4 lg:px-8 pt-5 pb-4 border-b border-white/[0.05] shrink-0">
         <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
@@ -451,7 +505,7 @@ export default function KanbanPage() {
 
       {lead && <LeadModal lead={lead} onClose={() => setLead(null)} />}
 
-      {/* Modal obrigatório ao mover para convertido/vendido */}
+      {/* Modal: venda obrigatória ao mover para convertido/vendido */}
       {vendaPendente && (
         <VendaModal
           lead={vendaPendente.lead}
@@ -474,6 +528,89 @@ export default function KanbanPage() {
             }
           }}
         />
+      )}
+
+      {/* Modal: atribuição obrigatória ao mover para agendado */}
+      {agendPendente && (
+        <AtribuirOperadorModal
+          lead={agendPendente.lead}
+          onClose={() => setAgendPendente(null)}
+          onSuccess={async () => {
+            const colAgend = colunas.find(c => c.slug === 'agendado')
+            try {
+              await mover({
+                leadId: agendPendente.lead.id,
+                novoStatusSlug: 'agendado',
+                novoStatusId: isColUUID(colAgend) ? colAgend.id : null,
+                tenantId,
+              })
+            } catch (err) { console.error('[Kanban] Erro ao mover para agendado:', err.message) }
+            finally { setAgendPendente(null) }
+          }}
+        />
+      )}
+
+      {/* Modal: motivo obrigatório ao mover para perdido */}
+      {perdaPendente && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setPerdaPendente(null)} />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="relative w-full max-w-sm bg-[#0B1220] border border-white/[0.08] rounded-2xl shadow-2xl p-6"
+          >
+            <h3 className="text-sm font-black text-white mb-1">Motivo da Perda</h3>
+            <p className="text-[10px] text-gray-500 mb-4">Informe o motivo antes de mover para Perdido</p>
+            {motivosOpts.length === 0 ? (
+              <p className="text-[11px] text-yellow-400/80 mb-4 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
+                Nenhum motivo cadastrado. Acesse Configurações para adicionar.
+              </p>
+            ) : (
+              <div className="space-y-1.5 mb-4 max-h-48 overflow-y-auto">
+                {motivosOpts.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setMotivoSelecionado(m.id)}
+                    className={[
+                      'w-full text-left px-3 py-2 rounded-xl text-[11px] font-bold transition-all border',
+                      motivoSelecionado === m.id
+                        ? 'bg-red-500/15 text-red-300 border-red-500/30'
+                        : 'bg-white/[0.03] text-gray-400 border-white/[0.06] hover:bg-white/[0.07]',
+                    ].join(' ')}
+                  >
+                    {m.nome}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setPerdaPendente(null)}
+                className="flex-1 py-2.5 rounded-xl text-[11px] font-bold bg-white/[0.05] text-gray-400 border border-white/[0.08] hover:bg-white/[0.08] transition-all">
+                Cancelar
+              </button>
+              <button
+                disabled={!motivoSelecionado && motivosOpts.length > 0}
+                onClick={async () => {
+                  const colPerdido = colunas.find(c => c.slug === 'perdido')
+                  try {
+                    if (motivoSelecionado) {
+                      await supabase.from('leads').update({ id_motivo_desistencia: motivoSelecionado, updated_at: new Date().toISOString() }).eq('id', perdaPendente.lead.id)
+                    }
+                    await mover({
+                      leadId: perdaPendente.lead.id,
+                      novoStatusSlug: 'perdido',
+                      novoStatusId: isColUUID(colPerdido) ? colPerdido.id : null,
+                      tenantId,
+                    })
+                  } catch (err) { console.error('[Kanban] Erro ao marcar perdido:', err.message) }
+                  finally { setPerdaPendente(null) }
+                }}
+                className="flex-1 py-2.5 rounded-xl text-[11px] font-black bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-all">
+                Confirmar Perda
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   )

@@ -49,6 +49,9 @@ function Field({ label, children }) {
   )
 }
 
+// Slugs de status onde a atribuição de operador é bloqueada (Em Negociação em diante, exceto Reaberto)
+const SLUGS_LOCK_OPERADOR = ['negociacao', 'em_negociacao', 'negociação', 'vendido', 'convertido', 'perdido']
+
 export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = false }) {
   const { usuario }  = useAuth()
   const qc           = useQueryClient()
@@ -58,6 +61,10 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
 
   // tenantId: usa o do lead ou o do usuario logado -- nunca undefined
   const tenantId = lead?.tenant_id || usuario?.tenant_id || null
+
+  // Status atual do lead para determinar se operador está bloqueado
+  const slugAtual = (lead?.status_comercial?.slug || lead?.status || '').toLowerCase().trim()
+  const operadorBloqueado = SLUGS_LOCK_OPERADOR.includes(slugAtual)
 
   const [form, setForm] = useState({
     nome:                    lead?.nome                    || '',
@@ -126,14 +133,24 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   }, [tenantId, podeAtribuir])
 
   async function handleSave() {
-    // Verifica se o status selecionado exige valor de venda
     const statusSelecionado = statusOpts.find(s => s.id === form.id_status)
-    const slugSelecionado = statusSelecionado?.slug?.toLowerCase()
-    const exigeVenda = statusSelecionado?.requer_valor ||
-      SLUGS_FECHADO.includes(slugSelecionado)
+    const slugSelecionado   = statusSelecionado?.slug?.toLowerCase()
 
+    // Agendado exige operador
+    if (slugSelecionado === 'agendado' && !form.id_operador_responsavel) {
+      setError('Para mover para Agendado é obrigatório atribuir um responsável.')
+      return
+    }
+
+    // Perdido exige motivo
+    if (slugSelecionado === 'perdido' && !form.id_motivo_desistencia) {
+      setError('Para marcar como Perdido é obrigatório informar o motivo da perda.')
+      return
+    }
+
+    // Vendido / convertido exige valor de venda
+    const exigeVenda = statusSelecionado?.requer_valor || SLUGS_FECHADO.includes(slugSelecionado)
     if (exigeVenda) {
-      // Abre VendaModal antes de salvar
       setVendaPendente(true)
       return
     }
@@ -171,18 +188,6 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
       // Registra venda se payload fornecido
       if (vendaPayload) {
         await registrarVenda.mutateAsync(vendaPayload)
-      }
-
-      // Se status for 'reaberto', transicionar automaticamente para 'agendado'
-      if (slugSelecionado === 'reaberto') {
-        const statusAgendado = statusOpts.find(s => s.slug?.toLowerCase() === 'agendado')
-        if (statusAgendado) {
-          await supabase.from('leads').update({
-            id_status: statusAgendado.id,
-            status: 'agendado',
-            updated_at: new Date().toISOString(),
-          }).eq('id', lead.id)
-        }
       }
 
       qc.invalidateQueries({ queryKey: ['leads'] })
@@ -353,10 +358,15 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
                     {(() => {
                       const sel = statusOpts.find(s => s.id === form.id_status)
                       if (!sel) return null
-                      if (sel.requer_valor || ['vendido','convertido'].includes(sel.slug?.toLowerCase()))
+                      const slug = sel.slug?.toLowerCase()
+                      if (sel.requer_valor || ['vendido','convertido'].includes(slug))
                         return <p className="text-[9px] text-[#10b981] mt-1">💰 Requer valor de venda ao salvar</p>
-                      if (sel.slug?.toLowerCase() === 'reaberto')
-                        return <p className="text-[9px] text-[#06b6d4] mt-1">↩ Será movido automaticamente para Agendado</p>
+                      if (slug === 'agendado')
+                        return <p className="text-[9px] text-amber-400 mt-1">👤 Obrigatório atribuir responsável</p>
+                      if (slug === 'perdido')
+                        return <p className="text-[9px] text-red-400 mt-1">⚠️ Obrigatório informar motivo da perda</p>
+                      if (slug === 'reaberto')
+                        return <p className="text-[9px] text-[#06b6d4] mt-1">↩ Lead ficará em Reaberto — gestor deve atribuir e mover para Agendado</p>
                       return null
                     })()}
                   </Field>
@@ -374,14 +384,15 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
                   </Field>
                 )}
                 {podeAtribuir && (
-                  <Field label="Consultor responsavel">
+                  <Field label={`Consultor responsavel${operadorBloqueado ? ' 🔒' : ''}`}>
                     <select
+                      disabled={operadorBloqueado}
                       value={form.id_operador_responsavel || ''}
                       onChange={e => setForm(p => ({
                         ...p,
                         id_operador_responsavel: e.target.value || null,
                       }))}
-                      className={INPUT_CLS}>
+                      className={INPUT_CLS + (operadorBloqueado ? ' opacity-50 cursor-not-allowed' : '')}>
                       <option value="">-- Sem responsavel --</option>
                       {operadores.map(op => (
                         <option key={op.id} value={op.id}>
@@ -389,6 +400,9 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
                         </option>
                       ))}
                     </select>
+                    {operadorBloqueado && (
+                      <p className="text-[9px] text-amber-400/70 mt-1">Atribuição bloqueada a partir de Em Negociação</p>
+                    )}
                   </Field>
                 )}
               </div>

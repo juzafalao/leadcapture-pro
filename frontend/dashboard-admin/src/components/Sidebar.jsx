@@ -138,6 +138,16 @@ const Icons = {
       <path d="M17 13l2 2-2 2M14 15h5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  FluxoLead: () => (
+    <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <circle cx="5" cy="5" r="2" />
+      <circle cx="19" cy="5" r="2" />
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="5" cy="19" r="2" />
+      <circle cx="19" cy="19" r="2" />
+      <path d="M7 5h10M14 12h3a2 2 0 012 2v3M10 12H7a2 2 0 00-2 2v3M12 14v3" strokeLinecap="round" />
+    </svg>
+  ),
   Logoff: () => (
     <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -163,8 +173,9 @@ const SECTIONS = [
     label: 'Operação',
     items: [
       { path: '/pipeline', icon: <Icons.Leads />,   label: 'Leads' },
-      { path: '/kanban',   icon: <Icons.Kanban />,  label: 'Funil' },
-      { path: '/agente',   icon: <Icons.Agente />,  label: 'Agente Z',  badge: 'IA' },
+      { path: '/kanban',          icon: <Icons.Kanban />,    label: 'Funil' },
+      { path: '/fluxo-vida-lead', icon: <Icons.FluxoLead />, label: 'Fluxo do Lead', roles: ['Gestor','Diretor','Administrador','admin'] },
+      { path: '/agente',          icon: <Icons.Agente />,    label: 'Agente Z', badge: 'IA' },
       { path: '/importar', icon: <Icons.Importar />, label: 'Importar Leads', roles: ['Gestor','Diretor','Administrador','admin'] },
       { path: '/canais',   icon: <Icons.Canais />,  label: 'Canais', roles: ['Gestor','Diretor','Administrador','admin'] },
     ],
