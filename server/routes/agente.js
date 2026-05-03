@@ -22,7 +22,7 @@ async function autenticar(req, res) {
   if (error || !user) { res.status(401).json({ success: false, error: 'Token inválido' }); return null }
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('id, tenant_id, role, is_super_admin, is_platform')
+    .select('id, tenant_id, role, active')
     .eq('auth_id', user.id)
     .maybeSingle()
   if (!usuario) { res.status(403).json({ success: false, error: 'Usuário não encontrado' }); return null }
@@ -30,7 +30,10 @@ async function autenticar(req, res) {
 }
 
 function isSuperAdmin(usuario) {
-  return !!(usuario.is_super_admin || usuario.is_platform || usuario.tenant_id === ADMIN_TENANT_ID)
+  return !!(
+    usuario.tenant_id === ADMIN_TENANT_ID ||
+    ['admin', 'Administrador', 'Diretor'].includes(usuario.role)
+  )
 }
 
 // ============================================================
