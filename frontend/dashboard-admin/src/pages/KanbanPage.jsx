@@ -154,9 +154,9 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
 })
 
 // ── Coluna ────────────────────────────────────────────────
-const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDragStart, onDragEnd, onDrop, onLeadClick, onReabrirLead }) {
-  const isOver  = dragOver === coluna.slug
-  const capital = leads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
+const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDragStart, onDragEnd, onDrop, onLeadClick, onReabrirLead, receitaVendas }) {
+  const isOver    = dragOver === coluna.slug
+  const isVendido = coluna.slug === 'vendido'
   const isPerdido = coluna.slug === 'perdido'
 
   return (
@@ -186,9 +186,9 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
             {leads.length}
           </span>
         </div>
-        {capital > 0 && (
-          <p className="text-[9px] font-bold text-gray-600 tabular-nums mt-0.5 pl-4">
-            {capital.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+        {isVendido && receitaVendas > 0 && (
+          <p className="text-[9px] font-bold tabular-nums mt-0.5 pl-4" style={{ color: coluna.cor }}>
+            {receitaVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </p>
         )}
       </div>
@@ -280,6 +280,24 @@ export default function KanbanPage() {
   const { data: kanban = {}, isLoading, isError, refetch } = useKanbanLeads({ tenantId, colunas, dataInicio: getDataInicio(filtro) })
   const { mutateAsync: mover }             = useMoverLead()
   const registrarVenda                     = useRegistrarVenda()
+
+  // Receita real de vendas do mês (somente coluna Vendido)
+  const [receitaVendido, setReceitaVendido] = useState(0)
+  useEffect(() => {
+    if (!tenantId) return
+    const now = new Date()
+    const ini = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const fim = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10)
+    supabase.from('vendas')
+      .select('taxa_franquia_negociada')
+      .eq('tenant_id', tenantId)
+      .eq('status', 'confirmada')
+      .gte('data_venda', ini)
+      .lt('data_venda', fim)
+      .then(({ data }) => {
+        setReceitaVendido((data || []).reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0))
+      })
+  }, [tenantId])
 
   // Carrega motivos de desistência do tenant
   useEffect(() => {
@@ -496,6 +514,7 @@ export default function KanbanPage() {
                 onDrop={onDrop}
                 onLeadClick={setLead}
                 onReabrirLead={onReabrirLead}
+                receitaVendas={col.slug === 'vendido' ? receitaVendido : 0}
               />
             </div>
           ))}
