@@ -1,5 +1,4 @@
 // components/leads/LeadModal.jsx
-// Update: ordena status por ordem, suporte a requer_valor (VendaModal) e reaberto → agendado
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../AuthContext'
@@ -99,10 +98,9 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
     if (!tenantId) { setLoadingOpts(false); return }
     setLoadingOpts(true)
     Promise.all([
-      // Status são globais (tenant_id = NULL) — sem filtro de tenant
       supabase.from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, requer_valor')
-        .is('tenant_id', null)
+        .eq('tenant_id', tenantId)
         .order('ordem', { ascending: true }),
       supabase.from('marcas')
         .select('id, nome, emoji')
