@@ -98,12 +98,23 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   useEffect(() => {
     if (!tenantId) { setLoadingOpts(false); return }
     setLoadingOpts(true)
-    Promise.all([
-      // Status são globais (tenant_id = NULL) — sem filtro de tenant
-      supabase.from('status_comercial')
+
+    async function loadStatus() {
+      // Tenta status do tenant; se não houver, usa globais (tenant_id = NULL)
+      const { data: byTenant } = await supabase.from('status_comercial')
+        .select('id, label, slug, cor, ordem, is_final, requer_valor')
+        .eq('tenant_id', tenantId)
+        .order('ordem', { ascending: true })
+      if (byTenant?.length) return byTenant
+      const { data: global } = await supabase.from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, requer_valor')
         .is('tenant_id', null)
-        .order('ordem', { ascending: true }),
+        .order('ordem', { ascending: true })
+      return global || []
+    }
+
+    Promise.all([
+      loadStatus(),
       supabase.from('marcas')
         .select('id, nome, emoji')
         .eq('tenant_id', tenantId)
@@ -112,8 +123,8 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
       supabase.from('motivos_desistencia')
         .select('id, nome')
         .eq('tenant_id', tenantId),
-    ]).then(([{ data: st }, { data: mr }, { data: mv }]) => {
-      setStatusOpts(st || [])
+    ]).then(([st, { data: mr }, { data: mv }]) => {
+      setStatusOpts(st)
       setMarcasOpts(mr || [])
       setMotivosOpts(mv || [])
       setLoadingOpts(false)

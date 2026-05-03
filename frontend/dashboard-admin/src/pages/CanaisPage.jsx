@@ -256,7 +256,7 @@ export default function CanaisPage() {
       setLoading(true)
       let q = supabase
         .from('leads')
-        .select('fonte, status, capital_disponivel')
+        .select('fonte, status, capital_disponivel, status_comercial:id_status(slug)')
         .is('deleted_at', null)
       if (tenantId) q = q.eq('tenant_id', tenantId)
       const { data } = await q
@@ -274,7 +274,8 @@ export default function CanaisPage() {
 
     for (const l of leads) {
       const cid  = matchCanal(l.fonte)
-      const isConv = l.status === 'convertido' || l.status === 'vendido'
+      const slugReal = l.status_comercial?.slug || l.status
+      const isConv = slugReal === 'vendido' || slugReal === 'convertido'
       map[cid].total++
       if (isConv) {
         map[cid].convertidos++
