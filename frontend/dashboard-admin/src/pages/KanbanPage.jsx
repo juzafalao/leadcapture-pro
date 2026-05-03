@@ -344,8 +344,8 @@ export default function KanbanPage() {
       return
     }
 
-    // Agendado exige operador atribuído
-    if (slug === 'agendado' && !l.id_operador_responsavel) {
+    // Em Agendamento exige operador atribuído
+    if (slug === 'em_agendamento' && !l.id_operador_responsavel) {
       setAgendPendente({ lead: l, colId })
       dragRef.current = null; setDragLeadId(null)
       return
@@ -365,12 +365,11 @@ export default function KanbanPage() {
     finally { dragRef.current = null; setDragLeadId(null) }
   }, [colunas, dragOver, mover, tenantId])
 
-  // Reabrir lead: move para 'reaberto' sem operador — gestor deve atribuir e mover para agendado
+  // Reabrir lead: move para 'reaberto' sem operador — gestor deve atribuir e mover para em_agendamento
   const onReabrirLead = useCallback(async (l) => {
     const colReaberto = colunas.find(c => c.slug === 'reaberto')
     if (!colReaberto) return
     try {
-      // Remove operador e move para reaberto
       await supabase.from('leads').update({ id_operador_responsavel: null, updated_at: new Date().toISOString() }).eq('id', l.id)
       await mover({
         leadId: l.id,
@@ -536,15 +535,15 @@ export default function KanbanPage() {
           lead={agendPendente.lead}
           onClose={() => setAgendPendente(null)}
           onSuccess={async () => {
-            const colAgend = colunas.find(c => c.slug === 'agendado')
+            const colAgend = colunas.find(c => c.slug === 'em_agendamento')
             try {
               await mover({
                 leadId: agendPendente.lead.id,
-                novoStatusSlug: 'agendado',
+                novoStatusSlug: 'em_agendamento',
                 novoStatusId: isColUUID(colAgend) ? colAgend.id : null,
                 tenantId,
               })
-            } catch (err) { console.error('[Kanban] Erro ao mover para agendado:', err.message) }
+            } catch (err) { console.error('[Kanban] Erro ao mover para em_agendamento:', err.message) }
             finally { setAgendPendente(null) }
           }}
         />
@@ -591,7 +590,7 @@ export default function KanbanPage() {
               <button
                 disabled={!motivoSelecionado && motivosOpts.length > 0}
                 onClick={async () => {
-                  const colPerdido = colunas.find(c => c.slug === 'perdido')
+                  const colPerdido = colunas.find(c => c.slug === 'perdido') ?? colunas.find(c => c.is_final && c.permite_reabertura)
                   try {
                     if (motivoSelecionado) {
                       await supabase.from('leads').update({ id_motivo_desistencia: motivoSelecionado, updated_at: new Date().toISOString() }).eq('id', perdaPendente.lead.id)
