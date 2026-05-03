@@ -30,20 +30,18 @@ export const COLUNAS_PADRAO = [
 ]
 
 // ── Status Colunas ─────────────────────────────────────────────────────
-export function useStatusColunas(tenantId) {
+// Status são globais (tenant_id = NULL): mesma lista para todos os tenants
+export function useStatusColunas(_tenantId) {
   return useQuery({
-    queryKey: ['status-colunas', tenantId],
-    staleTime: 1000 * 60 * 10,
-    gcTime: 1000 * 60 * 30,
+    queryKey: ['status-colunas-global'],
+    staleTime: 1000 * 60 * 60, // 1h — status globais mudam raramente
+    gcTime:    1000 * 60 * 60 * 4,
     queryFn: async () => {
-      if (!tenantId) return COLUNAS_PADRAO
-
       const { data, error } = await supabase
         .from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, permite_reabertura, requer_valor')
-        .eq('tenant_id', tenantId)
+        .is('tenant_id', null)
         .order('ordem', { ascending: true })
-        .order('label', { ascending: true })
 
       if (error || !data?.length) return COLUNAS_PADRAO
 
