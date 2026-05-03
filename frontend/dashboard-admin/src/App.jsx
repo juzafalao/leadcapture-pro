@@ -31,6 +31,7 @@ const WhatsAppPage          = lazy(() => import('./pages/WhatsAppPage'));
 const AgentePage            = lazy(() => import('./pages/AgentePage'));
 const AnalyticsPage         = lazy(() => import('./pages/AnalyticsPage'));
 const ImportarLeadsPage     = lazy(() => import('./pages/ImportarLeadsPage'));
+const FluxoVidaLeadPage     = lazy(() => import('./pages/FluxoVidaLeadPage'));
 
 const Sidebar  = lazy(() => import('./components/Sidebar'));
 const Header   = lazy(() => import('./components/layout/Header'));
@@ -158,9 +159,10 @@ function AppRoutes() {
         <Route path="/monitoramento" element={W(MonitoramentoPage, ROLES_DIRETOR)} />
 
         {/* OPERAÇÃO — todos */}
-        <Route path="/pipeline"      element={W(DashboardPage)} />
-        <Route path="/kanban"        element={W(KanbanPage)} />
-        <Route path="/canais"        element={W(CanaisPage, ROLES_GESTOR)} />
+        <Route path="/pipeline"           element={W(DashboardPage)} />
+        <Route path="/kanban"             element={W(KanbanPage)} />
+        <Route path="/fluxo-vida-lead"    element={W(FluxoVidaLeadPage, ROLES_GESTOR)} />
+        <Route path="/canais"             element={W(CanaisPage, ROLES_GESTOR)} />
 
         {/* AUTOMAÇÃO — Gestor+ */}
         <Route path="/captura"       element={W(CapturaPage,      ROLES_GESTOR)} />
