@@ -42,15 +42,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_status_global_slug
   WHERE tenant_id IS NULL;
 
 -- ─── 5. Remapear leads.id_status → UUID global ────────────
+-- CTE mapeia old_id → new_id sem referenciar a tabela alvo no JOIN
+WITH mapa AS (
+  SELECT
+    old_sc.id AS old_id,
+    gs.id     AS new_id
+  FROM public.status_comercial old_sc
+  JOIN public.status_comercial gs
+    ON  gs.slug      = old_sc.slug
+    AND gs.tenant_id IS NULL
+  WHERE old_sc.tenant_id IS NOT NULL
+)
 UPDATE public.leads l
 SET
-  id_status  = gs.id,
+  id_status  = mapa.new_id,
   updated_at = now()
-FROM public.status_comercial gs
-JOIN public.status_comercial ts ON ts.id = l.id_status
-WHERE gs.tenant_id IS NULL
-  AND gs.slug      = ts.slug
-  AND ts.tenant_id IS NOT NULL
+FROM mapa
+WHERE l.id_status  = mapa.old_id
   AND l.deleted_at IS NULL;
 
 -- ─── 6. Leads sem id_status mas com campo status (texto) ──
