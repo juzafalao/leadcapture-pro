@@ -99,11 +99,11 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
     if (!tenantId) { setLoadingOpts(false); return }
     setLoadingOpts(true)
     Promise.all([
+      // Status são globais (tenant_id = NULL) — sem filtro de tenant
       supabase.from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, requer_valor')
-        .eq('tenant_id', tenantId)
-        .order('ordem', { ascending: true })
-        .order('label', { ascending: true }),
+        .is('tenant_id', null)
+        .order('ordem', { ascending: true }),
       supabase.from('marcas')
         .select('id, nome, emoji')
         .eq('tenant_id', tenantId)
