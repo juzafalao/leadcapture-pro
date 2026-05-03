@@ -1,7 +1,5 @@
 // components/leads/LeadModal.jsx
-// Fix: removido .order('ordem') que nao existe na tabela status_comercial
-// Fix: query com fallback para tenantId null (admin platform)
-// Update: ordena por ordem, suporte a requer_valor e reaberto → agendado
+// Update: ordena status por ordem, suporte a requer_valor (VendaModal) e reaberto → agendado
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../AuthContext'
@@ -9,6 +7,7 @@ import { supabase } from '../../lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import VendaModal from '../vendas/VendaModal'
 import { useRegistrarVenda } from '../../hooks/useVendas'
+import { SLUGS_FECHADO } from '../../hooks/useKanban'
 
 const fmtCapital = (v) => {
   if (!v) return null
@@ -131,7 +130,7 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
     const statusSelecionado = statusOpts.find(s => s.id === form.id_status)
     const slugSelecionado = statusSelecionado?.slug?.toLowerCase()
     const exigeVenda = statusSelecionado?.requer_valor ||
-      ['vendido', 'convertido'].includes(slugSelecionado)
+      SLUGS_FECHADO.includes(slugSelecionado)
 
     if (exigeVenda) {
       // Abre VendaModal antes de salvar

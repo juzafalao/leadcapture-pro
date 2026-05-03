@@ -3,14 +3,16 @@ import { useState, useRef, memo, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import {
-  useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO,
+  useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO, SLUGS_FECHADO,
 } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
 import VendaModal from '../components/vendas/VendaModal'
 import { useRegistrarVenda } from '../hooks/useVendas'
 
-// Slugs que exigem registro de valor de venda ao mover lead para eles
-const SLUGS_FECHADO = ['convertido', 'vendido']
+// Verifica se um id de coluna é um UUID válido
+function isColUUID(col) {
+  return typeof col?.id === 'string' && col.id.length === 36 && col.id.includes('-')
+}
 
 // ── Helpers ──────────────────────────────────────────────
 function fmtCapital(v) {
@@ -268,10 +270,17 @@ export default function KanbanPage() {
   const { mutateAsync: mover }             = useMoverLead()
   const registrarVenda                     = useRegistrarVenda()
 
-  // Contagem de convertidos inclui ambos os slugs (vendido + convertido)
+  // Contagem de convertidos: usa metadados requer_valor do banco para ser dinâmico
+  const slugsConvertidos = useMemo(
+    () => new Set([...colunas.filter(c => c.requer_valor).map(c => c.slug), ...SLUGS_FECHADO]),
+    [colunas]
+  )
   const allLeads   = useMemo(() => Object.values(kanban).flat(), [kanban])
   const totalLeads = allLeads.length
-  const totalConv  = (kanban['vendido']?.length ?? 0) + (kanban['convertido']?.length ?? 0)
+  const totalConv  = useMemo(
+    () => [...slugsConvertidos].reduce((acc, slug) => acc + (kanban[slug]?.length ?? 0), 0),
+    [kanban, slugsConvertidos]
+  )
   const txConv     = totalLeads > 0 ? Math.round((totalConv / totalLeads) * 100) : 0
   const totalCap   = allLeads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
 
@@ -303,8 +312,7 @@ export default function KanbanPage() {
     const slugAtual = l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || 'novo'
     if (slugAtual === slug) { dragRef.current = null; setDragLeadId(null); return }
     const col    = colunas.find(c => c.slug === slug)
-    const isUUID = typeof col?.id === 'string' && col.id.length === 36 && col.id.includes('-')
-    const colId  = isUUID ? col.id : null
+    const colId  = isColUUID(col) ? col.id : null
 
     // Colunas que exigem valor de venda (requer_valor=true) ou slugs históricos de fechamento
     if (SLUGS_FECHADO.includes(slug) || col?.requer_valor) {
@@ -324,7 +332,6 @@ export default function KanbanPage() {
   const onReabrirLead = useCallback(async (l) => {
     const colReaberto = colunas.find(c => c.slug === 'reaberto')
     const colAgendado = colunas.find(c => c.slug === 'agendado')
-    const isUUID = (col) => typeof col?.id === 'string' && col.id.length === 36 && col.id.includes('-')
 
     // Destino final: se existir 'reaberto', passa por ele; senão vai direto para 'agendado'
     if (colReaberto) {
@@ -332,7 +339,7 @@ export default function KanbanPage() {
         await mover({
           leadId: l.id,
           novoStatusSlug: 'reaberto',
-          novoStatusId: isUUID(colReaberto) ? colReaberto.id : null,
+          novoStatusId: isColUUID(colReaberto) ? colReaberto.id : null,
           tenantId,
         })
       } catch (err) { console.error('[Kanban] Erro ao reabrir lead:', err.message) }
@@ -343,7 +350,7 @@ export default function KanbanPage() {
         await mover({
           leadId: l.id,
           novoStatusSlug: 'agendado',
-          novoStatusId: isUUID(colAgendado) ? colAgendado.id : null,
+          novoStatusId: isColUUID(colAgendado) ? colAgendado.id : null,
           tenantId,
         })
       } catch (err) { console.error('[Kanban] Erro ao mover lead reaberto para agendado:', err.message) }

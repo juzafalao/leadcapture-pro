@@ -9,6 +9,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useEffect, useRef, useCallback } from 'react'
 
+// Slugs canônicos de status finalizado que exigem valor de venda
+// Exportado para uso compartilhado em LeadModal e KanbanPage
+export const SLUGS_FECHADO = ['convertido', 'vendido']
+
 // Fallback usado APENAS quando banco não retorna status_comercial
 export const COLUNAS_PADRAO = [
   { id: 'novo',       label: 'Novo Lead',      slug: 'novo',       cor: '#3b82f6', ordem: 1, is_final: false, permite_reabertura: false, requer_valor: false },
