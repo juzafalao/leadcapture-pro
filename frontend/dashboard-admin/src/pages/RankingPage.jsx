@@ -483,8 +483,9 @@ export default function RankingPage() {
         <div className="flex gap-1 bg-white/[0.04] border border-white/[0.06] rounded-xl p-1">
           {[
             { id: 'ranking',   label: 'Ranking' },
-            { id: 'relatorio', label: 'Relatorio' },
-            { id: 'metricas',  label: 'Metricas' },
+            { id: 'equipe',    label: 'Equipe' },
+            { id: 'relatorio', label: 'Relatório' },
+            { id: 'metricas',  label: 'Métricas' },
             ...(isDiretor ? [{ id: 'config', label: 'Config' }] : []),
           ].map(t => (
             <button key={t.id} onClick={() => setAba(t.id)}
@@ -598,6 +599,80 @@ export default function RankingPage() {
                 ))
               )}
             </div>
+          </div>
+        )}
+
+        {!loading && aba === 'equipe' && (
+          <div className="space-y-5">
+            {/* KPIs da equipe */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Total Leads',    value: totalLeads,                cor: '#fff',      desc: 'Todos os leads atribuídos à equipe no período' },
+                { label: 'Convertidos',    value: consultores.reduce((a,c)=>a+c.convertidos,0), cor: '#10B981', desc: 'Leads que chegaram a Vendido' },
+                { label: 'Taxa Equipe',    value: totalLeads > 0 ? `${Math.round((consultores.reduce((a,c)=>a+c.convertidos,0)/totalLeads)*100)}%` : '0%', cor: '#10B981', desc: 'Taxa de conversão geral da equipe' },
+                { label: 'Meta Equipe',    value: fmtPct(pctEquipe),         cor: pctEquipe >= 80 ? '#10B981' : '#F59E0B', desc: 'Percentual da meta coletiva atingida' },
+              ].map(k => (
+                <div key={k.label} title={k.desc} className="bg-[#0B1220] border border-white/[0.06] rounded-2xl p-4 hover:border-white/10 transition-colors cursor-default">
+                  <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-2">{k.label}</p>
+                  <p className="text-2xl font-black tabular-nums" style={{ color: k.cor }}>{k.value}</p>
+                  <p className="text-[9px] text-gray-600 mt-1 leading-snug">{k.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Bônus da equipe */}
+            {metaConfig.bonus_equipe > 0 && (
+              <div className={`rounded-2xl border px-5 py-4 flex items-center justify-between ${pctEquipe >= 80 ? 'bg-[#10B981]/10 border-[#10B981]/30' : 'bg-white/[0.03] border-white/[0.06]'}`}>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-1">Bônus de Equipe</p>
+                  <p className="text-xl font-black text-[#10B981]">{fmtR$(metaConfig.bonus_equipe)}</p>
+                  <p className="text-[10px] text-gray-500">liberado quando equipe ≥ 80% da meta</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[9px] text-gray-600 mb-1">Atingimento</p>
+                  <p className="text-3xl font-black" style={{ color: pctEquipe >= 80 ? '#10B981' : '#F59E0B' }}>{fmtPct(pctEquipe)}</p>
+                  {pctEquipe >= 80 && <p className="text-[10px] text-[#10B981] font-black">LIBERADO</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Performance comparativa */}
+            <div className="bg-[#0B1220] border border-white/[0.06] rounded-2xl p-5">
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 mb-4">Performance Individual vs Meta</p>
+              <div className="space-y-4">
+                {consultores.map((c, i) => {
+                  const tx = c.total_leads > 0 ? Math.round((c.convertidos / c.total_leads) * 100) : 0
+                  return (
+                    <div key={c.id} className="flex items-center gap-4">
+                      <span className="w-5 text-center text-[10px] font-black text-gray-600 shrink-0">{i+1}</span>
+                      <div className="w-24 shrink-0">
+                        <p className="text-[11px] font-bold text-white truncate">{c.nome?.split(' ')[0]}</p>
+                        <p className="text-[9px] text-gray-600">{c.role}</p>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between text-[9px] text-gray-600 mb-1">
+                          <span>{c.total_leads} leads</span>
+                          <span>{fmtPct(c.pct_meta)} meta</span>
+                        </div>
+                        <BarraMeta pct={c.pct_meta} cor={c.bateu_meta ? '#10B981' : undefined} />
+                      </div>
+                      <div className="text-right shrink-0 w-16">
+                        <p className="text-[11px] font-black text-[#10B981]">{tx}%</p>
+                        <p className="text-[8px] text-gray-600">conv.</p>
+                      </div>
+                      <div className="text-right shrink-0 w-20 hidden sm:block">
+                        <p className="text-[11px] font-black text-[#EE7B4D]">{fmtR$(c.total_ganhos)}</p>
+                        <p className="text-[8px] text-gray-600">ganhos</p>
+                      </div>
+                    </div>
+                  )
+                })}
+                {!consultores.length && <p className="text-[11px] text-gray-600 text-center py-6">Sem dados para o período</p>}
+              </div>
+            </div>
+
+            {/* Alertas */}
+            <AlertaBanner consultores={consultores} pctEquipe={pctEquipe} metaEquipe={metaConfig.meta_leads} />
           </div>
         )}
 

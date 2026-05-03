@@ -2,20 +2,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-function getToken() {
-  for (const k of Object.keys(localStorage)) {
-    if (k.includes('auth-token') || k.includes('supabase.auth.token')) {
-      try {
-        const v = JSON.parse(localStorage.getItem(k))
-        return v?.access_token || v?.currentSession?.access_token || null
-      } catch { return null }
-    }
-  }
-  return null
-}
-
 async function api(method, path, body) {
-  const token = getToken()
+  const { data: { session } } = await supabase.auth.getSession()
+  const token = session?.access_token
   const res = await fetch(`/api/vendas${path}`, {
     method,
     headers: {
