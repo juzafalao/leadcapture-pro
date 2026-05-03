@@ -1,11 +1,13 @@
 // components/leads/LeadModal.jsx
-// Fix: removido .order('ordem') que nao existe na tabela status_comercial
-// Fix: query com fallback para tenantId null (admin platform)
+// Update: ordena status por ordem, suporte a requer_valor (VendaModal) e reaberto → agendado
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../AuthContext'
 import { supabase } from '../../lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
+import VendaModal from '../vendas/VendaModal'
+import { useRegistrarVenda } from '../../hooks/useVendas'
+import { SLUGS_FECHADO } from '../../hooks/useKanban'
 
 const fmtCapital = (v) => {
   if (!v) return null
@@ -82,6 +84,8 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   const [saving,  setSaving]  = useState(false)
   const [error,   setError]   = useState('')
   const [success, setSuccess] = useState(false)
+  const [vendaPendente, setVendaPendente] = useState(false) // exibe VendaModal ao salvar
+  const registrarVenda = useRegistrarVenda()
 
   // Carrega todas as opcoes em paralelo
   useEffect(() => {
@@ -89,9 +93,10 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
     setLoadingOpts(true)
     Promise.all([
       supabase.from('status_comercial')
-        .select('id, label, slug, cor')
+        .select('id, label, slug, cor, ordem, is_final, requer_valor')
         .eq('tenant_id', tenantId)
-        .order('label'),
+        .order('ordem', { ascending: true })
+        .order('label', { ascending: true }),
       supabase.from('marcas')
         .select('id, nome, emoji')
         .eq('tenant_id', tenantId)
@@ -121,8 +126,27 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   }, [tenantId, podeAtribuir])
 
   async function handleSave() {
+    // Verifica se o status selecionado exige valor de venda
+    const statusSelecionado = statusOpts.find(s => s.id === form.id_status)
+    const slugSelecionado = statusSelecionado?.slug?.toLowerCase()
+    const exigeVenda = statusSelecionado?.requer_valor ||
+      SLUGS_FECHADO.includes(slugSelecionado)
+
+    if (exigeVenda) {
+      // Abre VendaModal antes de salvar
+      setVendaPendente(true)
+      return
+    }
+
+    await _salvarLead()
+  }
+
+  async function _salvarLead(vendaPayload) {
     setSaving(true); setError(''); setSuccess(false)
     try {
+      const statusSelecionado = statusOpts.find(s => s.id === form.id_status)
+      const slugSelecionado = statusSelecionado?.slug?.toLowerCase()
+
       const payload = {
         nome:                    form.nome,
         email:                   form.email,
@@ -135,6 +159,7 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
         fonte:                   form.fonte,
         resumo_qualificacao:     form.resumo_qualificacao,
         id_status:               form.id_status               || null,
+        status:                  slugSelecionado               || null,
         id_motivo_desistencia:   form.id_motivo_desistencia   || null,
         id_marca:                form.id_marca                || null,
         id_operador_responsavel: form.id_operador_responsavel || null,
@@ -142,6 +167,24 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
       }
       const { error: e } = await supabase.from('leads').update(payload).eq('id', lead.id)
       if (e) throw e
+
+      // Registra venda se payload fornecido
+      if (vendaPayload) {
+        await registrarVenda.mutateAsync(vendaPayload)
+      }
+
+      // Se status for 'reaberto', transicionar automaticamente para 'agendado'
+      if (slugSelecionado === 'reaberto') {
+        const statusAgendado = statusOpts.find(s => s.slug?.toLowerCase() === 'agendado')
+        if (statusAgendado) {
+          await supabase.from('leads').update({
+            id_status: statusAgendado.id,
+            status: 'agendado',
+            updated_at: new Date().toISOString(),
+          }).eq('id', lead.id)
+        }
+      }
+
       qc.invalidateQueries({ queryKey: ['leads'] })
       qc.invalidateQueries({ queryKey: ['kanban'] })
       qc.invalidateQueries({ queryKey: ['metrics'] })
@@ -158,6 +201,7 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
   const style = CAT_STYLE[cat] || CAT_STYLE.cold
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Overlay */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
@@ -301,9 +345,20 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
                       className={INPUT_CLS}>
                       <option value="">-- Selecione --</option>
                       {statusOpts.map(s => (
-                        <option key={s.id} value={s.id}>{s.label}</option>
+                        <option key={s.id} value={s.id}>
+                          {s.label}{s.is_final ? ' 🔒' : ''}{s.requer_valor ? ' 💰' : ''}
+                        </option>
                       ))}
                     </select>
+                    {(() => {
+                      const sel = statusOpts.find(s => s.id === form.id_status)
+                      if (!sel) return null
+                      if (sel.requer_valor || ['vendido','convertido'].includes(sel.slug?.toLowerCase()))
+                        return <p className="text-[9px] text-[#10b981] mt-1">💰 Requer valor de venda ao salvar</p>
+                      if (sel.slug?.toLowerCase() === 'reaberto')
+                        return <p className="text-[9px] text-[#06b6d4] mt-1">↩ Será movido automaticamente para Agendado</p>
+                      return null
+                    })()}
                   </Field>
                 )}
                 {motivosOpts.length > 0 && (
@@ -380,5 +435,20 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
         </div>
       </motion.div>
     </div>
+
+    {/* VendaModal: exibido quando o status selecionado exige valor de venda */}
+    {vendaPendente && (
+      <VendaModal
+        lead={lead}
+        vendaExistente={null}
+        isSaving={saving || registrarVenda.isPending}
+        onClose={() => setVendaPendente(false)}
+        onSave={async (vendaPayload) => {
+          setVendaPendente(false)
+          await _salvarLead(vendaPayload)
+        }}
+      />
+    )}
+  </>
   )
 }

@@ -3,13 +3,16 @@ import { useState, useRef, memo, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
 import {
-  useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO,
+  useStatusColunas, useKanbanLeads, useMoverLead, COLUNAS_PADRAO, SLUGS_FECHADO,
 } from '../hooks/useKanban'
 import LeadModal from '../components/leads/LeadModal'
 import VendaModal from '../components/vendas/VendaModal'
 import { useRegistrarVenda } from '../hooks/useVendas'
 
-const SLUGS_FECHADO = ['convertido', 'vendido']
+// Verifica se um id de coluna é um UUID válido
+function isColUUID(col) {
+  return typeof col?.id === 'string' && col.id.length === 36 && col.id.includes('-')
+}
 
 // ── Helpers ──────────────────────────────────────────────
 function fmtCapital(v) {
@@ -60,7 +63,7 @@ function getCanal(fonte) {
 }
 
 // ── Card do lead ─────────────────────────────────────────
-const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragEnd, onClick }) {
+const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragEnd, onClick, showReabrirBtn, onReabrir }) {
   const score    = lead.score ?? 0
   const canal    = getCanal(lead.fonte)
   const cap      = fmtCapital(lead.capital_disponivel)
@@ -133,14 +136,25 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
           <span className="text-[9px] text-gray-500 tabular-nums">{dias}</span>
         )}
       </div>
+
+      {/* Botão Reabrir Lead (apenas na coluna Perdido) */}
+      {showReabrirBtn && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onReabrir(lead) }}
+          className="mt-2.5 w-full py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all bg-[#06b6d4]/10 text-[#06b6d4] hover:bg-[#06b6d4]/20 border border-[#06b6d4]/20"
+        >
+          ↩ Reabrir Lead
+        </button>
+      )}
     </div>
   )
 })
 
 // ── Coluna ────────────────────────────────────────────────
-const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDragStart, onDragEnd, onDrop, onLeadClick }) {
+const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDragStart, onDragEnd, onDrop, onLeadClick, onReabrirLead }) {
   const isOver  = dragOver === coluna.slug
   const capital = leads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
+  const isPerdido = coluna.slug === 'perdido'
 
   return (
     <div className="flex flex-col h-full">
@@ -155,6 +169,15 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
           <div className="flex items-center gap-2 min-w-0">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: coluna.cor }} />
             <span className="text-[11px] font-black text-white truncate">{coluna.label}</span>
+            {coluna.is_final && (
+              <span
+                className="text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0"
+                style={{ background: `${coluna.cor}25`, color: coluna.cor }}
+                title="Status finalizado"
+              >
+                final
+              </span>
+            )}
           </div>
           <span className="text-[10px] font-black text-gray-500 bg-white/[0.04] px-2 py-0.5 rounded-full tabular-nums shrink-0 ml-1">
             {leads.length}
@@ -193,6 +216,8 @@ const Coluna = memo(function Coluna({ coluna, leads, dragLeadId, dragOver, onDra
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onClick={onLeadClick}
+                showReabrirBtn={isPerdido}
+                onReabrir={onReabrirLead}
               />
             </motion.div>
           ))}
@@ -245,9 +270,17 @@ export default function KanbanPage() {
   const { mutateAsync: mover }             = useMoverLead()
   const registrarVenda                     = useRegistrarVenda()
 
+  // Contagem de convertidos: usa metadados requer_valor do banco para ser dinâmico
+  const slugsConvertidos = useMemo(
+    () => new Set([...colunas.filter(c => c.requer_valor).map(c => c.slug), ...SLUGS_FECHADO]),
+    [colunas]
+  )
   const allLeads   = useMemo(() => Object.values(kanban).flat(), [kanban])
   const totalLeads = allLeads.length
-  const totalConv  = kanban['convertido']?.length ?? 0
+  const totalConv  = useMemo(
+    () => [...slugsConvertidos].reduce((acc, slug) => acc + (kanban[slug]?.length ?? 0), 0),
+    [kanban, slugsConvertidos]
+  )
   const txConv     = totalLeads > 0 ? Math.round((totalConv / totalLeads) * 100) : 0
   const totalCap   = allLeads.reduce((a, l) => a + parseFloat(l.capital_disponivel || 0), 0)
 
@@ -279,11 +312,10 @@ export default function KanbanPage() {
     const slugAtual = l.status_comercial?.slug?.toLowerCase() || l.status?.toLowerCase() || 'novo'
     if (slugAtual === slug) { dragRef.current = null; setDragLeadId(null); return }
     const col    = colunas.find(c => c.slug === slug)
-    const isUUID = typeof col?.id === 'string' && col.id.length === 36 && col.id.includes('-')
-    const colId  = isUUID ? col.id : null
+    const colId  = isColUUID(col) ? col.id : null
 
-    // Colunas de fechamento exigem valor de venda antes de mover
-    if (SLUGS_FECHADO.includes(slug)) {
+    // Colunas que exigem valor de venda (requer_valor=true) ou slugs históricos de fechamento
+    if (SLUGS_FECHADO.includes(slug) || col?.requer_valor) {
       setVendaPendente({ lead: l, slugDestino: slug, colId })
       dragRef.current = null
       setDragLeadId(null)
@@ -295,6 +327,35 @@ export default function KanbanPage() {
     } catch (err) { console.error('[Kanban]', err.message) }
     finally { dragRef.current = null; setDragLeadId(null) }
   }, [colunas, dragOver, mover, tenantId])
+
+  // Reabrir lead: move para 'reaberto' e logo depois para 'agendado'
+  const onReabrirLead = useCallback(async (l) => {
+    const colReaberto = colunas.find(c => c.slug === 'reaberto')
+    const colAgendado = colunas.find(c => c.slug === 'agendado')
+
+    // Destino final: se existir 'reaberto', passa por ele; senão vai direto para 'agendado'
+    if (colReaberto) {
+      try {
+        await mover({
+          leadId: l.id,
+          novoStatusSlug: 'reaberto',
+          novoStatusId: isColUUID(colReaberto) ? colReaberto.id : null,
+          tenantId,
+        })
+      } catch (err) { console.error('[Kanban] Erro ao reabrir lead:', err.message) }
+    }
+
+    if (colAgendado) {
+      try {
+        await mover({
+          leadId: l.id,
+          novoStatusSlug: 'agendado',
+          novoStatusId: isColUUID(colAgendado) ? colAgendado.id : null,
+          tenantId,
+        })
+      } catch (err) { console.error('[Kanban] Erro ao mover lead reaberto para agendado:', err.message) }
+    }
+  }, [colunas, mover, tenantId])
 
   if (isLoading) {
     return (
@@ -381,6 +442,7 @@ export default function KanbanPage() {
                 onDragEnd={onDragEnd}
                 onDrop={onDrop}
                 onLeadClick={setLead}
+                onReabrirLead={onReabrirLead}
               />
             </div>
           ))}

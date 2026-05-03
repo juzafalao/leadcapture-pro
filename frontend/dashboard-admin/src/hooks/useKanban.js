@@ -9,14 +9,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useEffect, useRef, useCallback } from 'react'
 
+// Slugs canônicos de status finalizado que exigem valor de venda
+// Exportado para uso compartilhado em LeadModal e KanbanPage
+export const SLUGS_FECHADO = ['convertido', 'vendido']
+
 // Fallback usado APENAS quando banco não retorna status_comercial
 export const COLUNAS_PADRAO = [
-  { id: 'novo', label: 'Lead Novo', slug: 'novo', cor: '#ee7b4d' },
-  { id: 'contato', label: 'Em Contato', slug: 'contato', cor: '#F59E0B' },
-  { id: 'agendado', label: 'Agendado', slug: 'agendado', cor: '#3B82F6' },
-  { id: 'negociacao', label: 'Em Negociação', slug: 'negociacao', cor: '#8B5CF6' },
-  { id: 'convertido', label: 'Vendido', slug: 'convertido', cor: '#10B981' },
-  { id: 'perdido', label: 'Perdido', slug: 'perdido', cor: '#EF4444' },
+  { id: 'novo',       label: 'Novo Lead',      slug: 'novo',       cor: '#3b82f6', ordem: 1, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'agendado',   label: 'Agendado',        slug: 'agendado',   cor: '#f59e0b', ordem: 2, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'em_contato', label: 'Em Contato',      slug: 'em_contato', cor: '#8b5cf6', ordem: 3, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'negociacao', label: 'Em Negociação',   slug: 'negociacao', cor: '#ee7b4d', ordem: 4, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'vendido',    label: 'Vendido',         slug: 'vendido',    cor: '#10b981', ordem: 5, is_final: true,  permite_reabertura: false, requer_valor: true  },
+  { id: 'perdido',    label: 'Perdido',         slug: 'perdido',    cor: '#ef4444', ordem: 6, is_final: true,  permite_reabertura: true,  requer_valor: false },
+  { id: 'reaberto',   label: 'Reaberto',        slug: 'reaberto',   cor: '#06b6d4', ordem: 7, is_final: false, permite_reabertura: false, requer_valor: false },
 ]
 
 // ── Status Colunas ─────────────────────────────────────────────────────
@@ -30,8 +35,10 @@ export function useStatusColunas(tenantId) {
 
       const { data, error } = await supabase
         .from('status_comercial')
-        .select('id, label, slug, cor')
+        .select('id, label, slug, cor, ordem, is_final, permite_reabertura, requer_valor')
         .eq('tenant_id', tenantId)
+        .order('ordem', { ascending: true })
+        .order('label', { ascending: true })
 
       if (error || !data?.length) return COLUNAS_PADRAO
 
@@ -40,6 +47,10 @@ export function useStatusColunas(tenantId) {
         label: s.label,
         slug: s.slug?.toLowerCase().trim(),
         cor: s.cor || '#6366F1',
+        ordem: s.ordem ?? 0,
+        is_final: s.is_final ?? false,
+        permite_reabertura: s.permite_reabertura ?? false,
+        requer_valor: s.requer_valor ?? false,
       }))
     },
   })
