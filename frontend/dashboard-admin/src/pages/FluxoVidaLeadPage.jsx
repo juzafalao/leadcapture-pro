@@ -1,51 +1,41 @@
-// FluxoVidaLeadPage — Fluxograma do ciclo de vida do lead
+// FluxoVidaLeadPage — Fluxograma do ciclo de vida do lead (6 etapas canônicas)
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 const ETAPAS = [
   {
     ordem: 1,
-    slug: 'novo',
+    slug: 'novo_lead',
     label: 'Novo Lead',
     cor: '#3b82f6',
     icone: '◉',
     descricao: 'Entrada automática ao capturar o lead',
-    regras: ['Status inicial obrigatório', 'Não requer atribuição', 'Aguarda agendamento'],
+    regras: ['Status inicial obrigatório', 'Sem atribuição necessária', 'Aguarda ser agendado pelo gestor'],
     proibido: [],
   },
   {
     ordem: 2,
-    slug: 'agendado',
-    label: 'Agendado',
+    slug: 'em_agendamento',
+    label: 'Em Agendamento',
     cor: '#f59e0b',
     icone: '📅',
     descricao: 'Lead com atendimento agendado com consultor',
-    regras: ['Obrigatório atribuir responsável', 'Pode ser movido via kanban ou modal', 'Atribuição pode ser alterada'],
+    regras: ['Obrigatório atribuir responsável', 'Pode ser movido via kanban ou modal', 'Atribuição ainda pode ser alterada'],
     proibido: [],
     obrigatorio: 'Operador responsável',
   },
   {
     ordem: 3,
-    slug: 'em_contato',
-    label: 'Em Contato',
-    cor: '#8b5cf6',
-    icone: '📞',
-    descricao: 'Primeiro contato realizado com o lead',
-    regras: ['Atribuição ainda pode ser alterada', 'Qualificar o lead nesta etapa'],
-    proibido: [],
-  },
-  {
-    ordem: 4,
-    slug: 'negociacao',
+    slug: 'em_negociacao',
     label: 'Em Negociação',
     cor: '#ee7b4d',
     icone: '🤝',
-    descricao: 'Proposta em andamento, lead engajado',
-    regras: ['Atribuição BLOQUEADA a partir daqui', 'Acompanhar evolução da negociação'],
+    descricao: 'Proposta em andamento — lead engajado',
+    regras: ['Atribuição BLOQUEADA a partir daqui', 'Acompanhar evolução da negociação', 'Avança para Vendido ou Perdido'],
     proibido: ['Alterar operador responsável'],
   },
   {
-    ordem: 5,
+    ordem: 4,
     slug: 'vendido',
     label: 'Vendido',
     cor: '#10b981',
@@ -57,7 +47,7 @@ const ETAPAS = [
     isFinal: true,
   },
   {
-    ordem: 6,
+    ordem: 5,
     slug: 'perdido',
     label: 'Perdido',
     cor: '#ef4444',
@@ -70,113 +60,24 @@ const ETAPAS = [
     podeReabrir: true,
   },
   {
-    ordem: 7,
+    ordem: 6,
     slug: 'reaberto',
     label: 'Reaberto',
     cor: '#06b6d4',
     icone: '↩',
     descricao: 'Lead reaberto após ser marcado como perdido',
-    regras: ['Sem operador atribuído', 'Gestor deve atribuir novo responsável', 'Gestor deve mover para Agendado'],
+    regras: ['Operador removido ao reabrir', 'Gestor atribui novo responsável', 'Gestor move para Em Agendamento'],
     proibido: [],
     especial: true,
   },
 ]
 
 const SLAS = [
-  { status: 'Novo Lead',     prazo: '< 5 min',  cor: '#ef4444', desc: 'Primeiro contato após entrada' },
-  { status: 'Agendado',      prazo: '< 24h',    cor: '#f59e0b', desc: 'Realizar a ligação/reunião agendada' },
-  { status: 'Em Contato',    prazo: '< 48h',    cor: '#8b5cf6', desc: 'Avançar para proposta ou negociação' },
-  { status: 'Em Negociação', prazo: '< 5 dias', cor: '#ee7b4d', desc: 'Fechar ou qualificar como perdido' },
-  { status: 'Reaberto',      prazo: '< 2h',     cor: '#06b6d4', desc: 'Gestor atribuir e mover para Agendado' },
+  { status: 'Novo Lead',        prazo: '< 5 min',  cor: '#ef4444', desc: 'Primeiro contato após entrada' },
+  { status: 'Em Agendamento',   prazo: '< 24h',    cor: '#f59e0b', desc: 'Realizar a ligação/reunião agendada' },
+  { status: 'Em Negociação',    prazo: '< 5 dias', cor: '#ee7b4d', desc: 'Fechar ou qualificar como perdido' },
+  { status: 'Reaberto',         prazo: '< 2h',     cor: '#06b6d4', desc: 'Gestor atribuir e mover para Em Agendamento' },
 ]
-
-function EtapaCard({ etapa, idx }) {
-  const isLast = idx === ETAPAS.length - 1
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: idx * 0.06, duration: 0.3 }}
-      className="flex flex-col items-center"
-    >
-      {/* Card */}
-      <div
-        className="relative w-full rounded-2xl border p-4 bg-[#0B1220] transition-all hover:shadow-lg"
-        style={{ borderColor: `${etapa.cor}30`, boxShadow: `0 0 0 1px ${etapa.cor}15` }}
-      >
-        {/* Badge final/especial */}
-        {etapa.isFinal && (
-          <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
-            style={{ background: `${etapa.cor}25`, color: etapa.cor, border: `1px solid ${etapa.cor}40` }}>
-            FINAL
-          </span>
-        )}
-        {etapa.especial && (
-          <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full"
-            style={{ background: `${etapa.cor}25`, color: etapa.cor, border: `1px solid ${etapa.cor}40` }}>
-            REABERTO
-          </span>
-        )}
-
-        {/* Ordem + ícone */}
-        <div className="flex items-center gap-2 mb-3">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0"
-            style={{ background: `${etapa.cor}20`, color: etapa.cor }}>
-            {etapa.ordem}
-          </div>
-          <span className="text-lg">{etapa.icone}</span>
-          <div>
-            <p className="text-[11px] font-black text-white leading-tight">{etapa.label}</p>
-            <p className="text-[9px] text-gray-600 leading-tight mt-0.5">{etapa.descricao}</p>
-          </div>
-        </div>
-
-        {/* Obrigatório */}
-        {etapa.obrigatorio && (
-          <div className="mb-2 px-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5"
-            style={{ background: `${etapa.cor}15`, color: etapa.cor, border: `1px solid ${etapa.cor}25` }}>
-            <span>⚠</span> Obrigatório: {etapa.obrigatorio}
-          </div>
-        )}
-
-        {/* Regras */}
-        <ul className="space-y-1 mb-2">
-          {etapa.regras.map((r, i) => (
-            <li key={i} className="flex items-start gap-1.5 text-[9px] text-gray-400">
-              <span className="text-[#10b981] shrink-0 mt-0.5">›</span>{r}
-            </li>
-          ))}
-        </ul>
-
-        {/* Proibido */}
-        {etapa.proibido.length > 0 && (
-          <ul className="space-y-1">
-            {etapa.proibido.map((p, i) => (
-              <li key={i} className="flex items-start gap-1.5 text-[9px] text-red-400/80">
-                <span className="shrink-0 mt-0.5">✕</span>{p}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Pode reabrir */}
-        {etapa.podeReabrir && (
-          <div className="mt-2 pt-2 border-t border-white/[0.04] text-[9px] text-[#06b6d4] flex items-center gap-1">
-            <span>↩</span> Pode ser reaberto — vai para Reaberto
-          </div>
-        )}
-      </div>
-
-      {/* Seta */}
-      {!isLast && (
-        <div className="flex flex-col items-center my-1">
-          <div className="w-px h-3 bg-white/[0.08]" />
-          <div className="text-gray-700 text-xs">▼</div>
-        </div>
-      )}
-    </motion.div>
-  )
-}
 
 export default function FluxoVidaLeadPage() {
   return (
@@ -198,53 +99,63 @@ export default function FluxoVidaLeadPage() {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20">
           <span className="w-2 h-2 rounded-full bg-[#10b981] animate-pulse" />
-          <span className="text-[9px] font-black text-[#10b981] uppercase tracking-wider">7 Etapas</span>
+          <span className="text-[9px] font-black text-[#10b981] uppercase tracking-wider">6 Etapas Canônicas</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
 
-        {/* Fluxograma */}
+        {/* Fluxograma principal */}
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4">Fluxograma Completo</p>
 
-          {/* Fluxo principal (1-6) */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-            {ETAPAS.filter(e => e.ordem <= 6).map((etapa, idx) => (
-              <div key={etapa.slug} className="flex flex-col items-center">
+          {/* Etapas 1–5 em grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+            {ETAPAS.filter(e => e.ordem <= 5).map((etapa) => (
+              <motion.div
+                key={etapa.slug}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: etapa.ordem * 0.07, duration: 0.28 }}
+              >
                 <div
-                  className="w-full rounded-2xl border p-3 bg-[#0B1220] hover:shadow-lg transition-all cursor-default"
+                  className="h-full rounded-2xl border p-3 bg-[#0B1220] hover:shadow-lg transition-all cursor-default flex flex-col"
                   style={{ borderColor: `${etapa.cor}35`, boxShadow: `0 0 0 1px ${etapa.cor}12` }}
                 >
-                  {/* Header do card */}
+                  {/* Header */}
                   <div className="flex items-center gap-1.5 mb-2">
-                    <div className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
-                      style={{ background: `${etapa.cor}20`, color: etapa.cor }}>
+                    <div
+                      className="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-black shrink-0"
+                      style={{ background: `${etapa.cor}20`, color: etapa.cor }}
+                    >
                       {etapa.ordem}
                     </div>
-                    <p className="text-[10px] font-black text-white leading-tight truncate">{etapa.label}</p>
+                    <p className="text-[10px] font-black text-white leading-tight">{etapa.label}</p>
                   </div>
 
-                  {/* Dot + descricao */}
                   <p className="text-[8px] text-gray-600 leading-snug mb-2">{etapa.descricao}</p>
 
-                  {/* Obrigatório badge */}
+                  {/* Obrigatório */}
                   {etapa.obrigatorio && (
-                    <div className="text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded-md mb-1.5 text-center"
-                      style={{ background: `${etapa.cor}20`, color: etapa.cor }}>
+                    <div
+                      className="text-[7.5px] font-black uppercase px-1.5 py-0.5 rounded-md mb-1.5 text-center"
+                      style={{ background: `${etapa.cor}20`, color: etapa.cor }}
+                    >
                       ⚠ {etapa.obrigatorio}
                     </div>
                   )}
 
-                  {/* Status final */}
+                  {/* Final badge */}
                   {etapa.isFinal && (
-                    <div className="text-[7.5px] font-black uppercase text-center px-1.5 py-0.5 rounded-md"
-                      style={{ background: `${etapa.cor}12`, color: `${etapa.cor}90` }}>
+                    <div
+                      className="text-[7.5px] font-black uppercase text-center px-1.5 py-0.5 rounded-md mt-auto"
+                      style={{ background: `${etapa.cor}12`, color: `${etapa.cor}90` }}
+                    >
                       Encerramento
                     </div>
                   )}
 
-                  {/* Bloqueio operador */}
+                  {/* Bloqueios */}
                   {etapa.proibido.length > 0 && (
                     <div className="mt-1.5 text-[7.5px] text-red-400/70 flex items-center gap-1">
                       <span>✕</span>
@@ -252,78 +163,71 @@ export default function FluxoVidaLeadPage() {
                     </div>
                   )}
 
-                  {/* Reabrir */}
+                  {/* Pode reabrir */}
                   {etapa.podeReabrir && (
                     <div className="mt-1.5 text-[7.5px] text-[#06b6d4]/80 flex items-center gap-1">
                       <span>↩</span> Pode reabrir
                     </div>
                   )}
                 </div>
-
-                {/* Seta horizontal (não na última) */}
-                {idx < 5 && (
-                  <div className="hidden lg:flex absolute" style={{ pointerEvents: 'none' }} />
-                )}
-              </div>
+              </motion.div>
             ))}
           </div>
 
-          {/* Seta para reaberto */}
-          <div className="flex items-center gap-3 mb-4">
+          {/* Reaberto — separado */}
+          <div className="flex items-center gap-3 mb-3">
             <div className="flex-1 h-px bg-white/[0.04]" />
-            <div className="flex items-center gap-2 text-[9px] text-[#06b6d4]/60">
-              <span>↩ Perdido pode ser reaberto</span>
-            </div>
+            <span className="text-[9px] text-[#06b6d4]/50">↩ Perdido pode ser reaberto</span>
             <div className="flex-1 h-px bg-white/[0.04]" />
           </div>
 
-          {/* Card Reaberto separado */}
-          <div
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
             className="rounded-2xl border p-4 bg-[#0B1220]"
             style={{ borderColor: '#06b6d435', boxShadow: '0 0 0 1px #06b6d412' }}
           >
             <div className="flex items-start gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black shrink-0"
-                  style={{ background: '#06b6d420', color: '#06b6d4' }}>
-                  7
+                <div
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black shrink-0"
+                  style={{ background: '#06b6d420', color: '#06b6d4' }}
+                >
+                  6
                 </div>
                 <span className="text-lg">↩</span>
                 <div>
                   <p className="text-[11px] font-black text-white">Reaberto</p>
-                  <p className="text-[9px] text-gray-600">Lead reaberto após perda — aguarda nova atribuição</p>
+                  <p className="text-[9px] text-gray-600">Lead reaberto após perda — aguarda nova atribuição pelo gestor</p>
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 ml-auto">
-                {[
-                  'Sem operador (removido ao reabrir)',
-                  'Gestor atribui novo responsável',
-                  'Gestor move para Agendado',
-                ].map((r, i) => (
+                {['Operador removido automaticamente', 'Gestor atribui novo responsável', 'Gestor move para Em Agendamento'].map((r, i) => (
                   <span key={i} className="text-[8px] font-bold px-2 py-0.5 rounded-full bg-[#06b6d4]/10 text-[#06b6d4]/70 border border-[#06b6d4]/15">
                     {r}
                   </span>
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* Regras gerais */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
+            transition={{ delay: 0.55 }}
             className="mt-6 rounded-2xl border border-white/[0.06] p-5 bg-[#080E18]"
           >
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-4">Regras Gerais do Fluxo</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {[
-                { titulo: 'Novo Lead',      cor: '#3b82f6', regra: 'Todo lead entra com status "Novo Lead" obrigatoriamente.' },
-                { titulo: 'Agendado',       cor: '#f59e0b', regra: 'Exige responsável atribuído. Pode ser alterado por arraste no kanban ou via modal.' },
-                { titulo: 'Em Negociação+', cor: '#ee7b4d', regra: 'A partir de "Em Negociação", a atribuição de operador é BLOQUEADA.' },
-                { titulo: 'Vendido',        cor: '#10b981', regra: 'Encerramento positivo. Requer valor da venda informado obrigatoriamente.' },
-                { titulo: 'Perdido',        cor: '#ef4444', regra: 'Encerramento negativo. Requer motivo da perda. Pode ser reaberto.' },
-                { titulo: 'Reaberto',       cor: '#06b6d4', regra: 'Operador removido. Gestor deve atribuir novo responsável e mover para Agendado.' },
+                { titulo: 'Novo Lead',       cor: '#3b82f6', regra: 'Todo lead entra obrigatoriamente com status "Novo Lead". Sem atribuição necessária.' },
+                { titulo: 'Em Agendamento',  cor: '#f59e0b', regra: 'Exige responsável atribuído. Pode mover via arraste no kanban ou via modal do lead.' },
+                { titulo: 'Em Negociação',   cor: '#ee7b4d', regra: 'A partir daqui, a atribuição de operador é BLOQUEADA — não pode ser alterada.' },
+                { titulo: 'Vendido',         cor: '#10b981', regra: 'Encerramento positivo. Requer valor da venda informado obrigatoriamente.' },
+                { titulo: 'Perdido',         cor: '#ef4444', regra: 'Encerramento negativo. Requer motivo da perda. Pode ser reaberto pelo gestor.' },
+                { titulo: 'Reaberto',        cor: '#06b6d4', regra: 'Operador removido. Gestor deve atribuir novo responsável e mover para Em Agendamento.' },
               ].map((item, i) => (
                 <div key={i} className="flex items-start gap-2.5">
                   <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: item.cor }} />
@@ -337,7 +241,7 @@ export default function FluxoVidaLeadPage() {
           </motion.div>
         </div>
 
-        {/* Coluna direita: SLA + Temperatura */}
+        {/* Coluna direita */}
         <div className="space-y-5">
 
           {/* SLA */}
@@ -364,7 +268,7 @@ export default function FluxoVidaLeadPage() {
             </div>
           </motion.div>
 
-          {/* Temperatura × Status */}
+          {/* Temperatura */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -378,8 +282,10 @@ export default function FluxoVidaLeadPage() {
                 { label: 'Warm 🌡', cor: '#f59e0b', bg: '#f59e0b15', score: '60–79',  desc: 'Atendimento no mesmo dia' },
                 { label: 'Cold 🧊', cor: '#64748b', bg: '#64748b15', score: '0–59',   desc: 'Atendimento em até 48h' },
               ].map((t, i) => (
-                <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
-                  style={{ background: t.bg, border: `1px solid ${t.cor}25` }}>
+                <div key={i}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl"
+                  style={{ background: t.bg, border: `1px solid ${t.cor}25` }}
+                >
                   <div>
                     <p className="text-[10px] font-black" style={{ color: t.cor }}>{t.label}</p>
                     <p className="text-[8.5px] text-gray-500 leading-tight mt-0.5">{t.desc}</p>
@@ -392,7 +298,7 @@ export default function FluxoVidaLeadPage() {
             </div>
           </motion.div>
 
-          {/* Resumo de atribuição */}
+          {/* Regras de atribuição */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -402,11 +308,11 @@ export default function FluxoVidaLeadPage() {
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-500/70 mb-3">Regras de Atribuição</p>
             <div className="space-y-1.5">
               {[
-                ['Novo → Agendado',      'Gestor/Diretor atribui o responsável'],
-                ['Agendado → Em Contato','Atribuição pode ser alterada'],
-                ['Em Negociação+',       'Atribuição BLOQUEADA'],
-                ['Perdido → Reaberto',   'Operador é removido automaticamente'],
-                ['Reaberto → Agendado',  'Gestor deve reatribuir manualmente'],
+                ['Novo Lead → Em Agendamento',   'Gestor/Diretor atribui o responsável'],
+                ['Em Agendamento',                'Atribuição pode ser alterada'],
+                ['Em Negociação em diante',       'Atribuição BLOQUEADA'],
+                ['Perdido → Reaberto',            'Operador removido automaticamente'],
+                ['Reaberto → Em Agendamento',     'Gestor deve reatribuir manualmente'],
               ].map(([etapa, regra], i) => (
                 <div key={i} className="flex items-start gap-2">
                   <span className="text-amber-500/50 text-[9px] shrink-0 mt-0.5">→</span>
@@ -419,7 +325,24 @@ export default function FluxoVidaLeadPage() {
             </div>
           </motion.div>
 
-          {/* Link para o Kanban */}
+          {/* Slugs canônicos (referência técnica) */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6 }}
+            className="rounded-2xl border border-white/[0.06] p-4 bg-[#080E18]"
+          >
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-3">Slugs Canônicos (BD)</p>
+            <div className="space-y-1">
+              {ETAPAS.map(e => (
+                <div key={e.slug} className="flex items-center justify-between">
+                  <span className="text-[9px] text-gray-400">{e.label}</span>
+                  <code className="text-[8px] font-mono px-1.5 py-0.5 rounded-md bg-white/[0.04] text-gray-500">{e.slug}</code>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
           <Link
             to="/kanban"
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 text-[#10b981] text-[11px] font-black hover:bg-[#10b981]/15 transition-all"

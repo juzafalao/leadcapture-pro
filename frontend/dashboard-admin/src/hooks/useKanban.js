@@ -11,17 +11,22 @@ import { useEffect, useRef, useCallback } from 'react'
 
 // Slugs canônicos de status finalizado que exigem valor de venda
 // Exportado para uso compartilhado em LeadModal e KanbanPage
-export const SLUGS_FECHADO = ['convertido', 'vendido']
+export const SLUGS_FECHADO = ['vendido']
+
+// Os 6 slugs canônicos do fluxo de vida
+export const SLUGS_CANONICOS = ['novo_lead','em_agendamento','em_negociacao','vendido','perdido','reaberto']
+
+// Slugs em que a atribuição de operador fica bloqueada
+export const SLUGS_LOCK_OPERADOR = ['em_negociacao','vendido','perdido']
 
 // Fallback usado APENAS quando banco não retorna status_comercial
 export const COLUNAS_PADRAO = [
-  { id: 'novo',       label: 'Novo Lead',      slug: 'novo',       cor: '#3b82f6', ordem: 1, is_final: false, permite_reabertura: false, requer_valor: false },
-  { id: 'agendado',   label: 'Agendado',        slug: 'agendado',   cor: '#f59e0b', ordem: 2, is_final: false, permite_reabertura: false, requer_valor: false },
-  { id: 'em_contato', label: 'Em Contato',      slug: 'em_contato', cor: '#8b5cf6', ordem: 3, is_final: false, permite_reabertura: false, requer_valor: false },
-  { id: 'negociacao', label: 'Em Negociação',   slug: 'negociacao', cor: '#ee7b4d', ordem: 4, is_final: false, permite_reabertura: false, requer_valor: false },
-  { id: 'vendido',    label: 'Vendido',         slug: 'vendido',    cor: '#10b981', ordem: 5, is_final: true,  permite_reabertura: false, requer_valor: true  },
-  { id: 'perdido',    label: 'Perdido',         slug: 'perdido',    cor: '#ef4444', ordem: 6, is_final: true,  permite_reabertura: true,  requer_valor: false },
-  { id: 'reaberto',   label: 'Reaberto',        slug: 'reaberto',   cor: '#06b6d4', ordem: 7, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'novo_lead',      label: 'Novo Lead',      slug: 'novo_lead',      cor: '#3b82f6', ordem: 1, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'em_agendamento', label: 'Em Agendamento', slug: 'em_agendamento', cor: '#f59e0b', ordem: 2, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'em_negociacao',  label: 'Em Negociação',  slug: 'em_negociacao',  cor: '#ee7b4d', ordem: 3, is_final: false, permite_reabertura: false, requer_valor: false },
+  { id: 'vendido',        label: 'Vendido',        slug: 'vendido',        cor: '#10b981', ordem: 4, is_final: true,  permite_reabertura: false, requer_valor: true  },
+  { id: 'perdido',        label: 'Perdido',        slug: 'perdido',        cor: '#ef4444', ordem: 5, is_final: true,  permite_reabertura: true,  requer_valor: false },
+  { id: 'reaberto',       label: 'Reaberto',       slug: 'reaberto',       cor: '#06b6d4', ordem: 6, is_final: false, permite_reabertura: false, requer_valor: false },
 ]
 
 // ── Status Colunas ─────────────────────────────────────────────────────
