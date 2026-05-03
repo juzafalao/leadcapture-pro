@@ -103,7 +103,17 @@ export default function LeadModal({ lead, onClose, tenantName, statusReadOnly = 
       const { data: byTenant } = await supabase.from('status_comercial')
         .select('id, label, slug, cor, ordem, is_final, requer_valor')
         .eq('tenant_id', tenantId)
-        .order('ordem', { ascending: true }),
+        .order('ordem', { ascending: true })
+      if (byTenant?.length) return byTenant
+      const { data: global } = await supabase.from('status_comercial')
+        .select('id, label, slug, cor, ordem, is_final, requer_valor')
+        .is('tenant_id', null)
+        .order('ordem', { ascending: true })
+      return global || []
+    }
+
+    Promise.all([
+      loadStatus(),
       supabase.from('marcas')
         .select('id, nome, emoji')
         .eq('tenant_id', tenantId)
