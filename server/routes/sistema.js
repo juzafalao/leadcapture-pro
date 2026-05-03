@@ -39,7 +39,7 @@ async function getUsuario(req) {
   try {
     const { data } = await sb()
       .from('usuarios')
-      .select('id, tenant_id, role, is_super_admin, is_platform')
+      .select('id, tenant_id, role, active')
       .eq('auth_id', jwt.sub)
       .maybeSingle()
     return { token, usuario: data || null }
@@ -182,7 +182,7 @@ router.put('/scoring-config', async (req, res) => {
   const { usuario } = await getUsuario(req)
   if (!usuario) return res.status(401).json({ success: false, error: 'Token inválido ou usuário não encontrado' })
 
-  const podeEditar = ['Gestor', 'Diretor', 'Administrador', 'admin'].includes(usuario.role) || usuario.is_super_admin
+  const podeEditar = ['Gestor', 'Diretor', 'Administrador', 'admin'].includes(usuario.role)
   if (!podeEditar) return res.status(403).json({ success: false, error: 'Sem permissão para editar scoring' })
 
   const { tiers, thresholds, reset } = req.body
@@ -232,10 +232,8 @@ router.get('/notification-logs', async (req, res) => {
 
   const ADMIN_TENANT_ID = process.env.ADMIN_TENANT_ID || 'ac8a8add-3044-4051-a5e6-274b20da5633'
   const isSuperAdmin = !!(
-    usuario.is_super_admin ||
-    usuario.is_platform ||
     usuario.tenant_id === ADMIN_TENANT_ID ||
-    ['admin', 'Administrador'].includes(usuario.role)
+    ['admin', 'Administrador', 'Diretor'].includes(usuario.role)
   )
   if (!isSuperAdmin && !usuario.tenant_id) {
     return res.status(403).json({ success: false, error: 'Usuário sem tenant' })
