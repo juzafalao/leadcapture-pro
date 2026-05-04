@@ -5,7 +5,7 @@ import {
   Flame, Thermometer, Snowflake, Phone, RefreshCw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../components/AuthContext'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 
 
 const TEMP_CONFIG = {
@@ -193,12 +193,10 @@ function ConversaAtivaCard({ conversa }) {
 
 // ── Página principal ─────────────────────────────────────────
 export default function WhatsAppPage() {
-  const { usuario } = useAuth()
+  const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
   const [conversas,  setConversas]  = useState([])
   const [loading,    setLoading]    = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-
-  const tenantId = usuario?.tenant_id || usuario?.tenant?.id
 
   const carregar = useCallback(async () => {
     if (!tenantId) { setLoading(false); return }
@@ -259,11 +257,23 @@ export default function WhatsAppPage() {
             H A N D O F F &nbsp; I N T E L I G E N T E
           </p>
         </div>
-        <button onClick={handleRefresh} disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 border border-white/5">
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Atualizando...' : 'Atualizar'}
-        </button>
+        <div className="flex items-center gap-2">
+          {isAdmin && tenants.length > 0 && (
+            <select
+              value={tenantId}
+              onChange={e => setTenantId(e.target.value)}
+              className="bg-[#25D366]/10 border border-[#25D366]/30 rounded-xl px-3 py-2 text-xs text-[#25D366] font-bold focus:outline-none"
+            >
+              <option value="">-- Tenant --</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
+            </select>
+          )}
+          <button onClick={handleRefresh} disabled={refreshing}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 border border-white/5">
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Atualizando...' : 'Atualizar'}
+          </button>
+        </div>
       </div>
 
       {/* Métricas */}

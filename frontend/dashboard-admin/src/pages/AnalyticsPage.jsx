@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 import { useAlertModal } from '../hooks/useAlertModal'
 import { useAnalytics, useRealtimeLeads } from '../hooks/useAnalytics'
 import {
@@ -251,9 +252,10 @@ const PERIODOS = [
 ]
 
 export default function AnalyticsPage() {
-  const { usuario, isPlatformAdmin } = useAuth()
+  const { usuario } = useAuth()
+  const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
   const { alertModal, showAlert } = useAlertModal()
-  const isDirector = ['Diretor','Administrador','admin'].includes(usuario?.role) || usuario?.is_super_admin
+  const isDirector = ['Diretor','Administrador','admin'].includes(usuario?.role) || usuario?.is_super_admin || isAdmin
   const [periodo, setPeriodo] = useState('30')
   const [activeTab, setActiveTab] = useState('overview')
   const [newLeads, setNewLeads] = useState([])
@@ -267,10 +269,10 @@ export default function AnalyticsPage() {
     return () => clearInterval(t)
   }, [])
 
-  const { data, isLoading } = useAnalytics(isPlatformAdmin() ? null : usuario?.tenant_id, periodo)
+  const { data, isLoading } = useAnalytics(tenantId || null, periodo)
 
   // Realtime
-  useRealtimeLeads(isPlatformAdmin() ? null : usuario?.tenant_id, (novo) => {
+  useRealtimeLeads(tenantId || null, (novo) => {
     setNewLeads(ids => [novo.id, ...ids].slice(0, 5))
     setLiveLeads(list => [novo, ...list].slice(0, 20))
   })
@@ -325,6 +327,17 @@ export default function AnalyticsPage() {
             <span className="text-[10px] font-black text-green-400 uppercase tracking-wider">AO VIVO</span>
             <span className="text-[10px] text-gray-500">{clock.toLocaleTimeString('pt-BR')}</span>
           </div>
+          {/* Tenant selector (admin) */}
+          {isAdmin && tenants.length > 0 && (
+            <select
+              value={tenantId}
+              onChange={e => setTenantId(e.target.value)}
+              className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-2xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none"
+            >
+              <option value="">-- Tenant --</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
+            </select>
+          )}
           {/* Período */}
           <div className="flex bg-[#0F172A] border border-white/5 rounded-2xl p-1 gap-1">
             {PERIODOS.map(p => (

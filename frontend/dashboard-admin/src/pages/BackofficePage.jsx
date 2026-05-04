@@ -207,7 +207,7 @@ export default function BackofficePage() {
       // Tenants via Supabase (plataforma admin tem acesso via RLS)
       const { data: tenantsData } = await supabase
         .from('tenants')
-        .select('id, name, slug, active, created_at, cor_primaria')
+        .select('id, name, slug, active, created_at, cor_primaria, leads(count), usuarios(count)')
         .order('created_at', { ascending: false })
 
       // Contagens globais via endpoint server-side (service_role — bypassa RLS)
