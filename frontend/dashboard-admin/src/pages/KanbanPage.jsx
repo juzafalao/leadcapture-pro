@@ -10,7 +10,7 @@ import {
 import LeadModal from '../components/leads/LeadModal'
 import VendaModal from '../components/vendas/VendaModal'
 import AtribuirOperadorModal from '../components/leads/AtribuirOperadorModal'
-import { useRegistrarVenda } from '../hooks/useVendas'
+import { useRegistrarVenda, useResumoVendas } from '../hooks/useVendas'
 import { supabase } from '../lib/supabase'
 
 // Verifica se um id de coluna é um UUID válido
@@ -291,23 +291,9 @@ export default function KanbanPage() {
   const { mutateAsync: mover }             = useMoverLead()
   const registrarVenda                     = useRegistrarVenda()
 
-  // Receita real de vendas do mês (somente coluna Vendido)
-  const [receitaVendido, setReceitaVendido] = useState(0)
-  useEffect(() => {
-    if (!tenantId) return
-    const now = new Date()
-    const ini = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-    const fim = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10)
-    supabase.from('vendas')
-      .select('taxa_franquia_negociada')
-      .eq('tenant_id', tenantId)
-      .eq('status', 'confirmada')
-      .gte('data_venda', ini)
-      .lt('data_venda', fim)
-      .then(({ data }) => {
-        setReceitaVendido((data || []).reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0))
-      })
-  }, [tenantId])
+  // Receita real de vendas do mês — invalidada automaticamente ao registrar nova venda
+  const { data: resumoVendas } = useResumoVendas()
+  const receitaVendido = resumoVendas?.receita_total || 0
 
   // Carrega motivos de desistência do tenant
   useEffect(() => {

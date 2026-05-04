@@ -62,6 +62,23 @@ export function useAnalytics(tenantId, periodo = '30') {
       const capitalPerdido  = soma(perdidos)
       const capitalPipeline = soma(pipeline)
 
+      // Busca valor real de venda (taxa_franquia_negociada) para leads vendidos
+      let vendasMap = {}
+      if (vendidos.length > 0) {
+        const vendidosIds = vendidos.map(l => l.id)
+        let vendasQuery = supabase
+          .from('vendas')
+          .select('lead_id, taxa_franquia_negociada')
+          .in('lead_id', vendidosIds)
+          .eq('status', 'confirmada')
+        if (tenantId) vendasQuery = vendasQuery.eq('tenant_id', tenantId)
+        const { data: vendasData } = await vendasQuery
+        ;(vendasData || []).forEach(v => {
+          vendasMap[v.lead_id] = parseFloat(v.taxa_franquia_negociada || 0)
+        })
+      }
+      const receitaVendas = Object.values(vendasMap).reduce((a, v) => a + v, 0)
+
       const txConversao   = total > 0 ? ((vendidos.length / total) * 100).toFixed(1) : '0.0'
       const txDesistencia = total > 0 ? ((perdidos.length / total) * 100).toFixed(1) : '0.0'
 
@@ -119,7 +136,7 @@ export function useAnalytics(tenantId, periodo = '30') {
         const slug = getSlug(l)
         if (['vendido','convertido'].includes(slug)) {
           consultMap[id].vendidos++
-          consultMap[id].receita += parseFloat(l.capital_disponivel || 0)
+          consultMap[id].receita += vendasMap[l.id] || 0
         }
         if (slug === 'perdido') consultMap[id].perdidos++
       })
@@ -148,7 +165,7 @@ export function useAnalytics(tenantId, periodo = '30') {
 
       return {
         total, vendidos: vendidos.length, perdidos: perdidos.length, pipeline: pipeline.length,
-        capitalFechado, capitalPerdido, capitalPipeline,
+        capitalFechado, capitalPerdido, capitalPipeline, receitaVendas,
         txConversao, txDesistencia, cicloMedio,
         forecast, previsaoIA, pace90,
         evolucao, porMarca, motivosPerda, ultimosLeads,
