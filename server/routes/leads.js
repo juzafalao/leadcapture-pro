@@ -123,6 +123,18 @@ router.post('/', validateLead, async (req, res) => {
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
 
+    // Notificação realtime no sino para leads quentes (score >= 65)
+    if (lead.score >= 65) {
+      supabase.from('notificacoes').insert({
+        tenant_id: lead.tenant_id,
+        lead_id:   lead.id,
+        tipo:      'hot',
+        titulo:    `🔥 Lead quente: ${lead.nome}`,
+        mensagem:  `Score ${lead.score} | Capital: R$ ${Number(lead.capital_disponivel || 0).toLocaleString('pt-BR')} | ${lead.regiao_interesse || lead.cidade || ''}`.trim().replace(/\|\s*$/, ''),
+        lida:      false,
+      }).catch(err => console.warn('[Leads] notificacao insert:', err.message))
+    }
+
     const [{ data: marcaInfo }, { data: usuariosNotif }] = await Promise.all([
       supabase.from('marcas').select('nome, emoji, logo_url, tenant_id').eq('id', lead.id_marca).single(),
       supabase.from('usuarios')
@@ -555,7 +567,7 @@ router.put('/:id/assign-consultant', async (req, res) => {
 
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, tenant_id, nome')
+      .select('id, tenant_id, nome, fonte')
       .eq('id', id)
       .maybeSingle()
 
@@ -571,6 +583,17 @@ router.put('/:id/assign-consultant', async (req, res) => {
 
     if (!tenantOk) {
       return res.status(403).json({ success: false, error: 'Lead pertence a outro tenant' })
+    }
+
+    // Leads da LIA só podem ter consultor atribuído por Diretores ou Administradores
+    if (lead.fonte === 'captacao-ia') {
+      const isDiretorOuAdmin = ['Diretor', 'Administrador', 'admin'].includes(usuarioLogado.role)
+        || usuarioLogado.is_super_admin
+        || usuarioLogado.is_platform
+        || usuarioLogado.tenant_id === ADMIN_TENANT_ID
+      if (!isDiretorOuAdmin) {
+        return res.status(403).json({ success: false, error: 'Atribuição de leads da LIA é exclusiva para Diretores' })
+      }
     }
 
     const { data: consultor } = await supabase
