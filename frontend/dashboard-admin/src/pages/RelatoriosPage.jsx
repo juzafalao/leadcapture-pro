@@ -374,10 +374,11 @@ function RelatorioReceita({ tenantId, dias = 30 }) {
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
-    if (!tenantId) return
+    if (tenantId === undefined) return
+    if (!tenantId) { setLoading(false); return }
     const desde = new Date(Date.now() - Number(dias) * 24 * 60 * 60 * 1000).toISOString().slice(0,10)
     setLoading(true)
-    supabase
+    let q = supabase
       .from('vendas')
       .select(`
         taxa_franquia_negociada, taxa_franquia_tabela, data_venda, status,
@@ -385,11 +386,11 @@ function RelatorioReceita({ tenantId, dias = 30 }) {
         marca:marca_id(id, nome, emoji),
         consultor:consultor_id(id, nome)
       `)
-      .eq('tenant_id', tenantId)
       .eq('status', 'confirmada')
       .gte('data_venda', desde)
       .order('data_venda', { ascending: false })
-      .then(({ data }) => { setVendas(data || []); setLoading(false) })
+    if (tenantId) q = q.eq('tenant_id', tenantId)
+    q.then(({ data }) => { setVendas(data || []); setLoading(false) })
   }, [tenantId, dias])
 
   if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" /></div>
