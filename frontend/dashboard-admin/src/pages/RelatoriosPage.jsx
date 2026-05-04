@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 import { useRelatorios, useFiltrosRelatorio } from '../hooks/useRelatorios'
 import { useAlertModal } from '../hooks/useAlertModal'
 import {
@@ -272,7 +273,7 @@ function LeadsGrid({ leads = [], titulo = 'Leads do Período' }) {
 function exportPDF() { window.print() }
 
 // ── HEADER COMPARTILHADO ──
-function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isLoading, d, onVoltar, onExportCSV, onExportCompleto }) {
+function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isLoading, d, onVoltar, onExportCSV, onExportCompleto, tenantSelector }) {
   return (
     <>
       {/* TÍTULO */}
@@ -326,6 +327,8 @@ function PageHeader({ tipoAtivo, tipoInfo, filtros, setFiltros, filtrosData, isL
       <div className="px-4 lg:px-10 mb-8 print:hidden">
         <div className="bg-[#0F172A] border border-white/5 rounded-2xl p-4 flex flex-wrap gap-3 items-center">
           <span className="text-[9px] font-black uppercase tracking-wider text-gray-600">Filtros:</span>
+
+          {tenantSelector}
 
           <select value={filtros.periodo} onChange={e => setFiltros(f=>({...f, periodo:e.target.value}))}
             className="bg-[#0B1220] border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#10B981]/50 cursor-pointer">
@@ -515,13 +518,14 @@ function RelatorioReceita({ tenantId, dias = 30 }) {
 const ROLES_DIRETOR = ['Diretor', 'Administrador', 'admin']
 
 export default function RelatoriosPage() {
-  const { usuario, isPlatformAdmin } = useAuth()
+  const { usuario } = useAuth()
+  const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
   const { alertModal, showAlert } = useAlertModal()
   const [tipoAtivo, setTipoAtivo] = useState(null)
   const [filtros, setFiltros]     = useState({ periodo:'30', marca:'todas', operador:'todos' })
 
-  const { data: filtrosData }      = useFiltrosRelatorio(isPlatformAdmin() ? null : usuario?.tenant_id)
-  const { data, isLoading }        = useRelatorios(isPlatformAdmin() ? null : usuario?.tenant_id, filtros)
+  const { data: filtrosData }      = useFiltrosRelatorio(tenantId || null)
+  const { data, isLoading }        = useRelatorios(tenantId || null, filtros)
   const d = data || {}
   const tipoInfo = TIPOS.find(t => t.id === tipoAtivo)
 
@@ -558,7 +562,7 @@ export default function RelatoriosPage() {
       // ── RECEITA ────────────────────────────
       case 'receita': return (
         <RelatorioReceita
-          tenantId={isPlatformAdmin() ? null : usuario?.tenant_id}
+          tenantId={tenantId || null}
           dias={Number(filtros.periodo || 30)}
         />
       )
@@ -1030,6 +1034,16 @@ export default function RelatoriosPage() {
         onVoltar={handleVoltar}
         onExportCSV={handleExportCSV}
         onExportCompleto={handleExportCompleto}
+        tenantSelector={isAdmin && tenants.length > 0 ? (
+          <select
+            value={tenantId}
+            onChange={e => setTenantId(e.target.value)}
+            className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none"
+          >
+            <option value="">-- Tenant --</option>
+            {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
+          </select>
+        ) : null}
       />
 
       <AnimatePresence mode="wait">
@@ -1043,8 +1057,8 @@ export default function RelatoriosPage() {
               <h2 className="text-lg font-bold text-white mb-1">Selecione o Relatório</h2>
               <p className="text-xs text-gray-600">Escolha o tipo de análise que deseja visualizar</p>
             </div>
-            {(ROLES_DIRETOR.includes(usuario?.role) || isPlatformAdmin()) && (
-              <CommissionRulesPanel tenantId={isPlatformAdmin() ? null : usuario?.tenant_id} />
+            {(ROLES_DIRETOR.includes(usuario?.role) || isAdmin) && (
+              <CommissionRulesPanel tenantId={tenantId || null} />
             )}
             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-6">
               {TIPOS.map((tipo, i) => (

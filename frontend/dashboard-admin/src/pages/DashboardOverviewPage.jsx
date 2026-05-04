@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 import { supabase } from '../lib/supabase'
 import { COLUNAS_PADRAO } from '../hooks/useKanban'
 import { useNavigate } from 'react-router-dom'
@@ -122,11 +123,10 @@ function CustomTooltip({ active, payload, label }) {
 // PÁGINA PRINCIPAL
 // ═══════════════════════════════════════════════════════════
 export default function DashboardOverviewPage() {
-  const { usuario, isPlatformAdmin } = useAuth()
+  const { usuario } = useAuth()
+  const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
   const navigate    = useNavigate()
-  const tenantId    = isPlatformAdmin() ? null : usuario?.tenant_id
   const role        = usuario?.role
-  const isAdmin     = isPlatformAdmin() || usuario?.is_super_admin
   const isDiretor   = role === 'Diretor' || isAdmin
   const isGestor    = role === 'Gestor'  || isDiretor
   const isConsultor   = !isGestor
@@ -305,10 +305,22 @@ export default function DashboardOverviewPage() {
             {isConsultor ? 'Seus leads e pipeline pessoal' : 'Visão geral em tempo real de todas as operações'}
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20 self-start sm:self-auto">
-          <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
-          <span className="text-xs font-semibold text-[#10B981]">Ao vivo</span>
-          <span className="text-[10px] text-gray-500">{metrics.total} leads no mês</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          {isAdmin && tenants.length > 0 && (
+            <select
+              value={tenantId}
+              onChange={e => setTenantId(e.target.value)}
+              className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-1.5 text-xs text-[#10B981] font-bold focus:outline-none"
+            >
+              <option value="">-- Selecione o tenant --</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
+            </select>
+          )}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20">
+            <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+            <span className="text-xs font-semibold text-[#10B981]">Ao vivo</span>
+            <span className="text-[10px] text-gray-500">{metrics.total} leads no mês</span>
+          </div>
         </div>
       </div>
 
