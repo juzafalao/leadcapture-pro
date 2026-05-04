@@ -9,6 +9,7 @@
 
 import supabase from '../core/database.js'
 import { enviarMensagem, normalizarTelefone } from '../comunicacao/whatsapp.js'
+import { enviarEmail } from '../comunicacao/email.js'
 import { processarCapitalFromConfig } from '../core/scoring.js'
 import { getScoringConfig } from '../core/scoringConfig.js'
 
@@ -439,6 +440,19 @@ async function _executarHandoff(conversaId, leadId, tenantId, dados, historico, 
     .update({ status: 'handoff', resumo: resumoRich, atualizado_em: new Date().toISOString() })
     .eq('id', conversaId)
 
+  // Notificação realtime no sino para o handoff da LIA
+  const nomeLeadNotif = dados?.nome || 'Lead'
+  const tempNotif = dados?.temperatura || resumoRich?.temperatura || 'MORNO'
+  const emojiTemp = { QUENTE: '🔥', MORNO: '🌡️', FRIO: '❄️' }[tempNotif] || '📋'
+  await supabase.from('notificacoes').insert({
+    tenant_id: tenantId,
+    lead_id:   leadId,
+    tipo:      tempNotif === 'QUENTE' ? 'hot' : 'info',
+    titulo:    `${emojiTemp} Handoff LIA: ${nomeLeadNotif}`,
+    mensagem:  resumoRich?.proximo_passo || `Lead ${tempNotif.toLowerCase()} qualificado pela LIA. Capital: ${resumoRich?.capital || 'não informado'}`,
+    lida:      false,
+  }).catch(err => console.warn('[Agente] notificacao handoff:', err.message))
+
   const dadosCompletos = { ...dados, resumoRich }
   await _notificarGestores(tenantId, dadosCompletos, config)
     .catch(err => console.warn('[Agente] Falha ao notificar gestores:', err.message))
@@ -490,13 +504,16 @@ async function _notificarGestores(tenantId, dados, config) {
 
   const { data: gestores } = await supabase
     .from('usuarios')
-    .select('telefone, nome')
+    .select('email, nome')
     .eq('tenant_id', tenantId)
     .in('role', ['Administrador', 'Diretor', 'Gestor'])
     .eq('active', true)
     .limit(5)
 
   if (!gestores?.length) return
+
+  const emails = gestores.map(g => g.email).filter(e => e && e.includes('@') && !e.endsWith('.local'))
+  if (!emails.length) return
 
   const capitalFmt = (resumoRich?.capital_estimado || capital_disponivel)
     ? `R$ ${Number(resumoRich?.capital_estimado || capital_disponivel).toLocaleString('pt-BR')}`
@@ -510,27 +527,46 @@ async function _notificarGestores(tenantId, dados, config) {
 
   const tempEmoji = { QUENTE: '🔥', MORNO: '🌡', FRIO: '❄️' }[resumoRich?.temperatura] || '📋'
   const temp      = resumoRich?.temperatura || '—'
+  const nomeDisplay = resumoRich?.nome || nome || 'não informado'
 
-  let msg =
-    `${tempEmoji} *${nomeAgente} — Lead ${temp}*\n\n` +
-    `*Nome:* ${resumoRich?.nome || nome || 'não informado'}\n` +
-    `*Capital:* ${capitalFmt}\n` +
-    `*Localização:* ${[cidade, estado].filter(Boolean).join('/') || 'não informado'}\n` +
-    `*Prazo:* ${prazoFmt}\n` +
-    `*Decisores:* ${resumoRich?.decisores || 'não informado'}\n` +
-    `*Tom emocional:* ${resumoRich?.tom_emocional || 'não informado'}\n\n`
+  const dashUrl = process.env.DASHBOARD_URL || 'https://leadcapture-proprod.vercel.app'
 
-  if (resumoRich?.motivacao)   msg += `💡 *Motivação:* ${resumoRich.motivacao}\n`
-  if (resumoRich?.objecoes)    msg += `⚠️ *Objeções:* ${resumoRich.objecoes}\n`
-  if (resumoRich?.proximo_passo) msg += `\n✅ *Próximo passo:* ${resumoRich.proximo_passo}\n`
-  if (!resumoRich && resumo_consultor) msg += `📋 *Resumo:* ${resumo_consultor}\n`
+  const assunto = `[LIA Handoff] ${temp} — ${nomeDisplay}`
 
-  msg += `\n_Acesse o dashboard LeadCapture Pro para ver o lead completo._`
+  const corpo = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:24px;background:#0a0a0a;font-family:Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#18181b;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);">
+  <div style="background:linear-gradient(135deg,#10B981,#059669);padding:28px 32px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">${tempEmoji}</div>
+    <h1 style="color:#fff;margin:0;font-size:20px;font-weight:900;">${nomeAgente} — Handoff ${temp}</h1>
+    <p style="color:rgba(255,255,255,0.75);margin:4px 0 0;font-size:13px;">Lead qualificado — pronto para negociação</p>
+  </div>
+  <div style="padding:28px 32px;">
+    <table style="width:100%;border-collapse:collapse;">
+      ${[
+        ['Nome',          nomeDisplay],
+        ['Capital',       capitalFmt],
+        ['Localização',   [cidade, estado].filter(Boolean).join('/') || 'não informado'],
+        ['Prazo',         prazoFmt],
+        ['Decisores',     resumoRich?.decisores || 'não informado'],
+        ['Tom emocional', resumoRich?.tom_emocional || 'não informado'],
+        ...(resumoRich?.motivacao   ? [['Motivação',    resumoRich.motivacao]]   : []),
+        ...(resumoRich?.objecoes    ? [['Objeções',     resumoRich.objecoes]]    : []),
+        ...(resumoRich?.proximo_passo ? [['Próximo passo', resumoRich.proximo_passo]] : []),
+        ...(!resumoRich && resumo_consultor ? [['Resumo', resumo_consultor]] : []),
+      ].map(([label, value]) => `
+        <tr>
+          <td style="padding:8px 12px;font-size:10px;font-weight:700;text-transform:uppercase;color:#10B981;white-space:nowrap;vertical-align:top;">${label}</td>
+          <td style="padding:8px 12px;font-size:14px;color:#f4f4f5;">${value}</td>
+        </tr>
+      `).join('')}
+    </table>
+  </div>
+  <div style="padding:20px 32px;text-align:center;border-top:1px solid rgba(255,255,255,0.06);">
+    <a href="${dashUrl}" style="background:#10B981;color:#fff;font-weight:700;font-size:13px;padding:10px 22px;border-radius:8px;text-decoration:none;display:inline-block;">Abrir Dashboard</a>
+  </div>
+</div></body></html>`
 
-  for (const g of gestores) {
-    if (!g.telefone) continue
-    await enviarMensagem(g.telefone, msg)
-      .catch(err => console.warn(`[Agente] Falha ao notificar ${g.nome}:`, err.message))
-    await new Promise(r => setTimeout(r, 1500))
-  }
+  await enviarEmail(emails, assunto, corpo)
+    .catch(err => console.warn('[Agente] Falha ao enviar email handoff gestores:', err.message))
 }

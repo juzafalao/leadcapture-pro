@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../components/AuthContext'
 import { supabase } from '../lib/supabase'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 import * as XLSX from 'xlsx'
 
 const API_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
@@ -160,11 +161,9 @@ async function downloadTemplate(marcas = [], tenantId = '') {
 }
 
 export default function ImportarLeadsPage() {
-  const { usuario, isPlatformAdmin } = useAuth()
-  const isAdmin = isPlatformAdmin?.()
+  const { usuario } = useAuth()
+  const { tenantId } = useTenantSelector()
 
-  const [tenantId,   setTenantId]   = useState(isAdmin ? null : (usuario?.tenant_id ?? null))
-  const [tenants,    setTenants]    = useState([])
   const [marcas,     setMarcas]     = useState([])
   const [marcaId,    setMarcaId]    = useState('')
   const [arquivo,    setArquivo]    = useState(null)
@@ -178,14 +177,6 @@ export default function ImportarLeadsPage() {
   const [dragOver,   setDragOver]   = useState(false)
   const [dlLoading,  setDlLoading]  = useState(false)
   const fileRef = useRef(null)
-
-  // Carrega tenants (admin)
-  useEffect(() => {
-    if (!isAdmin) return
-    supabase.from('tenants').select('id, name').order('name').then(({ data }) => {
-      if (data?.length) { setTenants(data); if (!tenantId) setTenantId(data[0].id) }
-    })
-  }, [isAdmin])
 
   // Carrega marcas do tenant selecionado
   useEffect(() => {
@@ -378,21 +369,6 @@ export default function ImportarLeadsPage() {
       </div>
 
       <div className="max-w-2xl mx-auto space-y-4">
-
-        {/* Tenant selector (admin) */}
-        {isAdmin && tenants.length > 0 && (
-          <div className="bg-[#0A0F1E] border border-white/[0.08] rounded-2xl p-5">
-            <label className="block text-[10px] font-black uppercase tracking-wider text-gray-500 mb-2">Tenant *</label>
-            <select
-              value={tenantId ?? ''}
-              onChange={e => { setTenantId(e.target.value); reset() }}
-              className="w-full bg-[#0F172A] border border-white/[0.08] text-white text-[13px] rounded-xl px-4 py-2.5 focus:outline-none focus:border-[#10B981]/40"
-            >
-              <option value="">Selecione o tenant...</option>
-              {tenants.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-          </div>
-        )}
 
         {/* Marca selector */}
         <div className="bg-[#0A0F1E] border border-white/[0.08] rounded-2xl p-5">
