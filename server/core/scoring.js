@@ -32,7 +32,7 @@ const SCORING_TABLE = [
 
 const CATEGORIA_THRESHOLDS = {
   HOT: 80,
-  WARM: 60,
+  WARM: 55,
 }
 
 export function calcularScore(capital = 0) {
@@ -49,8 +49,7 @@ export function determinarCategoria(score) {
 }
 
 export function processarCapital(capitalRaw) {
-  const capitalStr = String(capitalRaw ?? '0').replace(/\D/g, '')
-  const capital = parseInt(capitalStr, 10) || 0
+  const capital = resolverCapital(capitalRaw) ?? 0
   const score = calcularScore(capital)
   const categoria = determinarCategoria(score)
   return { capital, score, categoria }
@@ -75,15 +74,14 @@ export function calcularScoreFromConfig(capital = 0, tiers = SCORING_TABLE) {
 
 export function determinarCategoriaFromConfig(score, thresholds = CATEGORIA_THRESHOLDS) {
   if (score >= (thresholds.HOT ?? 80)) return 'hot'
-  if (score >= (thresholds.WARM ?? 60)) return 'warm'
+  if (score >= (thresholds.WARM ?? 55)) return 'warm'
   return 'cold'
 }
 
 export function processarCapitalFromConfig(capitalRaw, config = DEFAULT_SCORING_CONFIG) {
   const tiers = config?.tiers?.length ? config.tiers : SCORING_TABLE
   const thresholds = config?.thresholds || CATEGORIA_THRESHOLDS
-  const capitalStr = String(capitalRaw ?? '0').replace(/\D/g, '')
-  const capital = parseInt(capitalStr, 10) || 0
+  const capital = resolverCapital(capitalRaw) ?? 0
   const score = calcularScoreFromConfig(capital, tiers)
   const categoria = determinarCategoriaFromConfig(score, thresholds)
   return { capital, score, categoria }

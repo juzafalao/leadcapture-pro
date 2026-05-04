@@ -220,7 +220,7 @@ export async function iniciarAgenteParaLead(lead, marcaInfo) {
 }
 
 // ── Main Entry Point ───────────────────────────────────────
-export async function processarMensagemAgente(telefone, mensagem, tenantId, nomeContato = null) {
+export async function processarMensagemAgente(telefone, mensagem, tenantId, nomeContato = null, existingLeadId = null) {
   if (!ANTHROPIC_API_KEY) {
     console.warn('[Agente] ANTHROPIC_API_KEY não configurada — agente desabilitado')
     return { handled: false }
@@ -265,25 +265,29 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
     let leadId     = conversa?.lead_id
 
     if (!conversa) {
-      // Cria lead preliminar
-      const { data: novoLead, error: leadErr } = await supabase.from('leads').insert({
-        tenant_id:          tenantId,
-        nome:               nomeContato || `Lead WhatsApp ${telefone.slice(-4)}`,
-        telefone:           normalizarTelefone(telefone),
-        email:              `tel.${telefone.replace(/\D/g, '')}@noemail.leadcapture.local`,
-        fonte:              'captacao-ia',
-        status:             'novo',
-        capital_disponivel: 0,
-        score:              0,
-        categoria:          'cold',
-        created_at:         new Date().toISOString(),
-        updated_at:         new Date().toISOString(),
-      }).select('id').single()
-
-      if (leadErr) {
-        console.error('[Agente] Erro ao criar lead:', leadErr.message)
+      // Reutiliza lead existente (passado pelo webhook) ou cria um preliminar
+      if (existingLeadId) {
+        leadId = existingLeadId
       } else {
-        leadId = novoLead.id
+        const { data: novoLead, error: leadErr } = await supabase.from('leads').insert({
+          tenant_id:          tenantId,
+          nome:               nomeContato || `Lead WhatsApp ${telefone.slice(-4)}`,
+          telefone:           normalizarTelefone(telefone),
+          email:              `tel.${telefone.replace(/\D/g, '')}@noemail.leadcapture.local`,
+          fonte:              'captacao-ia',
+          status:             'novo',
+          capital_disponivel: 0,
+          score:              0,
+          categoria:          'cold',
+          created_at:         new Date().toISOString(),
+          updated_at:         new Date().toISOString(),
+        }).select('id').single()
+
+        if (leadErr) {
+          console.error('[Agente] Erro ao criar lead:', leadErr.message)
+        } else {
+          leadId = novoLead.id
+        }
       }
 
       const { data: novaConversa, error: convErr } = await supabase.from('agente_conversas').insert({
