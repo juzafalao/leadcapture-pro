@@ -135,25 +135,24 @@ router.post('/', async (req, res) => {
 
     const { data, error } = await supabase
       .from('vendas')
-      .insert({
+      .upsert({
         tenant_id: usuario.tenant_id,
         lead_id,
-        marca_id:               marca_id     || null,
-        consultor_id:           consultor_id || null,
-        taxa_franquia_tabela:   taxa_franquia_tabela   || null,
+        marca_id:                marca_id               || null,
+        consultor_id:            consultor_id           || null,
+        taxa_franquia_tabela:    taxa_franquia_tabela   || null,
         taxa_franquia_negociada: Number(taxa_franquia_negociada),
-        data_venda:             data_venda   || new Date().toISOString().slice(0,10),
-        status:                 'confirmada',
-        observacoes:            observacoes  || null,
-      })
+        data_venda:              data_venda             || new Date().toISOString().slice(0,10),
+        status:                  'confirmada',
+        observacoes:             observacoes            || null,
+      }, { onConflict: 'lead_id' })
       .select()
       .single()
 
     if (error) throw error
     res.json({ success: true, venda: data })
   } catch (err) {
-    const status = err.message.includes('unique') ? 409 : 500
-    res.status(status).json({ success: false, error: err.message })
+    res.status(500).json({ success: false, error: err.message })
   }
 })
 

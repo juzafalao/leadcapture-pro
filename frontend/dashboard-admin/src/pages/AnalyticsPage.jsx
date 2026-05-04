@@ -346,7 +346,7 @@ export default function AnalyticsPage() {
       {/* ── KPI CARDS (topo, estilo imagem) ── */}
       <div className="px-4 lg:px-10 mb-8 grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard label="Leads Captados"   value={d.total || 0}         sub={`${d.mediadiaria || '0.0'}/dia em média`}     icon="🎯" />
-        <KPICard label="Capital em Leads" value={fmtK(d.capitalFechado || 0)} sub={`${d.vendidos || 0} conversões`}   icon="💰" highlight />
+        <KPICard label="Receita de Vendas" value={fmtK(d.receitaVendas || 0)} sub={`${d.vendidos || 0} conversões`}   icon="💰" highlight />
         <KPICard label="Taxa Conversão"   value={`${d.txConversao || '0.0'}%`}    sub={`Meta: 20%`}                      icon="📈" />
         <KPICard label="Capital Pipeline" value={fmtK(d.capitalPipeline || 0)} sub={`${d.pipeline || 0} em negociação`} icon="🤝" />
       </div>

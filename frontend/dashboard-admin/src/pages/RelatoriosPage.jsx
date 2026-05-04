@@ -963,7 +963,7 @@ export default function RelatoriosPage() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard label="Capital Total"      value={fmtK(d.capitalTotal||0)}      icon="💰" sub="Todos os leads"           cor="border-[#10B981]/20" />
-            <StatCard label="Capital Convertido" value={fmtK(d.capitalConvertido||0)} icon="✅" sub={`${d.vendidos||0} conversões`} cor="border-green-500/20" />
+            <StatCard label="Receita de Vendas"  value={fmtK(d.receitaVendas||0)}     icon="✅" sub={`${d.vendidos||0} conversões`} cor="border-green-500/20" />
             <StatCard label="Capital Pipeline"   value={fmtK(d.capitalPipeline||0)}   icon="🤝" sub="Em negociação"           cor="border-blue-500/20" />
             <StatCard label="Capital Perdido"    value={fmtK(d.capitalPerdido||0)}    icon="💔" sub={`${d.perdidos||0} perdidos`} cor="border-red-500/20" />
           </div>
@@ -974,9 +974,9 @@ export default function RelatoriosPage() {
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie data={[
-                      { name:'Convertido', value: d.capitalConvertido||0 },
-                      { name:'Pipeline',   value: d.capitalPipeline||0  },
-                      { name:'Perdido',    value: d.capitalPerdido||0   },
+                      { name:'Receita Vendas', value: d.receitaVendas||0    },
+                      { name:'Pipeline',       value: d.capitalPipeline||0  },
+                      { name:'Perdido',        value: d.capitalPerdido||0   },
                     ].filter(x=>x.value>0)} innerRadius={60} outerRadius={90} paddingAngle={4} dataKey="value" stroke="none">
                       <Cell fill="#10b981" />
                       <Cell fill="#3b82f6" />
