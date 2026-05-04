@@ -32,7 +32,7 @@ const SCORING_TABLE = [
 
 const CATEGORIA_THRESHOLDS = {
   HOT: 80,
-  WARM: 60,
+  WARM: 55,
 }
 
 export function calcularScore(capital = 0) {

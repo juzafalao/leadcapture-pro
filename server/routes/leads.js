@@ -211,6 +211,7 @@ router.post('/', validateLead, async (req, res) => {
             capital: lead.capital_disponivel, regiao: lead.regiao_interesse,
             marca: marcaFallback.nome, tenant_id: lead.tenant_id,
             fonte: lead.fonte, timestamp: new Date().toISOString(),
+            agente_ja_iniciado: agenteIniciado,
           }),
         }).catch(err => console.warn('[Leads] N8N webhook:', err.message))
       }

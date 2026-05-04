@@ -257,4 +257,57 @@ router.get('/notification-logs', async (req, res) => {
   res.json({ success: true, logs: data || [], isSuperAdmin })
 })
 
+// ─────────────────────────────────────────────
+// GET /api/sistema/admin-stats
+// Estatísticas globais para o backoffice (service_role — bypassa RLS)
+// ─────────────────────────────────────────────
+router.get('/admin-stats', async (req, res) => {
+  try {
+    const { usuario } = await getUsuario(req)
+    if (!usuario) return res.status(401).json({ success: false, error: 'Não autenticado' })
+
+    const isSuper = ['Administrador', 'admin'].includes(usuario.role)
+    if (!isSuper) return res.status(403).json({ success: false, error: 'Acesso negado' })
+
+    const client = sb()
+    const hoje = new Date().toISOString().split('T')[0]
+
+    const [
+      { count: totalLeads },
+      { count: totalUsuarios },
+      { count: leadsHoje },
+      { data: capitalData },
+      { data: tenantStats },
+    ] = await Promise.all([
+      client.from('leads').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+      client.from('usuarios').select('id', { count: 'exact', head: true }).eq('active', true),
+      client.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', hoje).is('deleted_at', null),
+      client.from('leads').select('capital_disponivel').is('deleted_at', null),
+      client.from('leads').select('tenant_id').is('deleted_at', null),
+    ])
+
+    const capitalTotal = (capitalData || []).reduce(
+      (sum, l) => sum + parseFloat(l.capital_disponivel || 0), 0
+    )
+
+    const perTenant = {}
+    ;(tenantStats || []).forEach(l => {
+      perTenant[l.tenant_id] = (perTenant[l.tenant_id] || 0) + 1
+    })
+
+    res.json({
+      success: true,
+      stats: {
+        totalLeads:    totalLeads    || 0,
+        totalUsuarios: totalUsuarios || 0,
+        leadsHoje:     leadsHoje     || 0,
+        capitalTotal,
+        perTenant,
+      },
+    })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message })
+  }
+})
+
 export default router
