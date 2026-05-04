@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../components/AuthContext'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 import { useAlertModal } from '../hooks/useAlertModal'
 import LoadingSpinner from '../components/shared/LoadingSpinner'
 import AutomacaoModal from '../components/automacao/AutomacaoModal'
@@ -188,7 +189,8 @@ function ActivityFeed({ tenantId }) {
 }
 
 export default function AutomacaoPage() {
-  const { usuario, isPlatformAdmin }  = useAuth()
+  const { usuario } = useAuth()
+  const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
   const { alertModal, showAlert }     = useAlertModal()
   const [workflows, setWorkflows]     = useState([])
   const [loading, setLoading]         = useState(true)
@@ -205,16 +207,15 @@ export default function AutomacaoPage() {
   }, [])
 
   const fetchWorkflows = useCallback(async () => {
-    const tid = isPlatformAdmin() ? null : usuario?.tenant_id
-    if (tid === undefined) return
+    if (!tenantId && tenantId !== null) return
     setLoading(true)
     let q = supabase.from('automacoes').select('*').order('created_at', { ascending: false })
-    if (tid) q = q.eq('tenant_id', tid)
+    if (tenantId) q = q.eq('tenant_id', tenantId)
     const { data, error } = await q
     if (!error && data) setWorkflows(data)
     else if (error) showAlert({ type: 'error', title: 'Erro', message: error.message })
     setLoading(false)
-  }, [usuario?.tenant_id])
+  }, [tenantId])
 
   useEffect(() => { fetchWorkflows() }, [fetchWorkflows])
 
@@ -274,14 +275,28 @@ export default function AutomacaoPage() {
       {/* Header */}
       <div className="px-4 lg:px-10 pt-6 lg:pt-10 mb-8">
         <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
-            Centro de <span className="text-[#10B981] font-bold">Automação</span>
-          </h1>
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
-            <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
-              Workflows · WhatsApp · E-mail · IA
-            </p>
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div>
+              <h1 className="text-2xl lg:text-4xl font-light text-white mb-2">
+                Centro de <span className="text-[#10B981] font-bold">Automação</span>
+              </h1>
+              <div className="flex items-center gap-3">
+                <div className="w-16 h-0.5 bg-[#10B981] rounded-full" />
+                <p className="text-[8px] lg:text-[9px] text-gray-600 font-black uppercase tracking-[0.3em]">
+                  Workflows · WhatsApp · E-mail · IA
+                </p>
+              </div>
+            </div>
+            {isAdmin && tenants.length > 0 && (
+              <select
+                value={tenantId}
+                onChange={e => setTenantId(e.target.value)}
+                className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none self-start"
+              >
+                <option value="">-- Selecione o tenant --</option>
+                {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
+              </select>
+            )}
           </div>
         </motion.div>
       </div>
@@ -309,8 +324,8 @@ export default function AutomacaoPage() {
       </div>
 
       {/* Feed de Atividade */}
-      {(usuario?.tenant_id || isPlatformAdmin()) && (
-        <ActivityFeed tenantId={isPlatformAdmin() ? null : usuario.tenant_id} />
+      {(tenantId || isAdmin) && (
+        <ActivityFeed tenantId={tenantId || null} />
       )}
 
       {/* Workflows */}
