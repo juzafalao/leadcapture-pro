@@ -130,8 +130,17 @@ const LeadCard = memo(function LeadCard({ lead, isDragging, onDragStart, onDragE
         )}
       </div>
 
+      {/* Marca */}
+      {lead.marca && (
+        <div className="mt-2 flex items-center gap-1 min-w-0">
+          <span className="text-[10px] text-gray-500 truncate">
+            {lead.marca.emoji} {lead.marca.nome}
+          </span>
+        </div>
+      )}
+
       {/* Rodapé: consultor + dias */}
-      <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-white/[0.05]">
+      <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.05]">
         <span className="text-[10px] text-gray-600 truncate">
           {lead.operador ? lead.operador.nome.split(' ')[0] : ''}
         </span>
@@ -464,10 +473,11 @@ export default function KanbanPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {[
-              { label: 'Total',       value: totalLeads,     color: 'text-white'      },
-              { label: 'Convertidos', value: totalConv,      color: 'text-[#10B981]'  },
-              { label: 'Conversão',   value: `${txConv}%`,   color: 'text-gray-300'   },
-              { label: 'Capital',     value: fmtK(totalCap), color: 'text-[#10B981]'  },
+              { label: 'Total',       value: totalLeads,                                   color: 'text-white'     },
+              { label: 'Convertidos', value: totalConv,                                    color: 'text-[#10B981]' },
+              { label: 'Conversão',   value: `${txConv}%`,                                 color: 'text-gray-300'  },
+              { label: 'Capital',     value: fmtK(totalCap),                               color: 'text-[#10B981]' },
+              { label: 'Vendas',      value: receitaVendido > 0 ? fmtK(receitaVendido) : '—', color: 'text-[#F59E0B]' },
             ].map(kpi => (
               <div key={kpi.label} className="bg-[#0A0F1E] border border-white/[0.07] rounded-xl px-3 py-2 text-center min-w-[64px]">
                 <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-0.5">{kpi.label}</p>

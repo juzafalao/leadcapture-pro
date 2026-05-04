@@ -65,16 +65,16 @@ function ActivityFeed({ tenantId }) {
   const debounceRef           = useRef(null)
 
   const fetchLogs = useCallback(async () => {
-    if (!tenantId) return
     const inicio = new Date()
     inicio.setDate(inicio.getDate() - 30)
-    const { data } = await supabase
+    let q = supabase
       .from('notification_logs')
       .select('id, tipo, status, erro, created_at, lead_id')
-      .eq('tenant_id', tenantId)
       .gte('created_at', inicio.toISOString())
       .order('created_at', { ascending: false })
       .limit(30)
+    if (tenantId) q = q.eq('tenant_id', tenantId)
+    const { data } = await q
     if (data) setLogs(data)
     setLoading(false)
   }, [tenantId])
@@ -84,15 +84,13 @@ function ActivityFeed({ tenantId }) {
   }, [fetchLogs])
 
   useEffect(() => {
-    if (!tenantId) return
+    const channelName = tenantId ? `notif-logs-${tenantId}` : 'notif-logs-admin'
+    const opts = tenantId
+      ? { event: 'INSERT', schema: 'public', table: 'notification_logs', filter: `tenant_id=eq.${tenantId}` }
+      : { event: 'INSERT', schema: 'public', table: 'notification_logs' }
     const ch = supabase
-      .channel(`notif-logs-${tenantId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notification_logs',
-        filter: `tenant_id=eq.${tenantId}`,
-      }, (payload) => {
+      .channel(channelName)
+      .on('postgres_changes', opts, (payload) => {
         const novo = payload.new
         setLogs(prev => [novo, ...prev].slice(0, 30))
         setNewIds(prev => new Set([...prev, novo.id]))
@@ -190,7 +188,7 @@ function ActivityFeed({ tenantId }) {
 }
 
 export default function AutomacaoPage() {
-  const { usuario }                   = useAuth()
+  const { usuario, isPlatformAdmin }  = useAuth()
   const { alertModal, showAlert }     = useAlertModal()
   const [workflows, setWorkflows]     = useState([])
   const [loading, setLoading]         = useState(true)
@@ -207,13 +205,12 @@ export default function AutomacaoPage() {
   }, [])
 
   const fetchWorkflows = useCallback(async () => {
-    if (!usuario?.tenant_id) return
+    const tid = isPlatformAdmin() ? null : usuario?.tenant_id
+    if (tid === undefined) return
     setLoading(true)
-    const { data, error } = await supabase
-      .from('automacoes')
-      .select('*')
-      .eq('tenant_id', usuario.tenant_id)
-      .order('created_at', { ascending: false })
+    let q = supabase.from('automacoes').select('*').order('created_at', { ascending: false })
+    if (tid) q = q.eq('tenant_id', tid)
+    const { data, error } = await q
     if (!error && data) setWorkflows(data)
     else if (error) showAlert({ type: 'error', title: 'Erro', message: error.message })
     setLoading(false)
@@ -264,7 +261,7 @@ export default function AutomacaoPage() {
     },
     {
       icon: '🤖',
-      label: 'Agente Z (IA)',
+      label: 'Lia (IA)',
       value: apiStatus?.services?.agente?.nome ?? (apiStatus ? 'Não configurado' : '...'),
       status: apiStatus?.services?.agente?.enabled ? 'Ativo' : 'Desabilitado',
       color:  apiStatus?.services?.agente?.enabled ? 'text-green-400' : 'text-gray-500',
@@ -312,8 +309,8 @@ export default function AutomacaoPage() {
       </div>
 
       {/* Feed de Atividade */}
-      {usuario?.tenant_id && (
-        <ActivityFeed tenantId={usuario.tenant_id} />
+      {(usuario?.tenant_id || isPlatformAdmin()) && (
+        <ActivityFeed tenantId={isPlatformAdmin() ? null : usuario.tenant_id} />
       )}
 
       {/* Workflows */}

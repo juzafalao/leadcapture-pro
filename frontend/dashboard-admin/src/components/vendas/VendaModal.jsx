@@ -53,6 +53,10 @@ export default function VendaModal({ lead, vendaExistente, onClose, onSave, isSa
 
   const handleSubmit = () => {
     if (!form.taxa_franquia_negociada) return
+    if (marcaInfo?.taxa_franquia_minima && Number(form.taxa_franquia_negociada) < Number(marcaInfo.taxa_franquia_minima)) {
+      setAviso(`⚠️ Valor abaixo do mínimo permitido (${fmtR$(marcaInfo.taxa_franquia_minima)}). Corrija antes de salvar.`)
+      return
+    }
     onSave({
       lead_id:                lead.id,
       marca_id:               lead?.id_marca || lead?.marca?.id || null,
@@ -149,7 +153,7 @@ export default function VendaModal({ lead, vendaExistente, onClose, onSave, isSa
             </button>
             <button
               onClick={handleSubmit}
-              disabled={isSaving || !form.taxa_franquia_negociada}
+              disabled={isSaving || !form.taxa_franquia_negociada || !!(marcaInfo?.taxa_franquia_minima && Number(form.taxa_franquia_negociada) < Number(marcaInfo.taxa_franquia_minima))}
               className="flex-1 py-3 rounded-xl bg-[#10B981] text-black font-black hover:bg-[#059669] disabled:opacity-50 text-sm"
             >
               {isSaving ? 'Salvando...' : vendaExistente ? 'Atualizar' : 'Registrar Venda'}

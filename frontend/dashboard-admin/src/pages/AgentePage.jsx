@@ -1,4 +1,4 @@
-// AgentePage.jsx — Gestão do Agente Z de captação via WhatsApp
+// AgentePage.jsx — Gestão da Lia (IA) de captação via WhatsApp
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, MessageCircle, UserCheck, ChevronRight, X, ExternalLink, RefreshCw, Flame, Thermometer, Snowflake, User, DollarSign, MapPin, Calendar, AlertTriangle, CheckCircle, ArrowRight, Settings, Save, ToggleLeft, ToggleRight } from 'lucide-react'
@@ -446,7 +446,7 @@ export default function AgentePage() {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [pageTab,    setPageTab]    = useState('conversas')
 
-  const agentNome = 'Agente Z'
+  const agentNome = 'Lia'
 
   const load = useCallback(async () => {
     if (!superAdmin && !tenantId) return
@@ -609,7 +609,7 @@ export default function AgentePage() {
                 </p>
                 {filtro === 'todas' && (
                   <div className="mt-3 space-y-1 text-left bg-white/[0.03] border border-white/5 rounded-xl p-4 max-w-xs">
-                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-2">Para ativar o Agente Z</p>
+                    <p className="text-[10px] font-black text-gray-600 uppercase tracking-wider mb-2">Para ativar a Lia</p>
                     <p className="text-[11px] text-gray-600">1. Defina <code className="text-[#8B5CF6]">AGENTE_TENANT_ID</code> no servidor</p>
                     <p className="text-[11px] text-gray-600">2. Confirme que <code className="text-[#8B5CF6]">ANTHROPIC_API_KEY</code> está configurado</p>
                     <p className="text-[11px] text-gray-600">3. Envie uma mensagem no WhatsApp conectado</p>

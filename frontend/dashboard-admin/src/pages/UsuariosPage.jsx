@@ -24,28 +24,46 @@ function Avatar({ nome, role }) {
   )
 }
 
-function UsuarioModal({ usuario, onClose, tenantId, onSaved }) {
+function UsuarioModal({ usuario, onClose, tenantId, onSaved, allUsuarios = [] }) {
   const qc = useQueryClient()
   const isNew = !usuario?.id
   const [form, setForm] = useState({
-    nome:     usuario?.nome     || '',
-    email:    usuario?.email    || '',
-    telefone: usuario?.telefone || '',
-    role:     usuario?.role     || 'Consultor',
-    active:   usuario?.active   ?? true,
+    nome:      usuario?.nome      || '',
+    email:     usuario?.email     || '',
+    telefone:  usuario?.telefone  || '',
+    role:      usuario?.role      || 'Consultor',
+    active:    usuario?.active    ?? true,
+    gestor_id: usuario?.gestor_id || '',
   })
   const [saving, setSaving] = useState(false)
   const [error,  setError]  = useState('')
+
+  // Quem pode ser "gestor" de um consultor: roles Gestor/Diretor
+  const gestoresDisponiveis = allUsuarios.filter(u =>
+    u.id !== usuario?.id && ['Gestor', 'Diretor'].includes(u.role)
+  )
+  // Quem pode ser "gestor" de um gestor: Diretores
+  const diretoresDisponiveis = allUsuarios.filter(u =>
+    u.id !== usuario?.id && u.role === 'Diretor'
+  )
+
+  const showGestorField   = ['Consultor', 'Operador'].includes(form.role)
+  const showDiretorField  = form.role === 'Gestor'
 
   async function handleSave() {
     if (!form.nome || !form.email) { setError('Nome e email sao obrigatorios'); return }
     setSaving(true); setError('')
     try {
+      const payload = {
+        nome: form.nome, email: form.email, telefone: form.telefone,
+        role: form.role, active: form.active,
+        gestor_id: form.gestor_id || null,
+      }
       if (isNew) {
-        const { error: e } = await supabase.from('usuarios').insert({ ...form, tenant_id: tenantId })
+        const { error: e } = await supabase.from('usuarios').insert({ ...payload, tenant_id: tenantId })
         if (e) throw e
       } else {
-        const { error: e } = await supabase.from('usuarios').update(form).eq('id', usuario.id)
+        const { error: e } = await supabase.from('usuarios').update(payload).eq('id', usuario.id)
         if (e) throw e
       }
       qc.invalidateQueries({ queryKey: ['usuarios', tenantId] })
@@ -99,6 +117,36 @@ function UsuarioModal({ usuario, onClose, tenantId, onSaved }) {
             </select>
           </div>
 
+          {/* Gestor responsável (Consultor → Gestor/Diretor) */}
+          {showGestorField && gestoresDisponiveis.length > 0 && (
+            <div>
+              <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-1.5">Gestor responsável</label>
+              <select
+                value={form.gestor_id}
+                onChange={e => setForm(p => ({ ...p, gestor_id: e.target.value }))}
+                className="w-full bg-[#080E18] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#10B981]/50 transition-colors"
+              >
+                <option value="">— Sem gestor —</option>
+                {gestoresDisponiveis.map(g => <option key={g.id} value={g.id}>{g.nome} ({g.role})</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Diretor responsável (Gestor → Diretor) */}
+          {showDiretorField && diretoresDisponiveis.length > 0 && (
+            <div>
+              <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-gray-600 mb-1.5">Diretor responsável</label>
+              <select
+                value={form.gestor_id}
+                onChange={e => setForm(p => ({ ...p, gestor_id: e.target.value }))}
+                className="w-full bg-[#080E18] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#10B981]/50 transition-colors"
+              >
+                <option value="">— Sem diretor —</option>
+                {diretoresDisponiveis.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+              </select>
+            </div>
+          )}
+
           <div className="flex items-center justify-between py-2">
             <div>
               <p className="text-[11px] font-bold text-white">Status ativo</p>
@@ -150,7 +198,7 @@ export default function UsuariosPage() {
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
       let q = supabase.from('usuarios')
-        .select('id, nome, email, telefone, role, active, created_at, last_login')
+        .select('id, nome, email, telefone, role, active, created_at, last_login, gestor_id')
         .is('deleted_at', null)
         .order('nome')
       if (tenantId) q = q.eq('tenant_id', tenantId)
@@ -226,18 +274,18 @@ export default function UsuariosPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/[0.06]">
-                  {['Usuario', 'Perfil', 'Status', 'Ultimo acesso', ''].map(h => (
+                  {['Usuario', 'Perfil', 'Gestor/Diretor', 'Status', 'Ultimo acesso', ''].map(h => (
                     <th key={h} className="px-5 py-3 text-left text-[9px] font-black uppercase tracking-[0.2em] text-gray-700">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={5} className="py-20 text-center">
+                  <tr><td colSpan={6} className="py-20 text-center">
                     <div className="w-7 h-7 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin mx-auto" />
                   </td></tr>
                 ) : filtrados.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-gray-600 text-sm">
+                  <tr><td colSpan={6} className="py-12 text-center text-gray-600 text-sm">
                     Nenhum usuario encontrado
                   </td></tr>
                 ) : filtrados.map((u) => {
@@ -264,6 +312,12 @@ export default function UsuariosPage() {
                       <td className="px-5 py-3.5">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${rs.bg} ${rs.text}`}>{u.role}</span>
                       </td>
+                      <td className="px-5 py-3.5 text-[10px] text-gray-500">
+                        {u.gestor_id
+                          ? (usuarios.find(x => x.id === u.gestor_id)?.nome?.split(' ')[0] || '—')
+                          : <span className="text-gray-700">—</span>
+                        }
+                      </td>
                       <td className="px-5 py-3.5">
                         <span className={`flex items-center gap-1.5 text-[11px] font-bold ${u.active ? 'text-[#10B981]' : 'text-gray-600'}`}>
                           <span className={`w-1.5 h-1.5 rounded-full ${u.active ? 'bg-[#10B981]' : 'bg-gray-600'}`} />
@@ -283,11 +337,91 @@ export default function UsuariosPage() {
         </div>
       </div>
 
+      {/* Hierarquia do time */}
+      {(() => {
+        const diretores = usuarios.filter(u => u.role === 'Diretor')
+        const gestores  = usuarios.filter(u => u.role === 'Gestor')
+        const consultores = usuarios.filter(u => ['Consultor','Operador'].includes(u.role))
+        if (!gestores.length && !diretores.length) return null
+        return (
+          <div className="px-6 lg:px-10 pb-8">
+            <div className="bg-white/[0.03] border border-white/[0.06] rounded-2xl overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-white/[0.04]">
+                <p className="text-[9px] font-black uppercase tracking-wider text-gray-500">Hierarquia do Time</p>
+              </div>
+              <div className="p-5 space-y-4">
+                {diretores.map(dir => {
+                  const gestoresDoDir = gestores.filter(g => g.gestor_id === dir.id)
+                  const consultoresSemGestor = consultores.filter(c => c.gestor_id === dir.id)
+                  return (
+                    <div key={dir.id}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Avatar nome={dir.nome} role={dir.role} />
+                        <div>
+                          <p className="text-[11px] font-black text-white">{dir.nome}</p>
+                          <span className="text-[9px] text-purple-400 font-bold uppercase">Diretor</span>
+                        </div>
+                      </div>
+                      <div className="ml-8 pl-4 border-l border-white/[0.06] space-y-2">
+                        {gestoresDoDir.map(g => {
+                          const consults = consultores.filter(c => c.gestor_id === g.id)
+                          return (
+                            <div key={g.id}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <Avatar nome={g.nome} role={g.role} />
+                                <div>
+                                  <p className="text-[11px] font-semibold text-white">{g.nome}</p>
+                                  <span className="text-[9px] text-blue-400 font-bold uppercase">Gestor · {consults.length} consultor{consults.length !== 1 ? 'es' : ''}</span>
+                                </div>
+                              </div>
+                              {consults.length > 0 && (
+                                <div className="ml-8 pl-4 border-l border-white/[0.04] flex flex-wrap gap-2 mt-1">
+                                  {consults.map(c => (
+                                    <span key={c.id} className="text-[10px] text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-full font-semibold">
+                                      {c.nome?.split(' ')[0]}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {consultoresSemGestor.map(c => (
+                          <div key={c.id} className="flex items-center gap-2">
+                            <Avatar nome={c.nome} role={c.role} />
+                            <p className="text-[11px] text-white">{c.nome}</p>
+                            <span className="text-[9px] text-gray-600">(direto ao diretor)</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+                {/* Gestores sem diretor */}
+                {gestores.filter(g => !g.gestor_id).map(g => {
+                  const consults = consultores.filter(c => c.gestor_id === g.id)
+                  return (
+                    <div key={g.id} className="flex items-center gap-2">
+                      <Avatar nome={g.nome} role={g.role} />
+                      <div>
+                        <p className="text-[11px] font-semibold text-white">{g.nome}</p>
+                        <span className="text-[9px] text-blue-400 font-bold uppercase">Gestor · {consults.length} consultor{consults.length !== 1 ? 'es' : ''} · sem diretor</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       <AnimatePresence>
         {modal !== null && (
           <UsuarioModal
             usuario={modal?.id ? modal : null}
             tenantId={tenantId}
+            allUsuarios={usuarios}
             onClose={() => setModal(null)}
           />
         )}

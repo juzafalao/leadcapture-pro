@@ -1,18 +1,76 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import ConfirmModal from '../shared/ConfirmModal';
+import { supabase } from '../../lib/supabase';
 import { Search, Bell, Menu, X } from 'lucide-react';
 
+const TIPO_CONFIG = {
+  hot:     { dot: 'bg-red-400',   label: 'Lead quente'   },
+  warn:    { dot: 'bg-amber-400', label: 'Atenção'       },
+  ok:      { dot: 'bg-[#10B981]', label: 'Sucesso'       },
+  info:    { dot: 'bg-blue-400',  label: 'Informação'    },
+}
+
+function fmtAgo(ts) {
+  if (!ts) return ''
+  const diff = Date.now() - new Date(ts).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1)  return 'agora'
+  if (m < 60) return `${m} min`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
+}
+
 export default function Header({ onMenuClick }) {
-  const { usuario, tenant, logout } = useAuth();
+  const { usuario, tenant, logout, isPlatformAdmin } = useAuth();
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [searchVal, setSearchVal] = useState('');
+  const [notifs, setNotifs] = useState([]);
   const notifRef = useRef(null);
-  const searchRef = useRef(null);
+
+  const tenantId = isPlatformAdmin() ? null : usuario?.tenant_id;
+
+  const loadNotifs = useCallback(async () => {
+    if (!tenantId && !isPlatformAdmin()) return;
+    let q = supabase
+      .from('notificacoes')
+      .select('id, titulo, mensagem, tipo, lida, created_at')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (tenantId) q = q.eq('tenant_id', tenantId);
+    const { data } = await q;
+    if (data) setNotifs(data);
+  }, [tenantId]);
+
+  useEffect(() => { loadNotifs(); }, [loadNotifs]);
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!tenantId && !isPlatformAdmin()) return;
+    const channelName = tenantId ? `notifs-header-${tenantId}` : 'notifs-header-admin';
+    const opts = tenantId
+      ? { event: 'INSERT', schema: 'public', table: 'notificacoes', filter: `tenant_id=eq.${tenantId}` }
+      : { event: 'INSERT', schema: 'public', table: 'notificacoes' };
+    const ch = supabase.channel(channelName).on('postgres_changes', opts, (payload) => {
+      setNotifs(prev => [payload.new, ...prev].slice(0, 20));
+    }).subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [tenantId]);
+
+  const markAllRead = async () => {
+    const unread = notifs.filter(n => !n.lida).map(n => n.id);
+    if (!unread.length) return;
+    await supabase.from('notificacoes').update({ lida: true }).in('id', unread);
+    setNotifs(prev => prev.map(n => ({ ...n, lida: true })));
+  };
+
+  const unreadCount = notifs.filter(n => !n.lida).length;
 
   useEffect(() => {
     function handleClick(e) {
@@ -88,40 +146,44 @@ export default function Header({ onMenuClick }) {
             {/* Sino de notificações */}
             <div ref={notifRef} className="relative">
               <button
-                onClick={() => setShowNotif(v => !v)}
+                onClick={() => { setShowNotif(v => !v); if (!showNotif) markAllRead(); }}
                 className="relative w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-[#CBD5E1] hover:border-[#10B981]/40 transition-colors"
               >
                 <Bell className="w-4 h-4" />
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#10B981] text-[9px] font-bold text-black flex items-center justify-center">
-                  3
-                </span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#10B981] text-[9px] font-bold text-black flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               {showNotif && (
-                <div className="absolute top-full mt-2 right-0 w-72 bg-[#0F172A] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden">
-                  <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+                <div className="absolute top-full mt-2 right-0 w-80 bg-[#0F172A] border border-white/[0.08] rounded-xl shadow-2xl shadow-black/50 z-50 overflow-hidden max-h-[420px] flex flex-col">
+                  <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between shrink-0">
                     <p className="text-sm font-semibold text-white">Notificações</p>
-                    <span className="text-[9px] text-[#10B981] font-bold uppercase tracking-wider">3 novas</span>
+                    {unreadCount > 0 && (
+                      <span className="text-[9px] text-[#10B981] font-bold uppercase tracking-wider">{unreadCount} nova{unreadCount !== 1 ? 's' : ''}</span>
+                    )}
                   </div>
-                  {[
-                    { title: 'Novo lead quente', msg: 'Lead com score 95 capturado via WhatsApp', time: '2 min', type: 'hot' },
-                    { title: 'Lead sem dono', msg: '5 leads aguardando atribuição', time: '18 min', type: 'warn' },
-                    { title: 'Meta mensal atingida', msg: 'Parabéns! 120% da meta de leads', time: '1h', type: 'ok' },
-                  ].map((n, i) => (
-                    <div key={i} className="px-4 py-3 hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-0">
-                      <div className="flex items-start gap-2.5">
-                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
-                          n.type === 'hot' ? 'bg-red-400' :
-                          n.type === 'warn' ? 'bg-amber-400' : 'bg-[#10B981]'
-                        }`} />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-white leading-tight">{n.title}</p>
-                          <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{n.msg}</p>
-                          <p className="text-[10px] text-[#334155] mt-1">{n.time} atrás</p>
+                  <div className="overflow-y-auto flex-1">
+                    {notifs.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-600 text-xs">Nenhuma notificação</div>
+                    ) : notifs.map((n) => {
+                      const cfg = TIPO_CONFIG[n.tipo] || TIPO_CONFIG.info;
+                      return (
+                        <div key={n.id} className={`px-4 py-3 hover:bg-white/[0.03] transition-colors border-b border-white/[0.04] last:border-0 ${!n.lida ? 'bg-white/[0.02]' : ''}`}>
+                          <div className="flex items-start gap-2.5">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${cfg.dot}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-white leading-tight">{n.titulo}</p>
+                              {n.mensagem && <p className="text-xs text-[#64748B] mt-0.5 leading-relaxed">{n.mensagem}</p>}
+                              <p className="text-[10px] text-[#334155] mt-1">{fmtAgo(n.created_at)} atrás</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

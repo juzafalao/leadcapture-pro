@@ -175,7 +175,7 @@ const SECTIONS = [
       { path: '/pipeline', icon: <Icons.Leads />,   label: 'Leads' },
       { path: '/kanban',          icon: <Icons.Kanban />,    label: 'Funil' },
       { path: '/fluxo-vida-lead', icon: <Icons.FluxoLead />, label: 'Fluxo do Lead', roles: ['Gestor','Diretor','Administrador','admin'] },
-      { path: '/agente',          icon: <Icons.Agente />,    label: 'Agente Z', badge: 'IA' },
+      { path: '/agente',          icon: <Icons.Agente />,    label: 'Lia', badge: 'IA' },
       { path: '/importar', icon: <Icons.Importar />, label: 'Importar Leads', roles: ['Gestor','Diretor','Administrador','admin'] },
       { path: '/canais',   icon: <Icons.Canais />,  label: 'Canais', roles: ['Gestor','Diretor','Administrador','admin'] },
     ],

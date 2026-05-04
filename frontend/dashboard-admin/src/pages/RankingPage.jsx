@@ -266,45 +266,63 @@ export default function RankingPage() {
     loadTenants()
   }, [isAdmin, usuario?.tenant_id])
 
-  // Carrega faixas de comissao
-  useEffect(() => {
-    if (!tenantId) { setLoading(false); return }
-    supabase.from('ranking_config').select('*').eq('tenant_id', tenantId)
-      .eq('ativo', true).order('de')
-      .then(({ data }) => setFaixas(data || []))
-  }, [tenantId])
 
-  // Carrega dados do ranking
+  // Carrega dados do ranking com queries diretas (sem RPC)
   const carregar = useCallback(async () => {
     if (!tenantId) { setLoading(false); return }
     setLoading(true)
     setErro('')
     try {
-      // Usa RPC SECURITY DEFINER -- bypassa RLS sem precisar de service key
-      const { data: rpcData, error: rpcErr } = await supabase
-        .rpc('get_ranking_data', {
-          p_tenant_id: tenantId,
-          p_ano:       periodo.ano,
-          p_mes:       periodo.mes,
-        })
-
-      if (rpcErr) {
-        setErro('Erro: ' + rpcErr.message)
-        setConsultores([])
-        setLoading(false)
-        return
-      }
-
-      const users  = rpcData?.usuarios || []
-      const leads  = rpcData?.leads    || []
-      const meta   = rpcData?.meta     || {}
-      const faixas = rpcData?.faixas   || []
-
-      if (!users.length) { setConsultores([]); setLoading(false); return }
-
-      // Busca vendas do período para calcular comissão real
       const mesIni = `${periodo.ano}-${String(periodo.mes).padStart(2,'0')}-01`
       const mesFim = new Date(periodo.ano, periodo.mes, 1).toISOString().slice(0,10)
+
+      // Busca usuários (consultores/gestores) do tenant
+      const { data: usersRaw, error: usersErr } = await supabase
+        .from('usuarios')
+        .select('id, nome, role')
+        .eq('tenant_id', tenantId)
+        .eq('active', true)
+        .in('role', ['Consultor', 'Gestor', 'Operador'])
+      if (usersErr) { setErro('Erro ao carregar usuários: ' + usersErr.message); setLoading(false); return }
+
+      const users = usersRaw || []
+      if (!users.length) { setConsultores([]); setLoading(false); return }
+
+      // Busca leads do período
+      const { data: leadsRaw } = await supabase
+        .from('leads')
+        .select('id, id_operador_responsavel, categoria, capital_disponivel, status_comercial:id_status(slug), status')
+        .eq('tenant_id', tenantId)
+        .is('deleted_at', null)
+        .gte('created_at', mesIni)
+        .lt('created_at', mesFim)
+
+      const leads = leadsRaw || []
+
+      // Tenta carregar meta (tabela pode não existir)
+      let meta = {}
+      try {
+        const { data: metaRows } = await supabase
+          .from('ranking_metas')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .eq('ano', periodo.ano)
+          .eq('mes', periodo.mes)
+          .is('consultor_id', null)
+          .limit(1)
+        meta = (metaRows || [])[0] || {}
+      } catch {}
+
+      // Tenta carregar faixas de comissão
+      let faixasLocal = []
+      try {
+        const { data: faixasRaw } = await supabase
+          .from('ranking_config').select('*').eq('tenant_id', tenantId).eq('ativo', true).order('de')
+        faixasLocal = faixasRaw || []
+        setFaixas(faixasLocal)
+      } catch { setFaixas([]) }
+
+      // Busca vendas do período para calcular comissão real
       const { data: vendasPeriodo } = await supabase
         .from('vendas')
         .select('lead_id, consultor_id, taxa_franquia_negociada')
@@ -349,7 +367,7 @@ export default function RankingPage() {
       const calc = users.map(u => {
         const d = mapa[u.id] || { total: 0, hot: 0, conv: 0, capital: 0, receita: 0 }
         const pctMeta = metaLeadsGlobal > 0 ? Math.min(Math.round((d.total / metaLeadsGlobal) * 100), 100) : 0
-        const com = calcCom(d.receita, faixas)
+        const com = calcCom(d.receita, faixasLocal)
         const bateuMeta   = pctMeta >= 100
         const bateuEquipe = pctEq   >= 80
         return {
