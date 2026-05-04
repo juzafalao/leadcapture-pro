@@ -474,20 +474,6 @@ export default function KanbanPage() {
           </div>
         </div>
 
-        {/* Seletor de tenant (admin) */}
-        {isAdmin && tenants.length > 0 && (
-          <div className="mb-3">
-            <select
-              value={tenantId}
-              onChange={e => setTenantId(e.target.value)}
-              className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-1.5 text-xs text-[#10B981] font-bold focus:outline-none"
-            >
-              <option value="">-- Selecione o tenant --</option>
-              {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-            </select>
-          </div>
-        )}
-
         {/* Filtro de período */}
         <div className="flex gap-1">
           {FILTROS.map(f => (

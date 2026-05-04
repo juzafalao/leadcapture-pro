@@ -74,7 +74,7 @@ export function calcularScoreFromConfig(capital = 0, tiers = SCORING_TABLE) {
 
 export function determinarCategoriaFromConfig(score, thresholds = CATEGORIA_THRESHOLDS) {
   if (score >= (thresholds.HOT ?? 80)) return 'hot'
-  if (score >= (thresholds.WARM ?? 60)) return 'warm'
+  if (score >= (thresholds.WARM ?? 55)) return 'warm'
   return 'cold'
 }
 
