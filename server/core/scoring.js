@@ -49,8 +49,7 @@ export function determinarCategoria(score) {
 }
 
 export function processarCapital(capitalRaw) {
-  const capitalStr = String(capitalRaw ?? '0').replace(/\D/g, '')
-  const capital = parseInt(capitalStr, 10) || 0
+  const capital = resolverCapital(capitalRaw) ?? 0
   const score = calcularScore(capital)
   const categoria = determinarCategoria(score)
   return { capital, score, categoria }
@@ -82,8 +81,7 @@ export function determinarCategoriaFromConfig(score, thresholds = CATEGORIA_THRE
 export function processarCapitalFromConfig(capitalRaw, config = DEFAULT_SCORING_CONFIG) {
   const tiers = config?.tiers?.length ? config.tiers : SCORING_TABLE
   const thresholds = config?.thresholds || CATEGORIA_THRESHOLDS
-  const capitalStr = String(capitalRaw ?? '0').replace(/\D/g, '')
-  const capital = parseInt(capitalStr, 10) || 0
+  const capital = resolverCapital(capitalRaw) ?? 0
   const score = calcularScoreFromConfig(capital, tiers)
   const categoria = determinarCategoriaFromConfig(score, thresholds)
   return { capital, score, categoria }
