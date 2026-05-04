@@ -201,38 +201,43 @@ export default function BackofficePage() {
   async function loadData() {
     setLoading(true)
     try {
-      // Busca tenants
-      const { data: tenantsData } = await supabase
+      // Busca tenants com contagens embutidas via PostgREST
+      const { data: tenantsRaw } = await supabase
         .from('tenants')
-        .select('id, name, slug, active, created_at, cor_primaria')
+        .select('id, name, slug, active, created_at, cor_primaria, leads(count), usuarios(count)')
         .order('created_at', { ascending: false })
-      
-      // Busca contagens
+
+      // Normaliza counts embutidos para campos diretos
+      const tenantsData = (tenantsRaw || []).map(t => ({
+        ...t,
+        total_leads:    t.leads?.[0]?.count    || 0,
+        total_usuarios: t.usuarios?.[0]?.count || 0,
+      }))
+
+      // Contagens globais — todas server-side, sem trazer linhas para o JS
+      const today = new Date().toISOString().split('T')[0]
       const [
         { count: totalLeads },
         { count: totalUsuarios },
-        { data: leadsHoje },
-        { data: capitalData },
+        { count: leadsHoje },
+        { data: capitalAgg },
       ] = await Promise.all([
         supabase.from('leads').select('id', { count: 'exact', head: true }),
         supabase.from('usuarios').select('id', { count: 'exact', head: true }),
-        supabase.from('leads').select('id').gte('created_at', new Date().toISOString().split('T')[0]),
-        supabase.from('leads').select('capital_disponivel'),
+        supabase.from('leads').select('id', { count: 'exact', head: true }).gte('created_at', today),
+        supabase.from('leads').select('total:capital_disponivel.sum()').limit(1).single(),
       ])
-      
-      const capitalTotal = (capitalData || []).reduce(
-        (sum, l) => sum + parseFloat(l.capital_disponivel || 0),
-        0
-      )
-      
-      setTenants(tenantsData || [])
+
+      const capitalTotal = parseFloat(capitalAgg?.total ?? 0)
+
+      setTenants(tenantsData)
       setStats({
-        totalTenants: tenantsData?.length || 0,
-        totalLeads: totalLeads || 0,
-        totalCapital: capitalTotal,
+        totalTenants:  tenantsData.length,
+        totalLeads:    totalLeads    || 0,
+        totalCapital:  capitalTotal,
         totalUsuarios: totalUsuarios || 0,
-        leadsHoje: leadsHoje?.length || 0,
-        conversoes: 0,
+        leadsHoje:     leadsHoje     || 0,
+        conversoes:    0,
       })
     } catch (err) {
       console.error('[Backoffice] Erro:', err)
