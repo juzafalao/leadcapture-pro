@@ -92,6 +92,30 @@ router.post('/', validateLead, async (req, res) => {
     leadData.fonte = dados.fonte || 'landing-page'
     leadData.status = dados.status || 'novo'
 
+    // Dedup: evita duplicata por duplo-clique (janela de 2h por email+marca)
+    const now = new Date()
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
+    const { data: leadExistente } = await supabase
+      .from('leads')
+      .select('id, created_at')
+      .eq('email', leadData.email)
+      .eq('id_marca', leadData.id_marca)
+      .gte('created_at', twoHoursAgo)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (leadExistente) {
+      console.log(`[Leads] Duplicata detectada — leadId: ${leadExistente.id} (menos de 2h)`)
+      return res.json({
+        success: true,
+        message: 'Lead já recebido anteriormente',
+        leadId: leadExistente.id,
+        duplicado: true,
+      })
+    }
+
     const { data, error } = await supabase.from('leads').insert([leadData]).select()
     if (error) throw error
     if (!data?.length) throw new Error('Insert retornou sem dados')

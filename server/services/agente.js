@@ -14,6 +14,16 @@ import { getScoringConfig } from '../core/scoringConfig.js'
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
 
+// ── Helper: garante que histórico seja sempre um array ─────
+function parseHistorico(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw) } catch { return [] }
+  }
+  return []
+}
+
 // ── Cache de configurações por tenant (TTL: 5 minutos) ─────
 const _agenteConfigCache = new Map()
 const CACHE_TTL_MS = 5 * 60 * 1000
@@ -189,7 +199,26 @@ export async function iniciarAgenteParaLead(lead, marcaInfo) {
     .limit(1)
     .maybeSingle()
 
-  if (existente) return { iniciado: false, motivo: 'conversa já ativa' }
+  if (existente) {
+    // Verifica se a mensagem inicial foi de fato enviada (histórico vazio = nunca enviou)
+    const { data: convData } = await supabase
+      .from('agente_conversas')
+      .select('historico')
+      .eq('id', existente.id)
+      .single()
+    const hist = parseHistorico(convData?.historico)
+    if (hist.length === 0) {
+      // Conversa existe mas mensagem inicial nunca chegou — reenviar
+      const primeiroNomeRetry = lead.nome?.split(' ')[0] || 'você'
+      const mensagemRetry =
+        `Olá, ${primeiroNomeRetry}! 👋 Sou ${config.nome_agente}, da equipe de expansão.\n\n` +
+        `Recebi seu interesse e queria entender melhor o seu perfil para te conectar com a pessoa certa. Tem 2 minutinhos agora?`
+      await enviarMensagem(telefoneNorm, mensagemRetry)
+        .catch(err => console.warn('[Agente] Retry mensagem inicial:', err.message))
+      return { iniciado: true, conversaId: existente.id, retry: true }
+    }
+    return { iniciado: false, motivo: 'conversa já ativa' }
+  }
 
   const { data: conversa, error: convErr } = await supabase
     .from('agente_conversas')
@@ -244,7 +273,7 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
       .limit(1)
       .maybeSingle()
 
-    const historico  = conversa?.historico || []
+    const historico  = parseHistorico(conversa?.historico)
     const totalTurns = historico.filter(h => h.role === 'user').length
 
     // Limite de turnos atingido — encerra sem chamar Claude
