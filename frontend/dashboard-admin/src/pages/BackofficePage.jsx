@@ -201,37 +201,29 @@ export default function BackofficePage() {
   async function loadData() {
     setLoading(true)
     try {
-      // Busca tenants
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      // Tenants via Supabase (plataforma admin tem acesso via RLS)
       const { data: tenantsData } = await supabase
         .from('tenants')
         .select('id, name, slug, active, created_at, cor_primaria')
         .order('created_at', { ascending: false })
-      
-      // Busca contagens
-      const [
-        { count: totalLeads },
-        { count: totalUsuarios },
-        { data: leadsHoje },
-        { data: capitalData },
-      ] = await Promise.all([
-        supabase.from('leads').select('id', { count: 'exact', head: true }),
-        supabase.from('usuarios').select('id', { count: 'exact', head: true }),
-        supabase.from('leads').select('id').gte('created_at', new Date().toISOString().split('T')[0]),
-        supabase.from('leads').select('capital_disponivel'),
-      ])
-      
-      const capitalTotal = (capitalData || []).reduce(
-        (sum, l) => sum + parseFloat(l.capital_disponivel || 0),
-        0
-      )
-      
+
+      // Contagens globais via endpoint server-side (service_role — bypassa RLS)
+      const statsRes = await fetch('/api/sistema/admin-stats', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const statsJson = statsRes.ok ? await statsRes.json() : { stats: {} }
+      const s = statsJson.stats || {}
+
       setTenants(tenantsData || [])
       setStats({
-        totalTenants: tenantsData?.length || 0,
-        totalLeads: totalLeads || 0,
-        totalCapital: capitalTotal,
-        totalUsuarios: totalUsuarios || 0,
-        leadsHoje: leadsHoje?.length || 0,
+        totalTenants:  tenantsData?.length || 0,
+        totalLeads:    s.totalLeads    || 0,
+        totalCapital:  s.capitalTotal  || 0,
+        totalUsuarios: s.totalUsuarios || 0,
+        leadsHoje:     s.leadsHoje     || 0,
         conversoes: 0,
       })
     } catch (err) {
