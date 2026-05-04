@@ -258,16 +258,6 @@ export default function WhatsAppPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {isAdmin && tenants.length > 0 && (
-            <select
-              value={tenantId}
-              onChange={e => setTenantId(e.target.value)}
-              className="bg-[#25D366]/10 border border-[#25D366]/30 rounded-xl px-3 py-2 text-xs text-[#25D366] font-bold focus:outline-none"
-            >
-              <option value="">-- Tenant --</option>
-              {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-            </select>
-          )}
           <button onClick={handleRefresh} disabled={refreshing}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold bg-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all disabled:opacity-50 border border-white/5">
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />

@@ -303,21 +303,9 @@ export default function CanaisPage() {
     <div className="min-h-full bg-[#0B1220] px-4 lg:px-10 py-6 lg:py-8">
 
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Canais de Captação</h1>
-          <p className="text-[11px] text-gray-500 mt-1">Performance detalhada de cada canal de aquisição</p>
-        </div>
-        {isAdmin && tenants.length > 0 && (
-          <select
-            value={tenantId}
-            onChange={e => setTenantId(e.target.value)}
-            className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none self-start lg:self-auto"
-          >
-            <option value="">-- Tenant --</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-          </select>
-        )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Canais de Captação</h1>
+        <p className="text-[11px] text-gray-500 mt-1">Performance detalhada de cada canal de aquisição</p>
       </div>
 
       {/* KPI Row */}
