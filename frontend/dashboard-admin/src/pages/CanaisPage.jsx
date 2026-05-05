@@ -224,11 +224,11 @@ function CanalCard({ canal, stats, delay }) {
         </div>
         <div>
           <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-1">Receita</p>
-          <p className="text-[12px] font-black text-white tabular-nums">{fmtBRL(stats.receita)}</p>
+          <p className="text-[12px] font-black text-white tabular-nums">{stats.receita > 0 ? fmtBRL(stats.receita) : '—'}</p>
         </div>
         <div>
-          <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-1">Custo</p>
-          <p className="text-[12px] font-black text-gray-400">{canal.custo ?? 'N/D'}</p>
+          <p className="text-[8px] font-black uppercase tracking-wider text-gray-600 mb-1">Investimento</p>
+          <p className="text-[12px] font-black text-gray-400 tabular-nums">{fmtBRL(stats.investimento)}</p>
         </div>
       </div>
 
@@ -246,19 +246,34 @@ function CanalCard({ canal, stats, delay }) {
 // ── Página principal ──────────────────────────────────────
 export default function CanaisPage() {
   const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
-  const [leads,   setLeads]   = useState([])
-  const [loading, setLoading] = useState(true)
+  const [leads,     setLeads]     = useState([])
+  const [vendasMap, setVendasMap] = useState({})
+  const [loading,   setLoading]   = useState(true)
 
   useEffect(() => {
     async function load() {
       setLoading(true)
       let q = supabase
         .from('leads')
-        .select('fonte, status, capital_disponivel, status_comercial:id_status(slug)')
+        .select('id, fonte, status, capital_disponivel, status_comercial:id_status(slug)')
         .is('deleted_at', null)
       if (tenantId) q = q.eq('tenant_id', tenantId)
-      const { data } = await q
-      setLeads(data ?? [])
+
+      let qV = supabase
+        .from('vendas')
+        .select('lead_id, taxa_franquia_negociada')
+        .eq('status', 'confirmada')
+      if (tenantId) qV = qV.eq('tenant_id', tenantId)
+
+      const [{ data: leadsData }, { data: vendasData }] = await Promise.all([q, qV])
+
+      setLeads(leadsData ?? [])
+
+      const vm = {}
+      for (const v of vendasData ?? []) {
+        if (v.lead_id) vm[v.lead_id] = parseFloat(v.taxa_franquia_negociada || 0)
+      }
+      setVendasMap(vm)
       setLoading(false)
     }
     load()
@@ -267,7 +282,7 @@ export default function CanaisPage() {
   const { stats, totalLeads, receitaTotal, convMedia } = useMemo(() => {
     const map = {}
     for (const c of CANAL_DEFS) {
-      map[c.id] = { total: 0, convertidos: 0, receita: 0 }
+      map[c.id] = { total: 0, convertidos: 0, receita: 0, investimento: 0 }
     }
 
     for (const l of leads) {
@@ -275,9 +290,10 @@ export default function CanaisPage() {
       const slugReal = l.status_comercial?.slug || l.status
       const isConv = slugReal === 'vendido' || slugReal === 'convertido'
       map[cid].total++
+      map[cid].investimento += parseFloat(l.capital_disponivel || 0)
       if (isConv) {
         map[cid].convertidos++
-        map[cid].receita += parseFloat(l.capital_disponivel || 0)
+        map[cid].receita += vendasMap[l.id] || 0
       }
     }
 
@@ -286,7 +302,7 @@ export default function CanaisPage() {
     const receitaTotal = Object.values(map).reduce((a, s) => a + s.receita, 0)
     const convMedia    = totalLeads > 0 ? ((totalConv / totalLeads) * 100).toFixed(1) : '0.0'
     return { stats: map, totalLeads, receitaTotal, convMedia }
-  }, [leads])
+  }, [leads, vendasMap])
 
   const donutSegments = CANAL_DEFS.map(c => ({ cor: c.cor, label: c.label, total: stats[c.id]?.total ?? 0 }))
   const canaisAtivos  = CANAL_DEFS.filter(c => (stats[c.id]?.total ?? 0) > 0).length
@@ -303,21 +319,9 @@ export default function CanaisPage() {
     <div className="min-h-full bg-[#0B1220] px-4 lg:px-10 py-6 lg:py-8">
 
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Canais de Captação</h1>
-          <p className="text-[11px] text-gray-500 mt-1">Performance detalhada de cada canal de aquisição</p>
-        </div>
-        {isAdmin && tenants.length > 0 && (
-          <select
-            value={tenantId}
-            onChange={e => setTenantId(e.target.value)}
-            className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none self-start lg:self-auto"
-          >
-            <option value="">-- Tenant --</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-          </select>
-        )}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-white">Canais de Captação</h1>
+        <p className="text-[11px] text-gray-500 mt-1">Performance detalhada de cada canal de aquisição</p>
       </div>
 
       {/* KPI Row */}
@@ -350,8 +354,8 @@ export default function CanaisPage() {
         <KpiCard
           delay={0.12}
           gradient="from-[#8B5CF6]/15 to-[#8B5CF6]/5"
-          label="Receita Total"
-          value={fmtBRL(receitaTotal)}
+          label="Receita de Vendas"
+          value={receitaTotal > 0 ? fmtBRL(receitaTotal) : '—'}
           icon={
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#8B5CF6" strokeWidth="1.5">
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" />
@@ -436,7 +440,7 @@ export default function CanaisPage() {
               <CanalCard
                 key={canal.id}
                 canal={canal}
-                stats={stats[canal.id] ?? { total: 0, convertidos: 0, receita: 0 }}
+                stats={stats[canal.id] ?? { total: 0, convertidos: 0, receita: 0, investimento: 0 }}
                 delay={0.24 + i * 0.04}
               />
             ))}

@@ -92,12 +92,48 @@ router.post('/', validateLead, async (req, res) => {
     leadData.fonte = dados.fonte || 'landing-page'
     leadData.status = dados.status || 'novo'
 
+    // Dedup: evita duplicata por duplo-clique (janela de 2h por email+marca)
+    const now = new Date()
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString()
+    const { data: leadExistente } = await supabase
+      .from('leads')
+      .select('id, created_at')
+      .eq('email', leadData.email)
+      .eq('id_marca', leadData.id_marca)
+      .gte('created_at', twoHoursAgo)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (leadExistente) {
+      console.log(`[Leads] Duplicata detectada — leadId: ${leadExistente.id} (menos de 2h)`)
+      return res.json({
+        success: true,
+        message: 'Lead já recebido anteriormente',
+        leadId: leadExistente.id,
+        duplicado: true,
+      })
+    }
+
     const { data, error } = await supabase.from('leads').insert([leadData]).select()
     if (error) throw error
     if (!data?.length) throw new Error('Insert retornou sem dados')
 
     const lead = data[0]
     console.log(`[Leads] Salvo: ${lead.id} | ${lead.nome} | score ${lead.score} | ${lead.categoria?.toUpperCase()}`)
+
+    // Notificação realtime no sino para leads quentes (score >= 65)
+    if (lead.score >= 65) {
+      supabase.from('notificacoes').insert({
+        tenant_id: lead.tenant_id,
+        lead_id:   lead.id,
+        tipo:      'hot',
+        titulo:    `🔥 Lead quente: ${lead.nome}`,
+        mensagem:  `Score ${lead.score} | Capital: R$ ${Number(lead.capital_disponivel || 0).toLocaleString('pt-BR')} | ${lead.regiao_interesse || lead.cidade || ''}`.trim().replace(/\|\s*$/, ''),
+        lida:      false,
+      }).catch(err => console.warn('[Leads] notificacao insert:', err.message))
+    }
 
     const [{ data: marcaInfo }, { data: usuariosNotif }] = await Promise.all([
       supabase.from('marcas').select('nome, emoji, logo_url, tenant_id').eq('id', lead.id_marca).single(),
@@ -531,7 +567,7 @@ router.put('/:id/assign-consultant', async (req, res) => {
 
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, tenant_id, nome')
+      .select('id, tenant_id, nome, fonte')
       .eq('id', id)
       .maybeSingle()
 
@@ -547,6 +583,17 @@ router.put('/:id/assign-consultant', async (req, res) => {
 
     if (!tenantOk) {
       return res.status(403).json({ success: false, error: 'Lead pertence a outro tenant' })
+    }
+
+    // Leads da LIA só podem ter consultor atribuído por Diretores ou Administradores
+    if (lead.fonte === 'captacao-ia') {
+      const isDiretorOuAdmin = ['Diretor', 'Administrador', 'admin'].includes(usuarioLogado.role)
+        || usuarioLogado.is_super_admin
+        || usuarioLogado.is_platform
+        || usuarioLogado.tenant_id === ADMIN_TENANT_ID
+      if (!isDiretorOuAdmin) {
+        return res.status(403).json({ success: false, error: 'Atribuição de leads da LIA é exclusiva para Diretores' })
+      }
     }
 
     const { data: consultor } = await supabase

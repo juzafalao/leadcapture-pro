@@ -1034,16 +1034,6 @@ export default function RelatoriosPage() {
         onVoltar={handleVoltar}
         onExportCSV={handleExportCSV}
         onExportCompleto={handleExportCompleto}
-        tenantSelector={isAdmin && tenants.length > 0 ? (
-          <select
-            value={tenantId}
-            onChange={e => setTenantId(e.target.value)}
-            className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none"
-          >
-            <option value="">-- Tenant --</option>
-            {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-          </select>
-        ) : null}
       />
 
       <AnimatePresence mode="wait">

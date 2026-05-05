@@ -134,6 +134,7 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
       return res.json({ success: true, ignorado: true, motivo: 'agente configurado sem resposta' })
     }
 
+    // Agente não configurado para este tenant — usa fluxo de qualificação legado
     const etapaAtual = lead.whatsapp_etapa || 'capital'
 
     if (etapaAtual === 'finalizado') {

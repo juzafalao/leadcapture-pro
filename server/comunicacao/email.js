@@ -191,6 +191,11 @@ function templateLeadQuente(lead, marca) {
 }
 
 // ── Exports ───────────────────────────────────────────────────
+// Envio genérico: pode ser usado por outros módulos (ex: agente.js)
+export async function enviarEmail(to, subject, html) {
+  return enviar(to, subject, html)
+}
+
 export async function notificarNovoLead(lead, marca, emailsExtras = []) {
   const base    = process.env.NOTIFICATION_EMAIL || 'leadcaptureadm@gmail.com'
   const extras  = (emailsExtras || []).filter(e => e && e.includes('@') && !e.endsWith('.local'))

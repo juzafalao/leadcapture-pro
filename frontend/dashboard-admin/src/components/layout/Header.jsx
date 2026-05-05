@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import { useTenant } from '../TenantContext';
 import ConfirmModal from '../shared/ConfirmModal';
 import { supabase } from '../../lib/supabase';
 import { Search, Bell, Menu, X } from 'lucide-react';
@@ -24,7 +25,8 @@ function fmtAgo(ts) {
 }
 
 export default function Header({ onMenuClick }) {
-  const { usuario, tenant, logout, isPlatformAdmin } = useAuth();
+  const { usuario, tenant, logout } = useAuth();
+  const { isAdmin, tenants, activeTenantId, setActiveTenantId } = useTenant();
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -33,7 +35,8 @@ export default function Header({ onMenuClick }) {
   const [notifs, setNotifs] = useState([]);
   const notifRef = useRef(null);
 
-  const tenantId = isPlatformAdmin() ? null : usuario?.tenant_id;
+  // Usa o tenant ativo global para filtrar notificações e realtime
+  const tenantId = activeTenantId || null;
 
   const loadNotifs = useCallback(async () => {
     if (!tenantId && !isPlatformAdmin()) return;
@@ -120,7 +123,20 @@ export default function Header({ onMenuClick }) {
             </div>
           </div>
 
-          {/* Centro: Barra de busca (desktop) */}
+          {/* Centro: Seletor de tenant (admin) + Barra de busca */}
+          {isAdmin && tenants.length > 0 && (
+            <select
+              value={activeTenantId}
+              onChange={e => setActiveTenantId(e.target.value)}
+              className="hidden sm:block bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none shrink-0 max-w-[180px] truncate"
+            >
+              {tenants.map(t => (
+                <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>
+              ))}
+            </select>
+          )}
+
+          {/* Barra de busca (desktop) */}
           <div className="hidden md:flex flex-1 max-w-xs items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] focus-within:border-[#10B981]/40 transition-colors">
             <Search className="w-4 h-4 text-[#475569] shrink-0" />
             <input

@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AuthProvider, useAuth } from './components/AuthContext';
+import { TenantProvider } from './components/TenantContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // -- Lazy imports -----------------------------------------
@@ -206,9 +207,11 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Router>
-            <AppRoutes />
-          </Router>
+          <TenantProvider>
+            <Router>
+              <AppRoutes />
+            </Router>
+          </TenantProvider>
         </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>

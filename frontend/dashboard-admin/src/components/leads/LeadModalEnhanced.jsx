@@ -23,6 +23,7 @@ import { useVendaDoLead, useRegistrarVenda, useAtualizarVenda } from '../../hook
 
 const ROLES_GESTOR = ['Administrador', 'admin', 'Diretor', 'Gestor']
 const ROLES_PODE_ATRIBUIR = ['Administrador', 'admin', 'Diretor', 'Gestor']
+const ROLES_DIRETOR_ADMIN = ['Administrador', 'admin', 'Diretor']
 
 export default function LeadModalEnhanced({ lead, onClose, tenantName, statusReadOnly = false }) {
   const { usuario } = useAuth()
@@ -30,6 +31,11 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
   const { alertModal, showAlert } = useAlertModal()
   const isGestor = ROLES_GESTOR.includes(usuario?.role)
   const podeAtribuir = ROLES_PODE_ATRIBUIR.includes(usuario?.role) || usuario?.is_super_admin || ['Administrador','admin'].includes(usuario?.role)
+
+  // Leads da LIA: somente Diretor/Admin podem atribuir consultor
+  const ehLeadLIA = lead?.fonte === 'captacao-ia'
+  const isDiretorOuAdmin = ROLES_DIRETOR_ADMIN.includes(usuario?.role) || usuario?.is_super_admin || usuario?.is_platform
+  const podeAtribuirEsteConsultor = podeAtribuir && (!ehLeadLIA || isDiretorOuAdmin)
 
   const isNovo = !lead?.id
   const [abaAtiva, setAbaAtiva] = useState('visao-geral')
@@ -270,6 +276,11 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
                       {lead.categoria.toUpperCase()}
                     </span>
                   )}
+                  {ehLeadLIA && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                      🤖 Veio da LIA
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-400 mt-1">
                   {lead?.email} • {lead?.telefone}
@@ -355,7 +366,7 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
                 <div className="bg-white/[0.04] border border-white/[0.06] rounded-2xl p-4">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-[9px] font-black uppercase tracking-wider text-gray-600">Consultor Atribuído</p>
-                    {podeAtribuir && (
+                    {podeAtribuirEsteConsultor && (
                       <button
                         onClick={() => setMostrarAtribuicao(!mostrarAtribuicao)}
                         className="text-[10px] px-2 py-1 rounded-md bg-[#10B981]/10 text-[#10B981] hover:bg-[#10B981]/20 transition-all"
@@ -363,9 +374,12 @@ export default function LeadModalEnhanced({ lead, onClose, tenantName, statusRea
                         {mostrarAtribuicao ? 'Cancelar' : 'Atribuir'}
                       </button>
                     )}
+                    {ehLeadLIA && !isDiretorOuAdmin && (
+                      <span className="text-[9px] text-purple-400">🤖 Atribuição restrita a Diretores</span>
+                    )}
                   </div>
 
-                  {mostrarAtribuicao && podeAtribuir ? (
+                  {mostrarAtribuicao && podeAtribuirEsteConsultor ? (
                     <div className="space-y-2">
                       {consultores.map(c => (
                         <button
