@@ -253,12 +253,12 @@ export async function iniciarAgenteParaLead(lead, marcaInfo) {
 export async function processarMensagemAgente(telefone, mensagem, tenantId, nomeContato = null, existingLeadId = null) {
   if (!ANTHROPIC_API_KEY) {
     console.warn('[Agente] ANTHROPIC_API_KEY não configurada — agente desabilitado')
-    return { handled: false }
+    return { handled: false, agente_configurado: false }
   }
 
   const config = await getAgenteConfig(tenantId)
   if (!config) {
-    return { handled: false }
+    return { handled: false, agente_configurado: false }
   }
 
   const MAX_TURNS = config.max_turns || 14
@@ -330,7 +330,7 @@ export async function processarMensagemAgente(telefone, mensagem, tenantId, nome
 
       if (convErr) {
         console.error('[Agente] Erro ao criar conversa:', convErr.message)
-        return { handled: false }
+        return { handled: false, agente_configurado: true }
       }
       conversaId = novaConversa.id
     } else {
