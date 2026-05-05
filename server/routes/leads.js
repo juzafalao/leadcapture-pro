@@ -218,7 +218,11 @@ router.post('/', validateLead, async (req, res) => {
     }
 
     // Roda notificações antes de responder — garante execução em serverless
-    await runNotificacoes().catch(err => console.error('[Leads] Notificações:', err.message))
+    // Timeout de 20s evita que uma chamada externa lenta (Evolution, email) mate a função
+    await Promise.race([
+      runNotificacoes(),
+      new Promise(resolve => setTimeout(resolve, 20_000))
+    ]).catch(err => console.error('[Leads] Notificações:', err.message))
 
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
   } catch (err) {
