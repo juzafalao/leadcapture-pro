@@ -412,16 +412,6 @@ export default function DashboardPage() {
 
           {/* Filtros */}
           <div className="flex flex-wrap items-center gap-2 px-5 py-3.5 border-b border-white/[0.04]">
-            {isAdmin && tenants.length > 0 && (
-              <select
-                value={tenantId}
-                onChange={e => { setTenantId(e.target.value); setPage(1) }}
-                className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-[11px] text-[#10B981] font-bold focus:outline-none"
-              >
-                <option value="">-- Tenant --</option>
-                {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-              </select>
-            )}
             <input
               type="text"
               placeholder="Buscar por nome, email ou telefone..."

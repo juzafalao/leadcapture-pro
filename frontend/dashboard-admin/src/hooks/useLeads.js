@@ -30,6 +30,7 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
     queryFn: async () => {
       let query = supabase
         .from('leads')
+        // admin global view (tenantId=null) uses estimated count — avoids full table scan on large multi-tenant dataset
         .select(`
           id, nome, email, telefone, cidade, estado,
           score, categoria, capital_disponivel, regiao_interesse,
@@ -40,7 +41,7 @@ export function useLeads({ tenantId, page = 1, perPage = 20, filters = {} }) {
           operador:id_operador_responsavel (id, nome, role),
           status_comercial:id_status (id, label, slug, cor),
           motivo_desistencia:id_motivo_desistencia (id, nome)
-        `, { count: 'exact' })
+        `, { count: tenantId === null ? 'estimated' : 'exact' })
         .is('deleted_at', null)
 
       if (tenantId) {
