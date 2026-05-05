@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../components/AuthContext'
+import { useTenantSelector } from '../hooks/useTenantSelector'
 import { supabase } from '../lib/supabase'
 
 //  Helpers 
@@ -231,16 +232,13 @@ function AlertaBanner({ consultores, pctEquipe, metaEquipe }) {
 //  Pagina principal 
 export default function RankingPage() {
   const { usuario } = useAuth()
+  const { isAdmin, tenants, tenantId, setTenantId } = useTenantSelector()
 
-  const isAdmin   = ['Administrador','admin'].includes(usuario?.role)
-    || usuario?.is_super_admin || usuario?.is_platform
   const podeVer   = isAdmin || ['Diretor','Gestor','Consultor'].includes(usuario?.role)
   const isDiretor = isAdmin || usuario?.role === 'Diretor'
 
   const [aba,              setAba]              = useState('ranking')
   const [periodo,          setPeriodo]          = useState({ ano: ANO_ATUAL, mes: MES_ATUAL })
-  const [tenants,          setTenants]          = useState([])
-  const [tenantId,         setTenantId]         = useState(usuario?.tenant_id || '')
   const [consultores,      setConsultores]      = useState([])
   const [metaConfig,       setMetaConfig]       = useState({})
   const [pctEquipe,        setPctEquipe]        = useState(0)
@@ -248,24 +246,6 @@ export default function RankingPage() {
   const [erro,             setErro]             = useState('')
   const [consultorDetalhe, setConsultorDetalhe] = useState(null)
   const [faixas,           setFaixas]           = useState([])
-
-  // Carrega tenants direto do Supabase -- admin ve todos, outros veem o proprio
-  useEffect(() => {
-    async function loadTenants() {
-      if (isAdmin) {
-        const { data } = await supabase.from('tenants').select('id, name').order('name')
-        if (data?.length) {
-          setTenants(data)
-          // Auto-seleciona primeiro tenant se nao tem nenhum selecionado
-          if (!tenantId && data[0]) setTenantId(data[0].id)
-        }
-      } else {
-        if (usuario?.tenant_id) setTenantId(usuario.tenant_id)
-      }
-    }
-    loadTenants()
-  }, [isAdmin, usuario?.tenant_id])
-
 
   // Carrega dados do ranking com queries diretas (sem RPC)
   const carregar = useCallback(async () => {
@@ -444,14 +424,6 @@ export default function RankingPage() {
 
           {/* Controles */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Tenant (admin) */}
-            {isAdmin && tenants.length > 0 && (
-              <select value={tenantId} onChange={e => setTenantId(e.target.value)}
-                className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none">
-                <option value="">-- Selecione o tenant --</option>
-                {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0,8)}</option>)}
-              </select>
-            )}
             {/* Periodo */}
             <select
               value={`${periodo.ano}-${periodo.mes}`}

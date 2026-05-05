@@ -34,6 +34,9 @@ router.get('/', async (req, res) => {
   try {
     const usuario = await autenticar(req)
     const { ano, mes, consultor_id, marca_id } = req.query
+    const tenantIdParam = req.query.tenant_id
+    const tenantFiltro = (['Administrador', 'admin'].includes(usuario.role) && tenantIdParam)
+      ? tenantIdParam : usuario.tenant_id
 
     let q = supabase
       .from('vendas')
@@ -44,7 +47,7 @@ router.get('/', async (req, res) => {
         marca:marca_id(id, nome, emoji),
         consultor:consultor_id(id, nome, role)
       `)
-      .eq('tenant_id', usuario.tenant_id)
+      .eq('tenant_id', tenantFiltro)
       .order('data_venda', { ascending: false })
 
     if (ano && mes) {
@@ -71,6 +74,9 @@ router.get('/resumo', async (req, res) => {
   try {
     const usuario = await autenticar(req)
     const { ano, mes } = req.query
+    const tenantIdParam = req.query.tenant_id
+    const tenantFiltro = (['Administrador', 'admin'].includes(usuario.role) && tenantIdParam)
+      ? tenantIdParam : usuario.tenant_id
 
     const now = new Date()
     const anoQ = Number(ano || now.getFullYear())
@@ -81,7 +87,7 @@ router.get('/resumo', async (req, res) => {
     const { data, error } = await supabase
       .from('vendas')
       .select('taxa_franquia_negociada, consultor_id, marca_id, data_venda')
-      .eq('tenant_id', usuario.tenant_id)
+      .eq('tenant_id', tenantFiltro)
       .eq('status', 'confirmada')
       .gte('data_venda', ini)
       .lt('data_venda', fim)

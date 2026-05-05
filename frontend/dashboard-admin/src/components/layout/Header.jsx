@@ -128,7 +128,7 @@ export default function Header({ onMenuClick }) {
             <select
               value={activeTenantId}
               onChange={e => setActiveTenantId(e.target.value)}
-              className="hidden sm:block bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none shrink-0 max-w-[180px] truncate"
+              className="flex sm:inline-flex w-full sm:w-auto bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-2 text-xs text-[#10B981] font-bold focus:outline-none shrink-0 max-w-[180px] truncate"
             >
               {tenants.map(t => (
                 <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>
