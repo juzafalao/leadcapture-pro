@@ -14,7 +14,8 @@ export function useRelatorios(tenantId, filtros = {}) {
   return useQuery({
     queryKey: ['relatorios', tenantId, filtros],
     enabled: !!tenantId || tenantId === null,
-    staleTime: 1000 * 60 * 5,       // ✅ 5min — relatório pesado, não precisa refetch toda vez
+    // staleTime 0 — admin troca tenant frequentemente, cache causava receita = 0
+    staleTime: 0,
     queryFn: async () => {
       const hoje = new Date()
       const inicio = new Date()
@@ -51,6 +52,7 @@ export function useRelatorios(tenantId, filtros = {}) {
       const vendidos   = bySlug('vendido', 'convertido')
 
       // Busca valor real de venda para leads vendidos
+      // tenantId vem sempre do activeTenantId do TenantContext global (nunca undefined)
       let vendasMap = {}
       if (vendidos.length > 0) {
         const vendidosIds = vendidos.map(l => l.id)
@@ -59,7 +61,7 @@ export function useRelatorios(tenantId, filtros = {}) {
           .select('lead_id, taxa_franquia_negociada')
           .in('lead_id', vendidosIds)
           .eq('status', 'confirmada')
-        if (tenantId) vendasQuery = vendasQuery.eq('tenant_id', tenantId)
+        if (tenantId != null) vendasQuery = vendasQuery.eq('tenant_id', tenantId)
         const { data: vendasData } = await vendasQuery
         ;(vendasData || []).forEach(v => {
           vendasMap[v.lead_id] = parseFloat(v.taxa_franquia_negociada || 0)
