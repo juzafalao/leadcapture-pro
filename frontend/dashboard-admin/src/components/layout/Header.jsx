@@ -25,7 +25,7 @@ function fmtAgo(ts) {
 }
 
 export default function Header({ onMenuClick }) {
-  const { usuario, tenant, logout } = useAuth();
+  const { usuario, tenant, logout, isPlatformAdmin } = useAuth();
   const { isAdmin, tenants, activeTenantId, setActiveTenantId } = useTenant();
   const navigate = useNavigate();
   const [confirmOpen, setConfirmOpen] = useState(false);

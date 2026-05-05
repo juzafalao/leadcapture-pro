@@ -9,7 +9,7 @@ const STORAGE_KEY = 'lc-active-tenant'
 export function TenantProvider({ children }) {
   const { usuario, isPlatformAdmin } = useAuth()
 
-  const isAdmin = isPlatformAdmin()
+  const isAdmin = (typeof isPlatformAdmin === 'function' ? isPlatformAdmin() : false)
     || usuario?.is_super_admin
     || usuario?.is_platform
     || ['Administrador', 'admin'].includes(usuario?.role)
