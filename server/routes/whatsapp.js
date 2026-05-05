@@ -7,7 +7,7 @@
 import { Router } from 'express'
 import supabase from '../core/database.js'
 import { enviarMensagem, normalizarTelefone, extrairTelefoneDoJid } from '../comunicacao/whatsapp.js'
-import { processarMensagemAgente, temConversaAgenteAtiva } from '../services/agente.js'
+import { processarMensagemAgente } from '../services/agente.js'
 import rateLimit from 'express-rate-limit'
 
 const router = Router()
@@ -122,14 +122,11 @@ router.post('/webhook', webhookLimiter, async (req, res) => {
 
     const lead = leads[0]
 
-    // Se há conversa de agente IA ativa para este lead, roteia para o agente
-    const agenteAtivo = await temConversaAgenteAtiva(telefone, lead.tenant_id)
-    if (agenteAtivo) {
-      console.log(`[WhatsApp/Webhook] Conversa agente ativa para ${telefone}`)
-      const result = await processarMensagemAgente(telefone, mensagem, lead.tenant_id)
-      if (result.handled) return res.json({ success: true, agente: true })
-    }
+    // Tenta rotear para o agente IA (cria conversa nova se necessário, sem duplicar o lead)
+    const result = await processarMensagemAgente(telefone, mensagem, lead.tenant_id, lead.nome, lead.id)
+    if (result.handled) return res.json({ success: true, agente: true })
 
+    // Agente não configurado para este tenant — usa fluxo de qualificação legado
     const etapaAtual = lead.whatsapp_etapa || 'capital'
 
     if (etapaAtual === 'finalizado') {
