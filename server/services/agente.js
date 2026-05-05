@@ -238,6 +238,15 @@ export async function iniciarAgenteParaLead(lead, marcaInfo) {
     return { iniciado: false, motivo: convErr.message }
   }
 
+  // Atribui o lead à LIA enquanto a conversa está ativa
+  if (lead.id) {
+    supabase.from('leads')
+      .update({ status: 'em_atendimento_ia', updated_at: new Date().toISOString() })
+      .eq('id', lead.id)
+      .then()
+      .catch(err => console.warn('[Agente] Falha ao atualizar status lead:', err.message))
+  }
+
   const primeiroNome = lead.nome?.split(' ')[0] || 'você'
   const mensagemInicial =
     `Olá, ${primeiroNome}! 👋 Sou ${config.nome_agente}, da equipe de expansão.\n\n` +

@@ -306,16 +306,6 @@ export default function DashboardOverviewPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {isAdmin && tenants.length > 0 && (
-            <select
-              value={tenantId}
-              onChange={e => setTenantId(e.target.value)}
-              className="bg-[#10B981]/10 border border-[#10B981]/30 rounded-xl px-3 py-1.5 text-xs text-[#10B981] font-bold focus:outline-none"
-            >
-              <option value="">-- Selecione o tenant --</option>
-              {tenants.map(t => <option key={t.id} value={t.id}>{t.name || t.id.slice(0, 8)}</option>)}
-            </select>
-          )}
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#10B981]/10 border border-[#10B981]/20">
             <div className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
             <span className="text-xs font-semibold text-[#10B981]">Ao vivo</span>
