@@ -378,9 +378,11 @@ function RelatorioReceita({ tenantId, dias = 30 }) {
 
   React.useEffect(() => {
     if (tenantId === undefined) return
-    if (!tenantId) { setLoading(false); return }
+    if (!tenantId) { setVendas([]); setLoading(false); return }
     const desde = new Date(Date.now() - Number(dias) * 24 * 60 * 60 * 1000).toISOString().slice(0,10)
     setLoading(true)
+    setVendas([])
+    let cancelled = false
     let q = supabase
       .from('vendas')
       .select(`
@@ -393,7 +395,8 @@ function RelatorioReceita({ tenantId, dias = 30 }) {
       .gte('data_venda', desde)
       .order('data_venda', { ascending: false })
     if (tenantId) q = q.eq('tenant_id', tenantId)
-    q.then(({ data }) => { setVendas(data || []); setLoading(false) })
+    q.then(({ data }) => { if (!cancelled) { setVendas(data || []); setLoading(false) } })
+    return () => { cancelled = true }
   }, [tenantId, dias])
 
   if (loading) return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-[#10B981] border-t-transparent rounded-full animate-spin" /></div>
@@ -523,6 +526,15 @@ export default function RelatoriosPage() {
   const { alertModal, showAlert } = useAlertModal()
   const [tipoAtivo, setTipoAtivo] = useState(null)
   const [filtros, setFiltros]     = useState({ periodo:'30', marca:'todas', operador:'todos' })
+
+  // Reseta filtros dependentes do tenant ao trocar de tenant (evita filtrar por marca/operador do tenant anterior)
+  const prevTenantRef = React.useRef(tenantId)
+  React.useEffect(() => {
+    if (prevTenantRef.current !== tenantId) {
+      prevTenantRef.current = tenantId
+      setFiltros(f => ({ periodo: f.periodo, marca: 'todas', operador: 'todos' }))
+    }
+  }, [tenantId])
 
   const { data: filtrosData }      = useFiltrosRelatorio(tenantId || null)
   const { data, isLoading }        = useRelatorios(tenantId || null, filtros)

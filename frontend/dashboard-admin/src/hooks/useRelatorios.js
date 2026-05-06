@@ -51,23 +51,15 @@ export function useRelatorios(tenantId, filtros = {}) {
       const bySlug = (...slugs) => rows.filter(l => slugs.includes(getSlug(l)))
       const vendidos   = bySlug('vendido', 'convertido')
 
-      // Busca valor real de venda para leads vendidos
-      // tenantId vem sempre do activeTenantId do TenantContext global (nunca undefined)
-      let vendasMap = {}
-      if (vendidos.length > 0) {
-        const vendidosIds = vendidos.map(l => l.id)
-        let vendasQuery = supabase
-          .from('vendas')
-          .select('lead_id, taxa_franquia_negociada')
-          .in('lead_id', vendidosIds)
-          .eq('status', 'confirmada')
-        if (tenantId != null) vendasQuery = vendasQuery.eq('tenant_id', tenantId)
-        const { data: vendasData } = await vendasQuery
-        ;(vendasData || []).forEach(v => {
-          vendasMap[v.lead_id] = parseFloat(v.taxa_franquia_negociada || 0)
-        })
-      }
-      const receitaVendas = Object.values(vendasMap).reduce((a, v) => a + v, 0)
+      // Busca receita real diretamente da tabela vendas (independente dos slugs de status)
+      let vendasQuery = supabase
+        .from('vendas')
+        .select('lead_id, taxa_franquia_negociada')
+        .eq('status', 'confirmada')
+        .gte('data_venda', inicio.toISOString().slice(0, 10))
+      if (tenantId != null) vendasQuery = vendasQuery.eq('tenant_id', tenantId)
+      const { data: vendasData } = await vendasQuery
+      const receitaVendas = (vendasData || []).reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0)
       const perdidos   = bySlug('perdido')
       const negociacao = bySlug('em_negociacao', 'negociacao')
       const agendado   = bySlug('em_agendamento', 'agendado', 'contato')
@@ -168,7 +160,7 @@ export function useFiltrosRelatorio(tenantId) {
   return useQuery({
     queryKey: ['filtros-relatorio', tenantId],
     enabled: !!tenantId || tenantId === null,
-    staleTime: 1000 * 60 * 10,      // ✅ 10min — filtros quase nunca mudam
+    staleTime: 0,                    // admin troca tenant frequentemente, filtros devem refrescar
     queryFn: async () => {
       let qMarcas = supabase.from('marcas').select('id,nome,emoji').eq('ativo', true)
       let qOps    = supabase.from('usuarios').select('id,nome').eq('active', true)
