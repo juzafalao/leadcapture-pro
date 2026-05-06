@@ -430,7 +430,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         style={{ padding: isCollapsed ? '14px 0' : '14px 20px' }}
       >
         <motion.img
-          src={logoSidebar}
+          src={logoFull}
           alt="LeadCapture Pro"
           animate={{ height: isCollapsed ? 32 : 56, opacity: 1 }}
           initial={{ opacity: 0 }}
