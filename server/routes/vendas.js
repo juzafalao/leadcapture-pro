@@ -139,10 +139,15 @@ router.post('/', async (req, res) => {
     if (!lead_id)                    return res.status(400).json({ success: false, error: 'lead_id obrigatório' })
     if (!taxa_franquia_negociada)    return res.status(400).json({ success: false, error: 'taxa_franquia_negociada obrigatória' })
 
+    // Usa o tenant_id do lead, não do admin — admin pode gerenciar múltiplos tenants
+    const { data: lead, error: leadErr } = await supabase
+      .from('leads').select('tenant_id').eq('id', lead_id).single()
+    if (leadErr || !lead) return res.status(404).json({ success: false, error: 'Lead não encontrado' })
+
     const { data, error } = await supabase
       .from('vendas')
       .upsert({
-        tenant_id: usuario.tenant_id,
+        tenant_id: lead.tenant_id,
         lead_id,
         marca_id:                marca_id               || null,
         consultor_id:            consultor_id           || null,
