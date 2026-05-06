@@ -261,6 +261,7 @@ export default function LeadsSistemaPage() {
   const [page, setPage] = useState(1);
   const [exportando, setExportando] = useState(false);
   const [motivosDesistencia, setMotivosDesistencia] = useState([]);
+  const [kpiCounts, setKpiCounts] = useState({ total: 0, novo: 0, negociacao: 0, fechado: 0, hoje: 0 });
   const debounceRef = useRef(null);
 
   const handleBuscaChange = useCallback((value) => {
@@ -271,7 +272,26 @@ export default function LeadsSistemaPage() {
 
   useEffect(() => {
     fetchProspects();
+    fetchKpiCounts();
   }, []);
+
+  const fetchKpiCounts = async () => {
+    const hoje = new Date().toDateString();
+    const [rTotal, rNovo, rNeg, rFech, rHoje] = await Promise.all([
+      supabase.from('leads_sistema').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+      supabase.from('leads_sistema').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('status', 'novo'),
+      supabase.from('leads_sistema').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('status', 'negociacao'),
+      supabase.from('leads_sistema').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('status', 'fechado'),
+      supabase.from('leads_sistema').select('id', { count: 'exact', head: true }).is('deleted_at', null).gte('created_at', new Date(new Date().setHours(0,0,0,0)).toISOString()),
+    ]);
+    setKpiCounts({
+      total:      rTotal.count  ?? 0,
+      novo:       rNovo.count   ?? 0,
+      negociacao: rNeg.count    ?? 0,
+      fechado:    rFech.count   ?? 0,
+      hoje:       rHoje.count   ?? 0,
+    });
+  };
 
   useEffect(() => {
     supabase
@@ -288,33 +308,44 @@ export default function LeadsSistemaPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, []);
 
+  // Re-fetch quando filtro de status muda (filtro aplicado no servidor)
   useEffect(() => {
-    let lista = [...prospects];
-    if (filtroStatus !== 'todos') {
-      lista = lista.filter(p => p.status === filtroStatus);
+    fetchProspects();
+  }, [filtroStatus]);
+
+  // Busca aplicada no cliente sobre os dados já carregados
+  useEffect(() => {
+    if (!busca) {
+      setFiltrados(prospects);
+      setPage(1);
+      return;
     }
-    if (busca) {
-      const q = busca.toLowerCase();
-      lista = lista.filter(p =>
-        p.nome?.toLowerCase().includes(q) ||
-        p.email?.toLowerCase().includes(q) ||
-        p.telefone?.includes(q) ||
-        p.companhia?.toLowerCase().includes(q)
-      );
-    }
-    setFiltrados(lista);
+    const q = busca.toLowerCase();
+    setFiltrados(prospects.filter(p =>
+      p.nome?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) ||
+      p.telefone?.includes(q) ||
+      p.companhia?.toLowerCase().includes(q)
+    ));
     setPage(1);
-  }, [prospects, busca, filtroStatus]);
+  }, [prospects, busca]);
 
   const fetchProspects = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     setErro(null);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('leads_sistema')
         .select('id, nome, email, telefone, companhia, cidade, estado, status, fonte, observacao, observacao_interna, motivo_desistencia_id, created_at')
         .is('deleted_at', null)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(2000);
+
+      if (filtroStatus !== 'todos') {
+        query = query.eq('status', filtroStatus);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('Erro ao buscar leads_sistema:', error);
@@ -322,6 +353,7 @@ export default function LeadsSistemaPage() {
         return;
       }
       setProspects(data || []);
+      setFiltrados(data || []);
     } catch (err) {
       console.error('Erro inesperado ao buscar leads_sistema:', err);
       if (!silent) setErro('Erro de conexao ao carregar prospects. Verifique sua rede.');
@@ -338,6 +370,7 @@ export default function LeadsSistemaPage() {
     }
     setSelected(null);
     fetchProspects({ silent: true });
+    fetchKpiCounts();
   };
 
   const exportarParaExcel = async () => {
@@ -388,18 +421,7 @@ export default function LeadsSistemaPage() {
   const startIndex = (page - 1) * PAGE_SIZE + 1;
   const endIndex = Math.min(page * PAGE_SIZE, filtrados.length);
 
-  // KPIs
-  const kpis = {
-    total:      prospects.length,
-    novo:       prospects.filter(p => p.status === 'novo').length,
-    negociacao: prospects.filter(p => p.status === 'negociacao').length,
-    fechado:    prospects.filter(p => p.status === 'fechado').length,
-    hoje:       prospects.filter(p => {
-      const d = new Date(p.created_at);
-      const n = new Date();
-      return d.toDateString() === n.toDateString();
-    }).length,
-  };
+  const kpis = kpiCounts;
 
   if (loading) {
     return <LoadingSpinner />;

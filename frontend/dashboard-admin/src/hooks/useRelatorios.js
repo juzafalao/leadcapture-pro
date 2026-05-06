@@ -14,8 +14,8 @@ export function useRelatorios(tenantId, filtros = {}) {
   return useQuery({
     queryKey: ['relatorios', tenantId, filtros],
     enabled: !!tenantId || tenantId === null,
-    // staleTime 0 — admin troca tenant frequentemente, cache causava receita = 0
-    staleTime: 0,
+    // cache key inclui tenantId + filtros — troca de tenant sempre refetch
+    staleTime: 1000 * 60 * 2,
     queryFn: async () => {
       const hoje = new Date()
       const inicio = new Date()
@@ -164,7 +164,7 @@ export function useFiltrosRelatorio(tenantId) {
   return useQuery({
     queryKey: ['filtros-relatorio', tenantId],
     enabled: !!tenantId || tenantId === null,
-    staleTime: 0,                    // admin troca tenant frequentemente, filtros devem refrescar
+    staleTime: 1000 * 60 * 10,
     queryFn: async () => {
       let qMarcas = supabase.from('marcas').select('id,nome,emoji').eq('ativo', true)
       let qOps    = supabase.from('usuarios').select('id,nome').eq('active', true)

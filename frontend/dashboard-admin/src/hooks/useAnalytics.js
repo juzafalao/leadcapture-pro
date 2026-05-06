@@ -187,17 +187,23 @@ export function useRealtimeLeads(tenantId, onNew) {
     }
     if (tenantId) channelConfig.filter = `tenant_id=eq.${tenantId}`
 
+    let debounceTimer = null
     const channel = supabase
       .channel('leads-realtime')
       .on('postgres_changes', channelConfig, (payload) => {
         onNew?.(payload.new)
-        // ✅ 2.5.3: Invalidar analytics + metrics (ambos dependem de leads)
-        qc.invalidateQueries({ queryKey: ['analytics'] })
-        qc.invalidateQueries({ queryKey: ['metrics'] })
-        // ✅ 2.5.3: Invalidar leads com exact: false para pegar todas as paginações
-        qc.invalidateQueries({ queryKey: ['leads'] })
+        // Debounce: bursts de eventos (ex: import em massa) geram só 1 refetch
+        clearTimeout(debounceTimer)
+        debounceTimer = setTimeout(() => {
+          qc.invalidateQueries({ queryKey: ['analytics'] })
+          qc.invalidateQueries({ queryKey: ['metrics'] })
+          qc.invalidateQueries({ queryKey: ['leads'] })
+        }, 800)
       })
       .subscribe()
-    return () => supabase.removeChannel(channel)
+    return () => {
+      clearTimeout(debounceTimer)
+      supabase.removeChannel(channel)
+    }
   }, [tenantId])
 }
