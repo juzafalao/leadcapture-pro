@@ -51,15 +51,19 @@ export function useRelatorios(tenantId, filtros = {}) {
       const bySlug = (...slugs) => rows.filter(l => slugs.includes(getSlug(l)))
       const vendidos   = bySlug('vendido', 'convertido')
 
-      // Busca receita real diretamente da tabela vendas (independente dos slugs de status)
-      let vendasQuery = supabase
-        .from('vendas')
-        .select('lead_id, taxa_franquia_negociada')
-        .eq('status', 'confirmada')
-        .gte('data_venda', inicio.toISOString().slice(0, 10))
-      if (tenantId != null) vendasQuery = vendasQuery.eq('tenant_id', tenantId)
-      const { data: vendasData } = await vendasQuery
-      const receitaVendas = (vendasData || []).reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0)
+      // Busca receita via lead_id dos leads já filtrados — vendas.tenant_id pode
+      // refletir o tenant do operador, não do cliente; leads têm o tenant correto.
+      const allLeadIds = rows.map(l => l.id)
+      let receitaVendas = 0
+      if (allLeadIds.length > 0) {
+        const { data: vendasData } = await supabase
+          .from('vendas')
+          .select('lead_id, taxa_franquia_negociada')
+          .eq('status', 'confirmada')
+          .gte('data_venda', inicio.toISOString().slice(0, 10))
+          .in('lead_id', allLeadIds)
+        receitaVendas = (vendasData || []).reduce((a, v) => a + parseFloat(v.taxa_franquia_negociada || 0), 0)
+      }
       const perdidos   = bySlug('perdido')
       const negociacao = bySlug('em_negociacao', 'negociacao')
       const agendado   = bySlug('em_agendamento', 'agendado', 'contato')

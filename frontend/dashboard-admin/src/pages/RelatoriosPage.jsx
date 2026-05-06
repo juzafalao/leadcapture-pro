@@ -383,19 +383,28 @@ function RelatorioReceita({ tenantId, dias = 30 }) {
     setLoading(true)
     setVendas([])
     let cancelled = false
-    let q = supabase
-      .from('vendas')
-      .select(`
-        taxa_franquia_negociada, taxa_franquia_tabela, data_venda, status,
-        lead:lead_id(nome),
-        marca:marca_id(id, nome, emoji),
-        consultor:consultor_id(id, nome)
-      `)
-      .eq('status', 'confirmada')
-      .gte('data_venda', desde)
-      .order('data_venda', { ascending: false })
-    if (tenantId) q = q.eq('tenant_id', tenantId)
-    q.then(({ data }) => { if (!cancelled) { setVendas(data || []); setLoading(false) } })
+
+    // Busca via lead_id porque vendas.tenant_id pode refletir o tenant do operador,
+    // não do cliente — os leads têm sempre o tenant_id correto.
+    supabase.from('leads').select('id').eq('tenant_id', tenantId).is('deleted_at', null)
+      .then(({ data: leadsData }) => {
+        if (cancelled) return
+        const leadIds = (leadsData || []).map(l => l.id)
+        if (leadIds.length === 0) { setVendas([]); setLoading(false); return }
+        supabase
+          .from('vendas')
+          .select(`
+            taxa_franquia_negociada, taxa_franquia_tabela, data_venda, status,
+            lead:lead_id(nome),
+            marca:marca_id(id, nome, emoji),
+            consultor:consultor_id(id, nome)
+          `)
+          .eq('status', 'confirmada')
+          .gte('data_venda', desde)
+          .in('lead_id', leadIds)
+          .order('data_venda', { ascending: false })
+          .then(({ data }) => { if (!cancelled) { setVendas(data || []); setLoading(false) } })
+      })
     return () => { cancelled = true }
   }, [tenantId, dias])
 

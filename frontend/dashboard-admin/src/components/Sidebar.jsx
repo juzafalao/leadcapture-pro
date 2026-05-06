@@ -6,8 +6,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import ConfirmModal from './shared/ConfirmModal'
-import logoIconSvg from '../assets/logo-icon.svg'
-import logoFull from '../assets/logo-leadcapture.png'
+import logoSidebar from '../assets/logo-login.jpg'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -433,33 +432,15 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
           justifyContent: isCollapsed ? 'center' : 'flex-start',
         }}
       >
-        <AnimatePresence initial={false} mode="wait">
-          {isCollapsed ? (
-            <motion.img
-              key="icon"
-              src={logoIconSvg}
-              alt="LeadCapture Pro"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              style={{ width: 32, height: 32, objectFit: 'contain' }}
-              className="shrink-0"
-            />
-          ) : (
-            <motion.img
-              key="full"
-              src={logoFull}
-              alt="LeadCapture Pro"
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
-              transition={{ duration: 0.18 }}
-              style={{ height: 40, width: 'auto', objectFit: 'contain', maxWidth: 160 }}
-              className="shrink-0"
-            />
-          )}
-        </AnimatePresence>
+        <motion.img
+          src={logoSidebar}
+          alt="LeadCapture Pro"
+          animate={{ height: isCollapsed ? 32 : 56, opacity: 1 }}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ width: 'auto', objectFit: 'contain', maxWidth: isCollapsed ? 36 : 160 }}
+          className="shrink-0"
+        />
       </NavLink>
 
       {/* Navegação */}
