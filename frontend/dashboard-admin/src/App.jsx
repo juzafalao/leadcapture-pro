@@ -8,8 +8,8 @@ import { TenantProvider } from './components/TenantContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // -- Lazy imports -----------------------------------------
-const DashboardOverviewPage = lazy(() => import('./pages/DashboardOverviewPage')); // /dashboard — overview
-const DashboardPage         = lazy(() => import('./pages/DashboardPage'));         // /pipeline  — leads list
+const DashboardOverviewPage = lazy(() => import('./pages/DashboardOverviewPage'));
+const DashboardPage         = lazy(() => import('./pages/DashboardPage'));
 const MarcasPage            = lazy(() => import('./pages/MarcasPage'));
 const SegmentosPage         = lazy(() => import('./pages/SegmentosPage'));
 const UsuariosPage          = lazy(() => import('./pages/UsuariosPage'));
@@ -66,18 +66,19 @@ const PageFallback = () => (
   </div>
 );
 
+// Transição apenas de opacidade — sem deslocamento Y que causava efeito de zoom
 const AnimatedPage = ({ children }) => (
   <motion.div
-    initial={{ opacity: 0, y: 6 }}
-    animate={{ opacity: 1, y: 0 }}
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    transition={{ duration: 0.18 }}
+    transition={{ duration: 0.15 }}
   >
     {children}
   </motion.div>
 );
 
-// -- Layout autenticado -----------------------------------
+// -- Layout autenticado (renderizado UMA VEZ, nunca remontado durante navegação) --
 function AuthenticatedLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   return (
@@ -85,7 +86,6 @@ function AuthenticatedLayout({ children }) {
       <Suspense fallback={null}>
         <Sidebar mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
       </Suspense>
-      {/* Placeholder que empurra o conteúdo acompanhando a largura do sidebar via CSS var */}
       <div
         className="hidden lg:block shrink-0"
         style={{ width: 'var(--sidebar-w, 240px)', transition: 'width 0.25s ease' }}
@@ -119,86 +119,103 @@ function AuthenticatedLayout({ children }) {
   );
 }
 
-// -- PrivateRoute -----------------------------------------
-function PrivateRoute({ children, allowedRoles = ROLES_CONSULTOR }) {
-  const { usuario, loading, isAuthenticated } = useAuth();
-  if (loading) return <PageFallback />;
-  if (!isAuthenticated || !usuario) return <Navigate to="/login" replace />;
-  const isSuperAdmin = usuario.is_super_admin === true || usuario.is_platform === true
-    || ['Administrador', 'admin'].includes(usuario.role);
-  if (isSuperAdmin) return children;
-  if (!allowedRoles.includes(usuario.role || '')) return <Navigate to="/dashboard" replace />;
-  return children;
-}
-
 // -- Rotas ------------------------------------------------
 function AppRoutes() {
   const location = useLocation();
-  const W = (Page, roles = ROLES_CONSULTOR) => (
-    <PrivateRoute allowedRoles={roles}>
-      <AuthenticatedLayout>
-        <AnimatedPage>
-          <Suspense fallback={<PageFallback />}>
-            <Page />
-          </Suspense>
-        </AnimatedPage>
-      </AuthenticatedLayout>
-    </PrivateRoute>
-  );
+  const { usuario, loading, isAuthenticated } = useAuth();
 
-  return (
-    <AnimatePresence mode="sync">
-      <Routes location={location} key={location.pathname}>
-        {/* Públicas */}
-        <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
+  if (loading) return <PageFallback />;
+
+  // Rotas públicas — não precisam de autenticação
+  if (!isAuthenticated) {
+    return (
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/login"         element={<AnimatedPage><Suspense fallback={<PageFallback />}><LoginPage /></Suspense></AnimatedPage>} />
+          <Route path="/landing/:slug" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
+          <Route path="/lp/:slug"      element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
+          <Route path="*"              element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AnimatePresence>
+    );
+  }
+
+  // Landing pages acessíveis mesmo autenticado
+  if (location.pathname.startsWith('/landing/') || location.pathname.startsWith('/lp/')) {
+    return (
+      <Routes>
         <Route path="/landing/:slug" element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
         <Route path="/lp/:slug"      element={<Suspense fallback={<PageFallback />}><LandingPage /></Suspense>} />
-        <Route path="/"              element={<Navigate to="/login" replace />} />
-
-        {/* PRINCIPAL — todos os roles */}
-        <Route path="/dashboard"     element={W(DashboardOverviewPage)} />
-        <Route path="/monitoramento" element={W(MonitoramentoPage, ROLES_DIRETOR)} />
-
-        {/* OPERAÇÃO — todos */}
-        <Route path="/pipeline"           element={W(DashboardPage)} />
-        <Route path="/kanban"             element={W(KanbanPage)} />
-        <Route path="/fluxo-vida-lead"    element={W(FluxoVidaLeadPage, ROLES_GESTOR)} />
-        <Route path="/canais"             element={W(CanaisPage, ROLES_GESTOR)} />
-
-        {/* AUTOMAÇÃO — Gestor+ */}
-        <Route path="/captura"       element={W(CapturaPage,      ROLES_GESTOR)} />
-        <Route path="/whatsapp"      element={W(WhatsAppPage,     ROLES_GESTOR)} />
-        <Route path="/agente"        element={W(AgentePage)} />
-        <Route path="/automacao"     element={W(AutomacaoPage,    ROLES_GESTOR)} />
-        <Route path="/email-marketing" element={W(EmailMarketingPage, ROLES_GESTOR)} />
-
-        {/* PERFORMANCE — todos */}
-        <Route path="/ranking"       element={W(RankingPage)} />
-
-        {/* OPERAÇÃO extras */}
-        <Route path="/importar"      element={W(ImportarLeadsPage, ROLES_GESTOR)} />
-
-        {/* INTELIGÊNCIA — Gestor+ */}
-        <Route path="/relatorios"    element={W(RelatoriosPage,  ROLES_GESTOR)} />
-        <Route path="/analytics"     element={W(AnalyticsPage,   ROLES_DIRETOR)} />
-
-        {/* SISTEMA — Diretor+ */}
-        <Route path="/backoffice"    element={W(LeadsSistemaPage,   ROLES_ADMIN)} />
-        <Route path="/marcas"        element={W(MarcasPage,         ROLES_GESTOR)} />
-        <Route path="/segmentos"     element={W(SegmentosPage,      ROLES_GESTOR)} />
-        <Route path="/usuarios"      element={W(UsuariosPage,       ROLES_GESTOR)} />
-        <Route path="/audit-log"     element={W(AuditLogPage,       ROLES_DIRETOR)} />
-        <Route path="/api-docs"      element={W(APIPage,            ROLES_DIRETOR)} />
-        <Route path="/configuracoes" element={W(SettingsPage,       ROLES_DIRETOR)} />
-
-        {/* Legado — redireciona */}
-        <Route path="/analytics"     element={<Navigate to="/dashboard" replace />} />
-        <Route path="/leads"         element={<Navigate to="/pipeline"  replace />} />
-        <Route path="/crm"           element={W(CRMPage, ROLES_GESTOR)} />
-
-        <Route path="*"              element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </AnimatePresence>
+    );
+  }
+
+  // Redireciona /login para /dashboard se já autenticado
+  if (location.pathname === '/login' || location.pathname === '/') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Verificação de role
+  const isSuperAdmin = usuario?.is_super_admin === true || usuario?.is_platform === true
+    || ['Administrador', 'admin'].includes(usuario?.role);
+  const hasRole = (roles) => isSuperAdmin || roles.includes(usuario?.role || '');
+
+  const page = (Page, roles = ROLES_CONSULTOR) =>
+    hasRole(roles)
+      ? <AnimatedPage><Suspense fallback={<PageFallback />}><Page /></Suspense></AnimatedPage>
+      : <Navigate to="/dashboard" replace />;
+
+  // Layout renderizado UMA VEZ — apenas o conteúdo interno anima
+  return (
+    <AuthenticatedLayout>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          {/* PRINCIPAL */}
+          <Route path="/dashboard"     element={page(DashboardOverviewPage)} />
+          <Route path="/monitoramento" element={page(MonitoramentoPage, ROLES_DIRETOR)} />
+
+          {/* OPERAÇÃO */}
+          <Route path="/pipeline"        element={page(DashboardPage)} />
+          <Route path="/kanban"          element={page(KanbanPage)} />
+          <Route path="/fluxo-vida-lead" element={page(FluxoVidaLeadPage, ROLES_GESTOR)} />
+          <Route path="/canais"          element={page(CanaisPage, ROLES_GESTOR)} />
+
+          {/* AUTOMAÇÃO */}
+          <Route path="/captura"         element={page(CapturaPage,       ROLES_GESTOR)} />
+          <Route path="/whatsapp"        element={page(WhatsAppPage,      ROLES_GESTOR)} />
+          <Route path="/agente"          element={page(AgentePage)} />
+          <Route path="/automacao"       element={page(AutomacaoPage,     ROLES_GESTOR)} />
+          <Route path="/email-marketing" element={page(EmailMarketingPage, ROLES_GESTOR)} />
+
+          {/* PERFORMANCE */}
+          <Route path="/ranking"         element={page(RankingPage)} />
+
+          {/* OPERAÇÃO extras */}
+          <Route path="/importar"        element={page(ImportarLeadsPage, ROLES_GESTOR)} />
+
+          {/* INTELIGÊNCIA */}
+          <Route path="/relatorios"      element={page(RelatoriosPage,  ROLES_GESTOR)} />
+          <Route path="/analytics"       element={page(AnalyticsPage,   ROLES_DIRETOR)} />
+
+          {/* SISTEMA */}
+          <Route path="/backoffice"      element={page(LeadsSistemaPage,   ROLES_ADMIN)} />
+          <Route path="/marcas"          element={page(MarcasPage,         ROLES_GESTOR)} />
+          <Route path="/segmentos"       element={page(SegmentosPage,      ROLES_GESTOR)} />
+          <Route path="/usuarios"        element={page(UsuariosPage,       ROLES_GESTOR)} />
+          <Route path="/audit-log"       element={page(AuditLogPage,       ROLES_DIRETOR)} />
+          <Route path="/api-docs"        element={page(APIPage,            ROLES_DIRETOR)} />
+          <Route path="/configuracoes"   element={page(SettingsPage,       ROLES_DIRETOR)} />
+
+          {/* CRM */}
+          <Route path="/crm"             element={page(CRMPage, ROLES_GESTOR)} />
+
+          {/* Legado */}
+          <Route path="/leads"           element={<Navigate to="/pipeline"  replace />} />
+
+          <Route path="*"                element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AnimatePresence>
+    </AuthenticatedLayout>
   );
 }
 
