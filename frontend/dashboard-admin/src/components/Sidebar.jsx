@@ -429,31 +429,15 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         className="shrink-0 flex items-center justify-center border-b border-white/[0.06] overflow-hidden"
         style={{ padding: isCollapsed ? '14px 0' : '14px 20px' }}
       >
-        <AnimatePresence initial={false} mode="wait">
-          {isCollapsed ? (
-            <motion.img
-              key="icon"
-              src={logoIcon}
-              alt="LeadCapture Pro"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              style={{ width: 32, height: 32, objectFit: 'contain' }}
-            />
-          ) : (
-            <motion.img
-              key="full"
-              src={logoFull}
-              alt="LeadCapture Pro"
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -6 }}
-              transition={{ duration: 0.18 }}
-              style={{ width: '100%', height: 'auto', maxHeight: 44, objectFit: 'contain' }}
-            />
-          )}
-        </AnimatePresence>
+        <motion.img
+          src={logoSidebar}
+          alt="LeadCapture Pro"
+          animate={{ height: isCollapsed ? 32 : 56, opacity: 1 }}
+          initial={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          style={{ width: 'auto', objectFit: 'contain', maxWidth: isCollapsed ? 36 : 160 }}
+          className="shrink-0"
+        />
       </NavLink>
 
       {/* Navegação */}
