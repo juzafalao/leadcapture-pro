@@ -82,25 +82,21 @@ export function useMetrics(tenantId) {
     queryKey: ['metrics', tenantId],
     staleTime: 1000 * 60 * 3,
     queryFn: async () => {
-      let query = supabase
-        .from('leads')
-        .select('categoria')
-        .is('deleted_at', null)
+      const base = () =>
+        supabase.from('leads').select('id', { count: 'exact', head: true }).is('deleted_at', null)
+      const withTenant = q => tenantId ? q.eq('tenant_id', tenantId) : q
 
-      if (tenantId) {
-        query = query.eq('tenant_id', tenantId)
-      }
+      const [rTotal, rHot, rWarm] = await Promise.all([
+        withTenant(base()),
+        withTenant(base()).ilike('categoria', 'hot'),
+        withTenant(base()).ilike('categoria', 'warm'),
+      ])
+      if (rTotal.error) throw rTotal.error
 
-      const { data, error } = await query
-      if (error) throw error
-      const rows = data ?? []
-
-      return {
-        total: rows.length,
-        hot:  rows.filter(l => (l.categoria || '').toLowerCase() === 'hot').length,
-        warm: rows.filter(l => (l.categoria || '').toLowerCase() === 'warm').length,
-        cold: rows.filter(l => ['cold', ''].includes((l.categoria || '').toLowerCase())).length
-      }
+      const total = rTotal.count ?? 0
+      const hot   = rHot.count  ?? 0
+      const warm  = rWarm.count ?? 0
+      return { total, hot, warm, cold: total - hot - warm }
     },
     enabled: !!tenantId || tenantId === null,
     refetchInterval: 1000 * 120,
