@@ -6,7 +6,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import ConfirmModal from './shared/ConfirmModal'
-import logoSidebar from '../assets/logo-login.jpg'
+import logoFull from '../assets/logo-sidebar.svg'
+import logoIcon from '../assets/logo-icon-sidebar.svg'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -419,18 +420,14 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
       initial={false}
       animate={{ width: isCollapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 h-screen bg-[#0A0F1E] border-r border-white/[0.06] flex flex-col z-50 overflow-hidden"
+      className="fixed left-0 top-0 h-screen bg-[#0F172A] border-r border-white/[0.06] flex flex-col z-50 overflow-hidden"
     >
       {/* Logo */}
       <NavLink
         to="/dashboard"
         onClick={handleNavClick}
-        className="shrink-0 flex items-center border-b border-white/[0.06] overflow-hidden"
-        style={{
-          gap: isCollapsed ? 0 : 12,
-          padding: isCollapsed ? '16px 0' : '16px 20px',
-          justifyContent: isCollapsed ? 'center' : 'flex-start',
-        }}
+        className="shrink-0 flex items-center justify-center border-b border-white/[0.06] overflow-hidden"
+        style={{ padding: isCollapsed ? '14px 0' : '14px 20px' }}
       >
         <motion.img
           src={logoSidebar}
