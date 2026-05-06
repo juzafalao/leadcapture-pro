@@ -5,8 +5,9 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
-import LogoIcon from './LogoIcon'
 import ConfirmModal from './shared/ConfirmModal'
+import logoIconSvg from '../assets/logo-icon.svg'
+import logoFull from '../assets/logo-leadcapture.png'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -432,19 +433,31 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
           justifyContent: isCollapsed ? 'center' : 'flex-start',
         }}
       >
-        <LogoIcon size={30} className="shrink-0" />
-        <AnimatePresence initial={false}>
-          {!isCollapsed && (
-            <motion.div
+        <AnimatePresence initial={false} mode="wait">
+          {isCollapsed ? (
+            <motion.img
+              key="icon"
+              src={logoIconSvg}
+              alt="LeadCapture Pro"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              style={{ width: 32, height: 32, objectFit: 'contain' }}
+              className="shrink-0"
+            />
+          ) : (
+            <motion.img
+              key="full"
+              src={logoFull}
+              alt="LeadCapture Pro"
               initial={{ opacity: 0, x: -8 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -8 }}
               transition={{ duration: 0.18 }}
-              className="overflow-hidden whitespace-nowrap"
-            >
-              <span className="text-[13px] font-black text-white block leading-tight tracking-tight">LeadCapture</span>
-              <span className="text-[8px] font-black uppercase tracking-[0.25em] text-[#10B981]">PRO</span>
-            </motion.div>
+              style={{ height: 40, width: 'auto', objectFit: 'contain', maxWidth: 160 }}
+              className="shrink-0"
+            />
           )}
         </AnimatePresence>
       </NavLink>
