@@ -6,8 +6,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from './AuthContext'
 import ConfirmModal from './shared/ConfirmModal'
-import logoFull from '../assets/logo-sidebar.svg'
-import logoIcon from '../assets/logo-icon-sidebar.svg'
+import logoLogin from '../assets/logo-login.jpg'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 
@@ -427,17 +426,19 @@ export default function Sidebar({ mobileOpen, setMobileOpen }) {
         to="/dashboard"
         onClick={handleNavClick}
         className="shrink-0 flex items-center justify-center border-b border-white/[0.06] overflow-hidden"
-        style={{ padding: isCollapsed ? '14px 0' : '14px 20px' }}
+        style={{ padding: isCollapsed ? '10px 0' : '10px 16px' }}
       >
-        <motion.img
-          src={logoFull}
-          alt="LeadCapture Pro"
-          animate={{ height: isCollapsed ? 32 : 56, opacity: 1 }}
-          initial={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          style={{ width: 'auto', objectFit: 'contain', maxWidth: isCollapsed ? 36 : 160 }}
-          className="shrink-0"
-        />
+        <motion.div
+          animate={{ width: isCollapsed ? 40 : 120, height: isCollapsed ? 40 : 74 }}
+          transition={{ duration: 0.25, ease: 'easeInOut' }}
+          className="shrink-0 flex items-center justify-center overflow-hidden rounded-xl"
+        >
+          <img
+            src={logoLogin}
+            alt="LeadCapture Pro"
+            style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'lighten' }}
+          />
+        </motion.div>
       </NavLink>
 
       {/* Navegação */}
