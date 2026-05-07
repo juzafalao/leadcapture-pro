@@ -2,7 +2,7 @@
 import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion'; // AnimatePresence usado nas rotas públicas
 import { AuthProvider, useAuth } from './components/AuthContext';
 import { TenantProvider } from './components/TenantContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -66,17 +66,8 @@ const PageFallback = () => (
   </div>
 );
 
-// Transição apenas de opacidade — sem deslocamento Y que causava efeito de zoom
-const AnimatedPage = ({ children }) => (
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    exit={{ opacity: 0 }}
-    transition={{ duration: 0.15 }}
-  >
-    {children}
-  </motion.div>
-);
+// Transição simples sem AnimatePresence — evita layout shift percebido como zoom
+const AnimatedPage = ({ children }) => <>{children}</>;
 
 // -- Layout autenticado (renderizado UMA VEZ, nunca remontado durante navegação) --
 function AuthenticatedLayout({ children }) {
@@ -165,11 +156,10 @@ function AppRoutes() {
       ? <AnimatedPage><Suspense fallback={<PageFallback />}><Page /></Suspense></AnimatedPage>
       : <Navigate to="/dashboard" replace />;
 
-  // Layout renderizado UMA VEZ — apenas o conteúdo interno anima
+  // Layout renderizado UMA VEZ — conteúdo troca sem animação (evita zoom)
   return (
     <AuthenticatedLayout>
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
+      <Routes>
           {/* PRINCIPAL */}
           <Route path="/dashboard"     element={page(DashboardOverviewPage)} />
           <Route path="/monitoramento" element={page(MonitoramentoPage, ROLES_DIRETOR)} />
@@ -214,7 +204,6 @@ function AppRoutes() {
 
           <Route path="*"                element={<Navigate to="/dashboard" replace />} />
         </Routes>
-      </AnimatePresence>
     </AuthenticatedLayout>
   );
 }
