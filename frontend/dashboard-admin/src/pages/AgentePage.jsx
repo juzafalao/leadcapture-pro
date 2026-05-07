@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, MessageCircle, UserCheck, ChevronRight, X, ExternalLink, RefreshCw, Flame, Thermometer, Snowflake, User, DollarSign, MapPin, Calendar, AlertTriangle, CheckCircle, ArrowRight, Settings, Save, ToggleLeft, ToggleRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../components/AuthContext'
+import { useTenant } from '../components/TenantContext'
 import { useNavigate } from 'react-router-dom'
 
 const API_URL = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, '')
@@ -436,9 +437,13 @@ function isSuperAdmin(usuario) {
 }
 
 export default function AgentePage() {
-  const { usuario }  = useAuth()
-  const superAdmin   = isSuperAdmin(usuario)
-  const tenantId     = superAdmin ? null : (usuario?.tenant_id || usuario?.tenant?.id)
+  const { usuario }           = useAuth()
+  const { activeTenantId }    = useTenant()
+  const superAdmin            = isSuperAdmin(usuario)
+  // Super admin respeita o tenant selecionado no Header; se nenhum → busca todos (null)
+  const tenantId = superAdmin
+    ? (activeTenantId || null)
+    : (usuario?.tenant_id || usuario?.tenant?.id)
   const [conversas,  setConversas]  = useState([])
   const [loading,    setLoading]    = useState(true)
   const [filtro,     setFiltro]     = useState('todas')
