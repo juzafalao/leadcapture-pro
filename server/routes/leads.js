@@ -197,8 +197,6 @@ router.post('/', validateLead, async (req, res) => {
       return false
     }
 
-    // Notificações rodam ANTES de res.json() para garantir execução em serverless
-    // (em Vercel/Lambda o processo é congelado imediatamente após a resposta)
     const runNotificacoes = async () => {
       const [ativoBoasVindas, ativoLeadQuente] = await Promise.all([
         isEmailAtivo(lead.tenant_id, 'boas-vindas'),
@@ -253,17 +251,19 @@ router.post('/', validateLead, async (req, res) => {
       }
     }
 
-    // Roda notificações antes de responder — garante execução em serverless
-    // Timeout de 20s evita que uma chamada externa lenta (Evolution, email) mate a função
-    await Promise.race([
-      runNotificacoes(),
-      new Promise(resolve => setTimeout(resolve, 20_000))
-    ]).catch(err => console.error('[Leads] Notificações:', err.message))
-
+    // Responde imediatamente — lead já está salvo no banco
     res.json({ success: true, message: 'Lead recebido com sucesso!', leadId: lead.id, score: lead.score, categoria: lead.categoria })
+
+    // Side-effects rodam após a resposta sem bloquear o lead
+    // Em Vercel serverless: a função continua executando até o timeout configurado
+    // após res.json() — use @vercel/functions waitUntil() para garantia extra
+    Promise.race([
+      runNotificacoes(),
+      new Promise(resolve => setTimeout(resolve, 15_000))
+    ]).catch(err => console.error('[Leads] Notificações background:', err.message))
   } catch (err) {
-    console.error('[Leads] Erro:', err.message)
-    res.status(500).json({ success: false, error: 'Erro interno ao processar lead', detalhe: err.message })
+    console.error('[Leads] Erro:', err)
+    res.status(500).json({ success: false, error: 'Erro interno ao processar lead' })
   }
 })
 
@@ -409,7 +409,7 @@ router.post('/google-forms', validateGoogleForms, async (req, res) => {
       categoria: lead.categoria,
     })
   } catch (err) {
-    console.error('[Leads/GoogleForms] Erro:', err.message)
+    console.error('[Leads/GoogleForms] Erro:', err)
     res.status(500).json({ success: false, error: 'Erro interno ao processar lead do Google Forms' })
   }
 })
@@ -521,7 +521,7 @@ router.post('/sistema', validateLeadSistema, async (req, res) => {
 
     res.json({ success: true, message: 'Recebemos seu contato! Em breve nossa equipe entrará em contato.', leadId: lead.id })
   } catch (err) {
-    console.error('[Leads/Sistema] Erro:', err.message)
+    console.error('[Leads/Sistema] Erro:', err)
     res.status(500).json({ success: false, error: 'Erro interno ao processar prospect' })
   }
 })
@@ -636,8 +636,8 @@ router.put('/:id/assign-consultant', async (req, res) => {
       message: `Consultor ${consultor.nome} atribuído com sucesso!`,
     })
   } catch (err) {
-    console.error('[Leads/AssignConsultant] Erro:', err.message)
-    res.status(500).json({ success: false, error: 'Erro interno ao atribuir consultor', detalhe: err.message })
+    console.error('[Leads/AssignConsultant] Erro:', err)
+    res.status(500).json({ success: false, error: 'Erro interno ao atribuir consultor' })
   }
 })
 

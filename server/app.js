@@ -10,6 +10,7 @@
 
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import dotenv from 'dotenv'
 import path from 'path'
 import fs from 'fs'
@@ -59,6 +60,18 @@ import supabase from './core/database.js'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
+// Template da landing page cacheado em memória — evita fs.readFileSync por request
+let _landingTemplate = null
+function getLandingTemplate() {
+  if (!_landingTemplate) {
+    const templatePath = path.join(__dirname, 'templates', 'landing.html')
+    _landingTemplate = fs.existsSync(templatePath)
+      ? fs.readFileSync(templatePath, 'utf-8')
+      : null
+  }
+  return _landingTemplate
+}
+
 // ─── Inicialização ───────────────────────────────────────────────
 const app = express()
 app.set('trust proxy', 1)
@@ -77,6 +90,14 @@ if (process.env.EVOLUTION_API_KEY) {
 } else {
   console.warn('[WhatsApp] EVOLUTION_API_KEY não configurada. O serviço de WhatsApp operará em modo simulado.')
 }
+
+// ─── Helmet: headers de segurança ────────────────────────────
+// CSP desabilitado aqui — configurado manualmente abaixo para compatibilidade
+// com inline scripts das landing pages e o dashboard React
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}))
 
 // ─── CORS Restritivo ─────────────────────────────────────────────
 const allowedOrigins = [
@@ -112,13 +133,10 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true, limit: '1mb' }))
 
-// Headers de segurança adicionais
-app.use((req, res, next) => {
-  res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('X-Frame-Options', 'DENY')
-  res.setHeader('X-XSS-Protection', '1; mode=block')
+// Headers adicionais não cobertos pelo helmet
+app.use((_req, res, next) => {
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
-  res.removeHeader('X-Powered-By')
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
   next()
 })
 
@@ -169,8 +187,11 @@ app.get('/landing/:slug', async (req, res) => {
       return res.status(404).send(_pagina404(slug))
     }
 
-    const templatePath = path.join(__dirname, 'templates', 'landing.html')
-    let html = fs.readFileSync(templatePath, 'utf-8')
+    const html_template = getLandingTemplate()
+    if (!html_template) {
+      return res.status(500).send('Template de landing page não encontrado')
+    }
+    let html = html_template
 
     const escapeHtml = (str) => String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": "&#39;" }[m]))
 

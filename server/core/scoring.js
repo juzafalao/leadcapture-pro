@@ -26,9 +26,11 @@ const SCORING_TABLE = [
   { min: 200_000, score: 80, label: '200k–300k' },
   { min: 150_000, score: 70, label: '150k–200k' },
   { min: 100_000, score: 60, label: '100k–150k' },
-  { min: 80_000, score: 55, label: '80k–100k' },
-  { min: 0, score: 50, label: '<80k' },
+  { min: 80_000,  score: 55, label: '80k–100k' },
+  { min: 0,       score: 50, label: '<80k' },
 ]
+// Pré-ordenado descendente — evita re-sort a cada chamada de calcularScore
+const SCORING_TABLE_SORTED = [...SCORING_TABLE].sort((a, b) => b.min - a.min)
 
 const CATEGORIA_THRESHOLDS = {
   HOT: 80,
@@ -36,10 +38,7 @@ const CATEGORIA_THRESHOLDS = {
 }
 
 export function calcularScore(capital = 0) {
-  const entrada = [...SCORING_TABLE]
-    .sort((a, b) => b.min - a.min)
-    .find(item => capital >= item.min)
-  return entrada ? entrada.score : 50
+  return SCORING_TABLE_SORTED.find(item => capital >= item.min)?.score ?? 50
 }
 
 export function determinarCategoria(score) {
@@ -68,8 +67,8 @@ export const DEFAULT_SCORING_CONFIG = {
 }
 
 export function calcularScoreFromConfig(capital = 0, tiers = SCORING_TABLE) {
-  const entrada = [...tiers].sort((a, b) => b.min - a.min).find(item => capital >= item.min)
-  return entrada ? entrada.score : 50
+  const sorted = tiers === SCORING_TABLE ? SCORING_TABLE_SORTED : [...tiers].sort((a, b) => b.min - a.min)
+  return sorted.find(item => capital >= item.min)?.score ?? 50
 }
 
 export function determinarCategoriaFromConfig(score, thresholds = CATEGORIA_THRESHOLDS) {

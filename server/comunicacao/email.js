@@ -8,8 +8,18 @@
 // ============================================================
 
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
 let transporter = null
+
+// Instância única do cliente Resend — evita new Resend() por chamada de email
+let _resendClient = null
+function getResendClient() {
+  if (!_resendClient && process.env.RESEND_API_KEY) {
+    _resendClient = new Resend(process.env.RESEND_API_KEY)
+  }
+  return _resendClient
+}
 
 // Resend modo teste: domínio não verificado só permite envio para o owner email
 const RESEND_TEST_MODE = !process.env.RESEND_DOMAIN_VERIFIED && !!process.env.RESEND_OWNER_EMAIL
@@ -49,8 +59,7 @@ export function inicializarEmail() {
 
 // ── Envio via Resend ──────────────────────────────────────────
 async function enviarViaResend(to, subject, html) {
-  const { Resend } = await import('resend')
-  const resend = new Resend(process.env.RESEND_API_KEY)
+  const resend = getResendClient()
 
   // Plano gratuito: remetente deve ser onboarding@resend.dev
   // Para usar domínio próprio: verificar em resend.com/domains
